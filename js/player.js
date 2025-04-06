@@ -5,7 +5,7 @@ const player = {
     col: null,
     color: '#007bff',
     resources: {
-        scrap: 0
+        medkits: 0
     },
     // NEW: Health properties
     hp: 10,

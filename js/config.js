@@ -18,3 +18,7 @@ const AI_ATTACK_DAMAGE = 1;
 const SHRINK_INTERVAL = 10;
 const SHRINK_AMOUNT = 1;
 const STORM_DAMAGE = 1;
+
+// --- NEW: Healing Config ---
+const HEAL_COST = 5;    // Medkits needed to heal
+const HEAL_AMOUNT = 3;  // HP restored per heal action

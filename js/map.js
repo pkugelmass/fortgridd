@@ -2,15 +2,15 @@ console.log("map.js loaded");
 
 // --- Configuration for Map Generation ---
 // (Could move to config.js later if desired)
-const INITIAL_WALL_CHANCE = 0.3; 
-const CA_ITERATIONS = 5;
-const CA_WALL_THRESHOLD = 4;    
+const INITIAL_WALL_CHANCE = 0.3; // User preferred value
+const CA_ITERATIONS = 5;          // User preferred value
+const CA_WALL_THRESHOLD = 4;      // User preferred value
 
 // --- Tile Definitions ---
 const TILE_LAND = 0;
 const TILE_WALL = 1;
 const TILE_TREE = 2;
-const TILE_SCRAP = 3;
+const TILE_MEDKIT = 3; // *** RENAMED from TILE_SCRAP ***
 
 // --- Visual Mappings ---
 const TILE_EMOJIS = {};
@@ -18,13 +18,12 @@ const TILE_COLORS = {
     [TILE_LAND]: '#8FBC8F', // DarkSeaGreen
     [TILE_WALL]: '#A9A9A9', // DarkGray
     [TILE_TREE]: '#556B2F', // DarkOliveGreen
-    [TILE_SCRAP]: '#B8860B', // DarkGoldenrod
+    [TILE_MEDKIT]: '#FF6347', // *** UPDATED KEY & Changed Color (e.g., Tomato Red for Medkit) ***
 };
 
 /**
  * Helper function to count wall neighbours around a cell.
- * Includes diagonals (Moore neighbourhood).
- * Handles grid boundaries.
+ * Includes diagonals (Moore neighbourhood). Handles boundaries.
  * @param {number[][]} grid - The map grid data.
  * @param {number} r - Row of the cell to check.
  * @param {number} c - Column of the cell to check.
@@ -34,18 +33,12 @@ function countWallNeighbours(grid, r, c) {
     let count = 0;
     for (let i = -1; i <= 1; i++) {
         for (let j = -1; j <= 1; j++) {
-            // Skip the cell itself
-            if (i === 0 && j === 0) continue;
-
-            const checkRow = r + i;
-            const checkCol = c + j;
-
-            // Check boundaries - treat out-of-bounds as walls to enforce borders
+            if (i === 0 && j === 0) continue; // Skip self
+            const checkRow = r + i; const checkCol = c + j;
+            // Treat out-of-bounds as walls
             if (checkRow < 0 || checkRow >= GRID_HEIGHT || checkCol < 0 || checkCol >= GRID_WIDTH) {
                 count++;
-            }
-            // Otherwise, check the cell type in the grid
-            else if (grid[checkRow] && grid[checkRow][checkCol] === TILE_WALL) {
+            } else if (grid[checkRow] && grid[checkRow][checkCol] === TILE_WALL) { // Check grid cell
                 count++;
             }
         }
@@ -62,13 +55,12 @@ function createMapData() {
     let currentMap = [];
 
     // 1. Initial Random Fill (Noise)
-    console.log("Generating initial noise...");
+    // console.log("Generating initial noise...");
     for (let row = 0; row < GRID_HEIGHT; row++) {
         currentMap[row] = [];
         for (let col = 0; col < GRID_WIDTH; col++) {
-            // Make edges walls initially
             if (row === 0 || row === GRID_HEIGHT - 1 || col === 0 || col === GRID_WIDTH - 1) {
-                currentMap[row][col] = TILE_WALL;
+                currentMap[row][col] = TILE_WALL; // Ensure borders are walls
             } else {
                 currentMap[row][col] = (Math.random() < INITIAL_WALL_CHANCE) ? TILE_WALL : TILE_LAND;
             }
@@ -76,17 +68,14 @@ function createMapData() {
     }
 
     // 2. Cellular Automata Iterations
-    console.log(`Running ${CA_ITERATIONS} CA iterations...`);
-    let nextMap = []; // Use a temporary grid for simultaneous updates
+    // console.log(`Running ${CA_ITERATIONS} CA iterations...`);
+    let nextMap = [];
     for (let i = 0; i < CA_ITERATIONS; i++) {
-        // Initialize nextMap based on currentMap structure
-        nextMap = currentMap.map(arr => arr.slice()); // Create a copy
-
-        for (let row = 1; row < GRID_HEIGHT - 1; row++) { // Iterate excluding borders
-            for (let col = 1; col < GRID_WIDTH - 1; col++) { // Iterate excluding borders
+        nextMap = currentMap.map(arr => arr.slice()); // Create copy for simultaneous update
+        for (let row = 1; row < GRID_HEIGHT - 1; row++) { // Exclude borders
+            for (let col = 1; col < GRID_WIDTH - 1; col++) { // Exclude borders
                 const wallNeighbours = countWallNeighbours(currentMap, row, col);
-
-                // Apply CA rule
+                // Apply CA rule based on threshold
                 if (wallNeighbours >= CA_WALL_THRESHOLD) {
                     nextMap[row][col] = TILE_WALL;
                 } else {
@@ -95,21 +84,21 @@ function createMapData() {
             }
         }
         currentMap = nextMap; // Update map for next iteration
-        console.log(`Iteration ${i + 1} complete.`);
+        // console.log(`Iteration ${i + 1} complete.`);
     }
 
-    // 3. Feature Placement (Trees, Scrap) on Land Tiles
-    console.log("Placing features (Trees, Scrap)...");
+    // 3. Feature Placement (Trees, Medkits) on Land Tiles
+    console.log("Placing features (Trees, Medkits)...");
     for (let row = 1; row < GRID_HEIGHT - 1; row++) { // Exclude borders
         for (let col = 1; col < GRID_WIDTH - 1; col++) {
             // Only place features on land generated by CA
             if (currentMap[row][col] === TILE_LAND) {
                 const randomValue = Math.random();
                 // Adjust probabilities as needed
-                if (randomValue < 0.08) { // Example: 8% chance for Tree on Land
+                if (randomValue < 0.08) { // Example: 8% chance for Tree
                     currentMap[row][col] = TILE_TREE;
-                } else if (randomValue < 0.13) { // Example: 5% chance for Scrap on Land (cumulative)
-                    currentMap[row][col] = TILE_SCRAP;
+                } else if (randomValue < 0.13) { // Example: 5% chance for Medkit (cumulative)
+                    currentMap[row][col] = TILE_MEDKIT; // *** Use new constant ***
                 }
             }
         }
