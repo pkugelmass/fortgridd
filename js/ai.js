@@ -3,34 +3,27 @@ console.log("ai.js loaded");
 // Array to hold all enemy objects
 let enemies = [];
 
-// --- AI Turn Logic --- (Moved from script.js)
+// --- AI Turn Logic ---
 
 /**
  * Executes turns for all AI enemies.
  * AI will attack if player is adjacent, otherwise move randomly.
- * Relies on global vars: gameActive, currentTurn, mapData, GRID_WIDTH/HEIGHT,
- * TILE_LAND, player, AI_ATTACK_DAMAGE.
- * Modifies global vars: enemy positions, player.hp, gameActive, currentTurn.
- * Calls global functions: redrawCanvas, drawUI.
+ * Relies on global vars/funcs from other scripts.
  */
 function executeAiTurns() {
-    // Safety checks moved inside just in case it's called inappropriately
     if (typeof gameActive === 'undefined' || typeof currentTurn === 'undefined') {
-        console.error("executeAiTurns called before game state is defined.");
-        return;
+        console.error("executeAiTurns called before game state is defined."); return;
     }
-     if (!gameActive || currentTurn !== 'ai' || typeof enemies === 'undefined') {
-        // If called when not AI turn, or game over, just ensure turn is player's if possible
-        if (gameActive) currentTurn = 'player';
-        return;
+    if (!gameActive || currentTurn !== 'ai' || typeof enemies === 'undefined') {
+        if (gameActive) currentTurn = 'player'; return;
     }
 
     console.log("Executing AI Turns...");
-    let redrawNeeded = false;
-    const currentEnemies = [...enemies]; // Iterate over a copy
+    let redrawNeeded = false; // Track if visual state changed
+    const currentEnemies = [...enemies];
 
     for (let i = 0; i < currentEnemies.length; i++) {
-        const enemy = enemies.find(e => e === currentEnemies[i]); // Get current enemy from main array
+        const enemy = enemies.find(e => e === currentEnemies[i]);
         if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue;
 
         let attackedPlayer = false;
@@ -38,67 +31,53 @@ function executeAiTurns() {
 
         // Check for Adjacent Player (Attack Logic)
         for (const dir of directions) {
-            const targetRow = enemy.row + dir.dr;
-            const targetCol = enemy.col + dir.dc;
-            // Ensure player exists before checking position/hp
+            const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc;
             if (typeof player !== 'undefined' && player.row === targetRow && player.col === targetCol) {
                 console.log(`Enemy ${enemy.id || i} attacks Player!`);
-                player.hp -= AI_ATTACK_DAMAGE; // Assumes AI_ATTACK_DAMAGE is global
-                console.log(`Player HP: ${player.hp}/${player.maxHp}`);
-                attackedPlayer = true;
-                redrawNeeded = true;
-
-                if (player.hp <= 0) { // Check Game Over
-                    console.log("Player defeated! GAME OVER!");
-                    gameActive = false; // Modify global gameActive
-                    if (typeof redrawCanvas === 'function') redrawCanvas(); else console.error("redrawCanvas not defined for Game Over!");
-                    alert("GAME OVER!");
-                    return; // Exit AI turns immediately
-                }
-                break; // Enemy attacked, action done
+                player.hp -= AI_ATTACK_DAMAGE; console.log(`Player HP: ${player.hp}/${player.maxHp}`);
+                attackedPlayer = true; redrawNeeded = true;
+                if (player.hp <= 0) { console.log("Player defeated! GAME OVER!"); gameActive = false; redrawCanvas(); alert("GAME OVER!"); return; }
+                break;
             }
         }
 
         // Random Movement Logic (Only if player was NOT attacked)
         if (!attackedPlayer) {
              const possibleMoves = [];
-             for (const dir of directions) {
-                 const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc;
-                 // Boundary Check
+             for (const dir of directions) { /* ... find valid moves ... */
+                const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc;
                  if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
-                    // Ensure mapData exists
-                    if (typeof mapData !== 'undefined') {
+                     if (typeof mapData !== 'undefined') {
                          const targetTileType = mapData[targetRow][targetCol];
-                         // Terrain Check (AI only moves on Land) - Assumes TILE_LAND is global
                          if (targetTileType === TILE_LAND) {
-                             // Player Collision Check
                              let occupiedByPlayer = (typeof player !== 'undefined' && player.row === targetRow && player.col === targetCol);
-                             // Other Enemy Collision Check
                              let occupiedByOtherEnemy = false;
                              for (let j = 0; j < enemies.length; j++) { const otherEnemy = enemies[j]; if (enemy.id === otherEnemy.id) continue; if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) { occupiedByOtherEnemy = true; break; } }
-                             // Add move if valid and unoccupied
                              if (!occupiedByPlayer && !occupiedByOtherEnemy) { possibleMoves.push({ row: targetRow, col: targetCol }); }
                          }
                     } else { console.error("mapData not defined for AI move check!");}
                  }
              }
-             // Execute move if possible
-             if (possibleMoves.length > 0) {
-                 const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-                 enemy.row = chosenMove.row; enemy.col = chosenMove.col;
-                 redrawNeeded = true;
-             }
-        } // End random movement block
+             if (possibleMoves.length > 0) { const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)]; enemy.row = chosenMove.row; enemy.col = chosenMove.col; redrawNeeded = true; }
+        }
     } // End loop through enemies
 
-    // Switch back to player only if game is still active
+    // --- Finish AI Turn ---
     if (gameActive) {
-        if (redrawNeeded && typeof redrawCanvas === 'function') { redrawCanvas(); } // Redraw if needed
-        currentTurn = 'player'; // Modify global currentTurn
+        // Set turn back to player *BEFORE* final redraw/UI update
+        currentTurn = 'player';
         console.log("AI Turns complete. Player turn.");
-        if (!redrawNeeded && typeof drawUI === 'function') { drawUI(ctx); } // Update UI text if no redraw
+
+        // Redraw the whole canvas if needed (AI moved/attacked),
+        // otherwise, just update UI text (e.g., if all AI were blocked)
+        if (redrawNeeded) {
+             if (typeof redrawCanvas === 'function') redrawCanvas(); else console.error("redrawCanvas not defined!");
+        } else {
+             if (typeof drawUI === 'function') drawUI(ctx); else console.error("drawUI not defined!");
+        }
     } else {
-         if (typeof redrawCanvas === 'function') redrawCanvas(); // Ensure final state drawn
-         console.log("Game Over - Input Disabled.");
+        // Game ended during AI turn, ensure final state drawn
+        if (typeof redrawCanvas === 'function') redrawCanvas(); else console.error("redrawCanvas not defined!");
+        console.log("Game Over - Input Disabled.");
     }
-}
+} // End executeAiTurns
