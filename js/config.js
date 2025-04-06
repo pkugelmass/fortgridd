@@ -10,7 +10,7 @@ const MIN_CELL_SIZE = 8; // NEW: Minimum pixel size for a cell
 const CANVAS_PADDING = 20; // NEW: Pixels padding around canvas in window
 
 // Entities
-const NUM_ENEMIES = 3; // Adjust if needed for larger map
+const NUM_ENEMIES = 10; // Adjust if needed for larger map
 const PLAYER_ATTACK_DAMAGE = 2;
 const AI_ATTACK_DAMAGE = 1;
 
