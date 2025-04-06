@@ -31,7 +31,7 @@ function handleKeyDown(event) {
         case 'arrowleft': case 'a': targetCol--; actionKey = true; actionType = 'move_or_attack'; break;
         case 'arrowright': case 'd': targetCol++; actionKey = true; actionType = 'move_or_attack'; break;
         case ' ': actionKey = true; actionType = 'wait'; break; // Spacebar = Wait
-        default: return;
+        default: return; // Ignore other keys
     }
 
     if (actionKey) event.preventDefault(); else return;
@@ -39,12 +39,8 @@ function handleKeyDown(event) {
     // Process "Wait" Action
     if (actionType === 'wait') {
         console.log("Player waits.");
-        // Tell the Game manager the player's turn ended
-        Game.endPlayerTurn();
-        // No need to call redrawCanvas or setTimeout here, Game.endPlayerTurn handles triggering AI (via setTimeout)
-        // and the subsequent AI turn or redraw will update the display.
-        // Let's call redrawCanvas *once* here just to update the UI turn indicator immediately.
-        if (typeof redrawCanvas === 'function') redrawCanvas(); else console.error("redrawCanvas not defined!");
+        if (typeof redrawCanvas === 'function') redrawCanvas(); // Update UI to show AI turn
+        Game.endPlayerTurn(); // Handles triggering AI turns
         return; // Action complete
     }
 
@@ -94,8 +90,14 @@ function handleKeyDown(event) {
                      if (typeof redrawCanvas === 'function') redrawCanvas(); // Redraw to show move results
                     Game.endPlayerTurn();
 
-                } // else: move blocked by terrain
+                } else {
+                    // >>> RESTORED LOG <<<
+                    console.log(`Move blocked: Target tile (${targetRow}, ${targetCol}) type ${targetTileType} is not walkable.`);
+                }
             } // End Movement Logic
-        } // else: move blocked by boundary
+        } else {
+             // >>> RESTORED LOG <<<
+            console.log(`Move blocked: Target (${targetRow}, ${targetCol}) is outside grid boundaries.`);
+        }
     } // End Move or Attack block
 }
