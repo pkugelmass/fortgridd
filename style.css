@@ -1,0 +1,11 @@
+body {
+    font-family: sans-serif;
+    display: flex; /* Optional: helps center canvas */
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    flex-direction: column; /* Stack title and canvas */
+}
+canvas {
+     background-color: #eee; /* Light grey background for canvas */
+}
