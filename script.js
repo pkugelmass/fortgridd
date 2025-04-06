@@ -10,9 +10,9 @@ const PLAYER_ATTACK_DAMAGE = 2;
 const AI_ATTACK_DAMAGE = 1;
 
 // --- Game State Variables ---
-let mapData = [];
+let mapData = []; // Populated by createMapData() from map.js
 let currentTurn = 'player';
-let gameActive = true;
+let gameActive = true; // Start assuming game is active
 console.log("SCRIPT VARS: Initial gameActive =", gameActive);
 // Player object is defined in player.js
 // Enemies array is defined in ai.js
@@ -21,109 +21,35 @@ console.log("SCRIPT VARS: Initial gameActive =", gameActive);
 // --- Canvas Setup ---
 console.log("SCRIPT SETUP: Getting canvas element...");
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d'); // ctx will be used globally by drawing functions
 console.log("SCRIPT SETUP: Setting canvas dimensions...");
 canvas.width = GRID_WIDTH * CELL_SIZE;
 canvas.height = GRID_HEIGHT * CELL_SIZE;
 console.log(`SCRIPT SETUP: Canvas dimensions set to ${canvas.width}x${canvas.height}`);
 
 
-// --- Drawing Functions --- (Verified Complete Bodies)
+// --- Drawing Orchestration --- (Individual draw functions moved to drawing.js)
 
-/** Draws grid lines */
-function drawGrid() {
-    // console.log("DRAW: drawGrid START");
-    ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1;
-    for (let x = 0; x <= GRID_WIDTH; x++) { ctx.beginPath(); ctx.moveTo(x * CELL_SIZE, 0); ctx.lineTo(x * CELL_SIZE, canvas.height); ctx.stroke(); }
-    for (let y = 0; y <= GRID_HEIGHT; y++) { ctx.beginPath(); ctx.moveTo(0, y * CELL_SIZE); ctx.lineTo(canvas.width, y * CELL_SIZE); ctx.stroke(); }
-    // console.log("DRAW: drawGrid END");
-}
-
-/** Draws map cell contents */
-function drawMapCells() {
-    // console.log("DRAW: drawMapCells START");
-    if (!mapData || mapData.length === 0) { console.warn("drawMapCells skipped: mapData empty."); return; }
-    const fontSize = CELL_SIZE * 0.7; ctx.font = `${fontSize}px Arial`;
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    for (let row = 0; row < GRID_HEIGHT; row++) {
-        for (let col = 0; col < GRID_WIDTH; col++) {
-            if (!mapData[row]) continue;
-            const tileType = mapData[row][col];
-            const cellX = col * CELL_SIZE; const cellY = row * CELL_SIZE;
-            // Use TILE_COLORS (defined in map.js, global)
-            ctx.fillStyle = TILE_COLORS[tileType] || '#FFFFFF';
-            ctx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
-            // Use TILE_EMOJIS (defined in map.js)
-            const emoji = TILE_EMOJIS[tileType];
-            if (emoji) { const centerX = cellX + CELL_SIZE / 2; const centerY = cellY + CELL_SIZE / 2; ctx.fillText(emoji, centerX, centerY); }
-        }
-    }
-    // console.log("DRAW: drawMapCells END");
-}
-
-/** Draws the player */
-function drawPlayer(ctx, cellSize) {
-    // console.log("DRAW: drawPlayer START");
-    if (typeof player === 'undefined' || player.row === null || player.col === null) return;
-    const centerX = player.col * cellSize + cellSize / 2; const centerY = player.row * cellSize + cellSize / 2;
-    const radius = (cellSize / 2) * 0.8; ctx.fillStyle = player.color;
-    ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
-    // console.log("DRAW: drawPlayer END");
-}
-
-/** Draws all enemies */
-function drawEnemies(ctx, cellSize) {
-    // console.log("DRAW: drawEnemies START");
-    if (typeof enemies === 'undefined' || enemies.length === 0) return;
-    const radius = (cellSize / 2) * 0.7; const defaultColor = '#ff0000';
-    for (const enemy of enemies) {
-        if (enemy.row === null || enemy.col === null) continue;
-        const centerX = enemy.col * cellSize + cellSize / 2; const centerY = enemy.row * cellSize + cellSize / 2;
-        ctx.fillStyle = enemy.color || defaultColor;
-        ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
-    }
-    // console.log("DRAW: drawEnemies END");
-}
-
-/** Draws UI */
-function drawUI(ctx) {
-    // console.log("DRAW: drawUI START");
-    ctx.fillStyle = 'white'; ctx.font = '16px Arial';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.shadowColor = 'black'; ctx.shadowBlur = 4;
-    let yOffset = 10;
-    if (typeof player !== 'undefined' && player.resources) { ctx.fillText(`Scrap: ${player.resources.scrap}`, 10, yOffset); } else { ctx.fillText("Scrap: N/A", 10, yOffset); }
-    yOffset += 20;
-    if (typeof player !== 'undefined') { ctx.fillText(`HP: ${player.hp} / ${player.maxHp}`, 10, yOffset); } else { ctx.fillText("HP: N/A", 10, yOffset); }
-    yOffset += 20;
-    ctx.fillText(`Turn: ${currentTurn}`, 10, yOffset);
-    if (!gameActive) {
-        // console.log("DRAW: Drawing win/loss overlay because gameActive is false."); // Kept this log
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);
-        ctx.font = '30px Arial'; ctx.fillStyle = 'red';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        if (typeof player !== 'undefined' && player.hp <= 0) { ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2); }
-        else { ctx.fillStyle = 'lime'; ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2); }
-    }
-    ctx.shadowBlur = 0;
-    // console.log("DRAW: drawUI END");
-}
-
-
-/** Main drawing function */
+/**
+ * Main drawing function (clears canvas and calls individual draw functions).
+ * Relies on drawGrid, drawMapCells, drawEnemies, drawPlayer, drawUI being globally defined.
+ */
 function redrawCanvas() {
-    // console.log("--- REDRAW CANVAS START ---"); // Can uncomment if needed
+    // console.log("--- REDRAW CANVAS START ---");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawMapCells();
-    drawGrid();
-    drawEnemies(ctx, CELL_SIZE);
-    drawPlayer(ctx, CELL_SIZE);
-    drawUI(ctx);
-    // console.log("--- REDRAW CANVAS END ---"); // Can uncomment if needed
+    // Call functions now defined in drawing.js
+    // These functions access global state (mapData, player, enemies etc.)
+    // and use the global ctx variable.
+    // Ensure drawing.js is loaded before this script in index.html
+    if (typeof drawMapCells === 'function') drawMapCells(); else console.error("drawMapCells not defined!");
+    if (typeof drawGrid === 'function') drawGrid(); else console.error("drawGrid not defined!");
+    if (typeof drawEnemies === 'function') drawEnemies(ctx, CELL_SIZE); else console.error("drawEnemies not defined!");
+    if (typeof drawPlayer === 'function') drawPlayer(ctx, CELL_SIZE); else console.error("drawPlayer not defined!");
+    if (typeof drawUI === 'function') drawUI(ctx); else console.error("drawUI not defined!");
+    // console.log("--- REDRAW CANVAS END ---");
 }
 
-// --- AI Turn Logic --- (Verified Complete Body)
+// --- AI Turn Logic --- (Function Definition remains here for now)
 
 /**
  * Executes turns for all AI enemies.
@@ -135,16 +61,16 @@ function executeAiTurns() {
     }
     console.log("Executing AI Turns...");
     let redrawNeeded = false;
-    const currentEnemies = [...enemies]; // Iterate over a copy
+    const currentEnemies = [...enemies]; // Iterate over a copy in case main array changes
 
     for (let i = 0; i < currentEnemies.length; i++) {
-        const enemy = enemies.find(e => e === currentEnemies[i]); // Find current enemy in master list
-        if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue;
+         const enemy = enemies.find(e => e === currentEnemies[i]); // Get current enemy from main array
+         if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue; // Skip if invalid/dead
 
         let attackedPlayer = false;
         const directions = [ { dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
 
-        // Check for Adjacent Player (Attack Logic)
+        // --- Check for Adjacent Player (Attack Logic) ---
         for (const dir of directions) {
             const targetRow = enemy.row + dir.dr;
             const targetCol = enemy.col + dir.dc;
@@ -166,30 +92,36 @@ function executeAiTurns() {
             }
         }
 
-        // Random Movement Logic (Only if player was NOT attacked)
+        // --- Random Movement Logic (Only if player was NOT attacked) ---
         if (!attackedPlayer) {
              const possibleMoves = [];
              for (const dir of directions) {
                  const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc;
+                 // Boundary Check
                  if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
                      const targetTileType = mapData[targetRow][targetCol];
-                     if (targetTileType === TILE_LAND) { // AI moves only on Land
+                     // Terrain Check (AI only moves on Land)
+                     if (targetTileType === TILE_LAND) {
+                         // Player Collision Check
                          let occupiedByPlayer = (typeof player !== 'undefined' && player.row === targetRow && player.col === targetCol);
+                         // Other Enemy Collision Check
                          let occupiedByOtherEnemy = false;
-                         for (let j = 0; j < enemies.length; j++) { // Check against master list
+                         for (let j = 0; j < enemies.length; j++) {
                              const otherEnemy = enemies[j];
-                             if (enemy.id === otherEnemy.id) continue;
+                             if (enemy.id === otherEnemy.id) continue; // Don't check self
                              if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) { occupiedByOtherEnemy = true; break; }
                          }
+                         // Add move if valid and unoccupied
                          if (!occupiedByPlayer && !occupiedByOtherEnemy) { possibleMoves.push({ row: targetRow, col: targetCol }); }
                      }
                  }
              }
-             if (possibleMoves.length > 0) { // Execute move if possible
+             // Execute move if possible
+             if (possibleMoves.length > 0) {
                  const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
                  enemy.row = chosenMove.row; enemy.col = chosenMove.col;
                  redrawNeeded = true;
-             }
+             } // else { // Enemy stays put }
         } // End random movement block
     } // End loop through enemies
 
@@ -198,7 +130,10 @@ function executeAiTurns() {
         if (redrawNeeded) { redrawCanvas(); } // Redraw if any AI moved/attacked
         currentTurn = 'player';
         console.log("AI Turns complete. Player turn.");
-        if (!redrawNeeded) { drawUI(ctx); } // Still update UI text if nothing else changed
+        if (!redrawNeeded && typeof drawUI === 'function') { // Check drawUI exists
+             // Update UI text immediately if redraw didn't happen
+             drawUI(ctx);
+        }
     } else {
          // If game ended during AI turn (player defeat), ensure final state is drawn
          redrawCanvas();
@@ -213,16 +148,13 @@ function executeAiTurns() {
  * Handles keydown events for player movement, bump-attack, OR skipping turn (' ').
  */
 function handleKeyDown(event) {
-    // console.log("handleKeyDown Fired! Key:", event.key); // Keep commented out unless debugging input
+    // console.log("handleKeyDown Fired! Key:", event.key);
     if (!gameActive || currentTurn !== 'player') { return; }
     if (typeof player === 'undefined' || player.row === null || player.col === null) { return; }
 
-    let targetRow = player.row;
-    let targetCol = player.col;
-    let actionKey = false;
-    let actionType = null;
+    let targetRow = player.row; let targetCol = player.col;
+    let actionKey = false; let actionType = null;
 
-    // Determine Action Type based on Key
     switch (event.key.toLowerCase()) {
         case 'arrowup': case 'w': targetRow--; actionKey = true; actionType = 'move_or_attack'; break;
         case 'arrowdown': case 's': targetRow++; actionKey = true; actionType = 'move_or_attack'; break;
@@ -238,7 +170,8 @@ function handleKeyDown(event) {
     if (actionType === 'wait') {
         console.log("Player waits.");
         currentTurn = 'ai'; console.log("Player turn finished (wait). Switching to AI turn.");
-        redrawCanvas(); setTimeout(executeAiTurns, 100);
+        redrawCanvas(); // Update UI to show AI turn
+        setTimeout(executeAiTurns, 100); // AI takes turn after delay
         return;
     }
 
@@ -247,35 +180,51 @@ function handleKeyDown(event) {
         // Boundary Check
         if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
             let targetEnemy = null;
-            if (typeof enemies !== 'undefined') { targetEnemy = enemies.find(enemy => enemy.row === targetRow && enemy.col === targetCol); }
+            if (typeof enemies !== 'undefined') { // Ensure enemies array exists
+                targetEnemy = enemies.find(enemy => enemy.row === targetRow && enemy.col === targetCol && enemy.hp > 0); // Find LIVE enemy
+            }
 
             // A) ATTACK LOGIC
             if (targetEnemy) {
                 console.log(`Player attacks Enemy ${targetEnemy.id || '??'}!`);
                 targetEnemy.hp -= PLAYER_ATTACK_DAMAGE; console.log(`Enemy HP: ${targetEnemy.hp}/${targetEnemy.maxHp}`);
-                if (targetEnemy.hp <= 0) {
+
+                if (targetEnemy.hp <= 0) { // Check defeat
                     console.log(`Enemy ${targetEnemy.id || '??'} defeated!`);
-                    enemies = enemies.filter(enemy => enemy !== targetEnemy);
-                    if (enemies.length === 0) { console.log("All enemies defeated! YOU WIN!"); gameActive = false; redrawCanvas(); alert("YOU WIN!"); return; }
+                    enemies = enemies.filter(enemy => enemy !== targetEnemy); // Remove enemy
+
+                    if (enemies.length === 0) { // Check Win Condition
+                        console.log("All enemies defeated! YOU WIN!");
+                        gameActive = false; redrawCanvas(); alert("YOU WIN!"); return;
+                    }
                 }
+                // End player turn after attack
                 currentTurn = 'ai'; console.log("Player turn finished (attack). Switching to AI turn.");
-                redrawCanvas(); setTimeout(executeAiTurns, 100);
+                redrawCanvas(); // Update UI immediately
+                setTimeout(executeAiTurns, 100); // AI takes turn after delay
             }
             // B) MOVEMENT LOGIC
             else {
                 const targetTileType = mapData[targetRow][targetCol];
+                // Walkable Check (Land or Scrap)
                 if (targetTileType === TILE_LAND || targetTileType === TILE_SCRAP) {
-                    player.row = targetRow; player.col = targetCol;
-                    if (targetTileType === TILE_SCRAP) { if (player.resources) { player.resources.scrap++; console.log(`Collected Scrap! Total: ${player.resources.scrap}`); } mapData[player.row][player.col] = TILE_LAND; }
+                    player.row = targetRow; player.col = targetCol; // Move player
+
+                    if (targetTileType === TILE_SCRAP) { // Resource Check
+                        if (player.resources) { player.resources.scrap++; console.log(`Collected Scrap! Total: ${player.resources.scrap}`); }
+                        mapData[player.row][player.col] = TILE_LAND; // Change tile back to land
+                    }
+                    // End player turn after move
                     currentTurn = 'ai'; console.log("Player turn finished (move). Switching to AI turn.");
-                    redrawCanvas(); setTimeout(executeAiTurns, 100);
-                }
-            }
-        }
-    }
+                    redrawCanvas(); // Show player move immediately
+                    setTimeout(executeAiTurns, 100); // AI takes turn after delay
+                } // else: move blocked by terrain
+            } // End Movement Logic
+        } // else: move blocked by boundary
+    } // End Move or Attack block
 }
 
-window.addEventListener('keydown', handleKeyDown);
+window.addEventListener('keydown', handleKeyDown); // Ensure listener registration is present
 
 
 // --- Initialization --- (Verified Complete Logic)
@@ -289,3 +238,5 @@ console.log(`INIT: Checking gameActive status before initial draw: ${gameActive}
 if (gameActive) { console.log("INIT: Calling initial redrawCanvas()..."); redrawCanvas(); console.log("INIT: Initial redrawCanvas() called."); } else { console.error("INIT: Game initialization failed. Skipping initial draw."); /* Draw error message */ ctx.fillStyle = 'black'; ctx.fillRect(0, 0, canvas.width, canvas.height); ctx.font = '20px Arial'; ctx.fillStyle = 'red'; ctx.textAlign = 'center'; ctx.fillText('Game Initialization Failed. Check Console.', canvas.width / 2, canvas.height / 2); }
 console.log("INIT: Initialization sequence complete.");
 // Final status logs...
+if(typeof player !== 'undefined' && player.row !== null) { console.log(`Player starting at: ${player.row}, ${player.col}`); console.log(`Initial resources:`, player.resources); } else { console.log("Player position not set."); }
+console.log(`Placed ${enemies.length} enemies:`, enemies);
