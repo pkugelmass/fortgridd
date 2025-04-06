@@ -1,5 +1,5 @@
-// --- Start of script.js ---
-console.log("SCRIPT START: Loading script.js...");
+// --- Start of main.js ---
+console.log("SCRIPT START: Loading main.js...");
 
 // --- Configuration ---
 // Defined in config.js
