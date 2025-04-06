@@ -3,8 +3,8 @@ console.log("config.js loaded");
 // Game Configuration Constants
 
 // Grid & Display
-const GRID_WIDTH = 40; // Example: Keep the larger size you liked
-const GRID_HEIGHT = 40;
+const GRID_WIDTH = 50; // Example: Keep the larger size you liked
+const GRID_HEIGHT = 50;
 // const CELL_SIZE = 30; // No longer used for fixed sizing
 const MIN_CELL_SIZE = 8; // NEW: Minimum pixel size for a cell
 const CANVAS_PADDING = 20; // NEW: Pixels padding around canvas in window

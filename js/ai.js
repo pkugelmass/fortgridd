@@ -1,7 +1,8 @@
 console.log("ai.js loaded");
 
 // --- AI Configuration ---
-const AI_DETECTION_RANGE = 8; // How close player/enemy needs to be for AI to move towards (Manhattan distance)
+// Detection range now stored per enemy, but keep a default? Maybe not needed if creation ensures it.
+// const AI_DEFAULT_DETECTION_RANGE = 8;
 
 // Array to hold all enemy objects
 let enemies = [];
@@ -10,8 +11,8 @@ let enemies = [];
 
 /**
  * Executes turns for all AI enemies.
- * Priority: 1. Move to safety if outside zone. 2. Attack adjacent unit (player or enemy).
- * 3. Move towards nearest unit (player or enemy). 4. Random valid move.
+ * Priority: 1. Move to safety. 2. Attack adjacent unit.
+ * 3. Move towards target (influenced by HP state). 4. Random move.
  */
 function executeAiTurns() {
     // Check Game object first
@@ -19,18 +20,15 @@ function executeAiTurns() {
 
     // Use Game manager for state checks
     if (Game.isGameOver() || Game.getCurrentTurn() !== 'ai' || typeof enemies === 'undefined') {
-        // If called inappropriately, ensure turn state is corrected if game isn't over
-        if (typeof Game !== 'undefined' && !Game.isGameOver() && Game.getCurrentTurn() === 'ai') { Game.endAiTurn(); }
-        return;
+        if (typeof Game !== 'undefined' && !Game.isGameOver() && Game.getCurrentTurn() === 'ai') { Game.endAiTurn(); } return;
     }
 
     // console.log("Executing AI Turns..."); // Quieter log
     let redrawNeeded = false; // Track if visual state changed
-    const currentEnemiesTurnOrder = [...enemies]; // Iterate over a snapshot in case array changes mid-turn
+    const currentEnemiesTurnOrder = [...enemies]; // Iterate over a snapshot
 
     for (let i = 0; i < currentEnemiesTurnOrder.length; i++) {
-        // Get current enemy from the main 'enemies' array, ensure it still exists and is alive
-        const enemy = enemies.find(e => e.id === currentEnemiesTurnOrder[i].id); // Find by ID for safety
+        const enemy = enemies.find(e => e.id === currentEnemiesTurnOrder[i].id); // Get current enemy from main array
         if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue; // Skip if invalid/dead
 
         let actedThisTurn = false; // Flag to ensure only one action (move/attack) per turn
@@ -42,11 +40,9 @@ function executeAiTurns() {
         if (isOutside) {
             // console.log(`Enemy ${enemy.id || i} at (${enemy.row}, ${enemy.col}) is outside safe zone, seeking safety.`);
             const possibleMoves = []; // Find all valid adjacent moves first
-            for (const dir of directions) {
+             for (const dir of directions) {
                  const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc;
-                 // Boundary Check
                  if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
-                    // Terrain Check & Collision Check
                     if (typeof mapData !== 'undefined') { const targetTileType = mapData[targetRow][targetCol];
                          if (targetTileType === TILE_LAND) { // Can only move onto land
                             let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol);
@@ -57,8 +53,8 @@ function executeAiTurns() {
             }
 
             if (possibleMoves.length > 0) {
-                const helpfulMoves = [];
-                for (const move of possibleMoves) { /* Find helpful moves logic */
+                const helpfulMoves = []; // Find moves that get closer to the safe zone boundaries
+                for (const move of possibleMoves) {
                     let isHelpful = false;
                     if (enemy.row < zone.minRow && move.row > enemy.row) isHelpful = true;
                     else if (enemy.row > zone.maxRow && move.row < enemy.row) isHelpful = true;
@@ -72,11 +68,10 @@ function executeAiTurns() {
                 let chosenMove = null;
                 if (helpfulMoves.length > 0) { // Prioritize helpful moves
                     chosenMove = helpfulMoves[Math.floor(Math.random() * helpfulMoves.length)];
-                    // console.log(`Enemy ${enemy.id || i} moving towards safety to (${chosenMove.row}, ${chosenMove.col})`);
                 } else { // Otherwise take any valid move
                      chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-                     // console.log(`Enemy ${enemy.id || i} making random valid move while outside zone to (${chosenMove.row}, ${chosenMove.col})`);
                 }
+                // console.log(`Enemy ${enemy.id || i} moving regarding safety to (${chosenMove.row}, ${chosenMove.col})`);
                 enemy.row = chosenMove.row; enemy.col = chosenMove.col;
                 actedThisTurn = true; redrawNeeded = true;
             } else { /* No moves possible */ actedThisTurn = true; }
@@ -86,127 +81,108 @@ function executeAiTurns() {
         // Only run if AI didn't already move towards safety
         if (!actedThisTurn) {
             let adjacentTarget = null;
-            let targetList = []; // Check all adjacent cells
-
-            // Add player if adjacent and alive
-             if (typeof player !== 'undefined' && player.hp > 0 && player.row !== null) {
-                for (const dir of directions) {
-                    if (enemy.row + dir.dr === player.row && enemy.col + dir.dc === player.col) {
-                        targetList.push(player);
-                        break; // Found player
-                    }
-                }
-             }
-             // Add other enemies if adjacent and alive
-             if (typeof enemies !== 'undefined') {
-                 for (const otherEnemy of enemies) {
-                     if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0 || otherEnemy.row === null) continue; // Skip self, dead, invalid
-                     for (const dir of directions) {
-                         if (enemy.row + dir.dr === otherEnemy.row && enemy.col + dir.dc === otherEnemy.col) {
-                             targetList.push(otherEnemy);
-                             break; // Found this enemy
-                         }
-                     }
-                 }
-             }
+            let targetList = []; // Check all adjacent cells for targets
+             if (typeof player !== 'undefined' && player.hp > 0 && player.row !== null) { for (const dir of directions) { if (enemy.row + dir.dr === player.row && enemy.col + dir.dc === player.col) { targetList.push(player); break; } } }
+             if (typeof enemies !== 'undefined') { for (const otherEnemy of enemies) { if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0 || otherEnemy.row === null) continue; for (const dir of directions) { if (enemy.row + dir.dr === otherEnemy.row && enemy.col + dir.dc === otherEnemy.col) { targetList.push(otherEnemy); break; } } } }
 
             // If any targets were found, pick one (first found for simplicity) and attack
             if (targetList.length > 0) {
                 adjacentTarget = targetList[0]; // Attack the first target found
-
                 const isTargetPlayer = (adjacentTarget === player);
                 const targetId = isTargetPlayer ? 'Player' : (adjacentTarget.id || '??');
                 console.log(`Enemy ${enemy.id || i} attacks ${targetId}!`);
-
-                adjacentTarget.hp -= AI_ATTACK_DAMAGE; // Apply damage
-                console.log(`${targetId} HP: ${adjacentTarget.hp}/${adjacentTarget.maxHp}`);
+                adjacentTarget.hp -= AI_ATTACK_DAMAGE; console.log(`${targetId} HP: ${adjacentTarget.hp}/${adjacentTarget.maxHp}`);
                 actedThisTurn = true; redrawNeeded = true;
-
                 // Check defeat condition for the target
                 if (adjacentTarget.hp <= 0) {
                     console.log(`${targetId} defeated!`);
-                    if (isTargetPlayer) {
-                        Game.setGameOver(); alert("GAME OVER!"); return; // Stop AI turns immediately
-                    } else {
-                        // Remove defeated enemy from the main 'enemies' array
-                        enemies = enemies.filter(e => e.id !== adjacentTarget.id);
-                        // Check Win Condition for Player
-                        if (enemies.length === 0) {
-                            console.log("Last enemy defeated! YOU WIN!");
-                            Game.setGameOver(); alert("YOU WIN!"); return; // Stop AI turns immediately
-                        }
-                    }
+                    if (isTargetPlayer) { Game.setGameOver(); alert("GAME OVER!"); return; }
+                    else { enemies = enemies.filter(e => e.id !== adjacentTarget.id); if (enemies.length === 0) { console.log("Last enemy defeated! YOU WIN!"); Game.setGameOver(); alert("YOU WIN!"); return; } }
                 }
             } // End if adjacent target found
         } // End Attack Check block
 
-        // If game ended due to attack action, stop processing AI
-        if (Game.isGameOver()) return;
+        if (Game.isGameOver()) return; // Exit if game ended
 
-        // --- 3. Move Towards Nearest Unit (Player OR Enemy) ---
+        // --- 3. Move Towards Nearest Unit (Player OR Enemy, influenced by HP state) ---
         // Only run if AI didn't move towards safety OR attack
-        if (!actedThisTurn) {
+        if (!actedThisTurn && typeof player !== 'undefined' && player.hp > 0 && player.row !== null) { // Check if player exists and is alive
             let closestUnit = null;
-            let minDistance = AI_DETECTION_RANGE + 1;
+            let minDistance = Infinity; // Start infinite, check against detection range later
 
             // Check player distance
-            if (typeof player !== 'undefined' && player.hp > 0 && player.row !== null) {
-                 const dist = Math.abs(player.row - enemy.row) + Math.abs(player.col - enemy.col);
-                 if (dist <= AI_DETECTION_RANGE && dist < minDistance) { minDistance = dist; closestUnit = player; }
-            }
+            let playerDist = Math.abs(player.row - enemy.row) + Math.abs(player.col - enemy.col);
+            if (playerDist < minDistance) { minDistance = playerDist; closestUnit = player; }
             // Check other enemies distance
             if (typeof enemies !== 'undefined') {
                  for (const otherEnemy of enemies) {
                      if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0 || otherEnemy.row === null) continue;
                      const dist = Math.abs(otherEnemy.row - enemy.row) + Math.abs(otherEnemy.col - enemy.col);
-                     if (dist <= AI_DETECTION_RANGE && dist < minDistance) { minDistance = dist; closestUnit = otherEnemy; }
+                     if (dist < minDistance) { minDistance = dist; closestUnit = otherEnemy; }
                  }
             }
 
-            // If a closest unit was found within range
-            if (closestUnit) {
-                // Find all valid moves first
-                const possibleMoves = [];
-                 for (const dir of directions) {
-                     const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc;
-                     if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
-                        if (typeof mapData !== 'undefined') { const targetTileType = mapData[targetRow][targetCol];
-                             if (targetTileType === TILE_LAND) {
-                                let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol);
-                                let occupiedByOtherEnemy = false;
-                                if (enemies && enemies.length > 0) { for (let j = 0; j < enemies.length; j++) { const otherEnemy = enemies[j]; if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0) continue; if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) { occupiedByOtherEnemy = true; break; } } }
-                                if (!occupiedByPlayer && !occupiedByOtherEnemy) { possibleMoves.push({ row: targetRow, col: targetCol }); } }
-                        } else { console.error("mapData not defined for AI move check!");} }
-                 }
+            // Check if a valid target was found within the enemy's detection range
+            // Use enemy.detectionRange (set during creation in main.js), provide fallback just in case
+            const enemyDetectionRange = enemy.detectionRange || AI_DETECTION_RANGE || 8;
+            if (closestUnit && minDistance <= enemyDetectionRange) {
+                // Apply HP-based behavior
+                const hpPercent = enemy.hp / enemy.maxHp;
+                let pursueTarget = false;
 
-                 // Evaluate possible moves to find one that gets closer to the closestUnit
-                 if (possibleMoves.length > 0) {
-                     let bestMove = null;
-                     let minTargetDistance = minDistance; // Start with current distance to target
+                if (hpPercent <= 0.3) { // Low HP -> Cautious (skip pursuit)
+                    pursueTarget = false;
+                    // console.log(`AI DEBUG: Enemy ${enemy.id} low HP, moving randomly.`);
+                } else { // Mid or High HP -> Pursue target
+                    pursueTarget = true;
+                    // Can add more nuanced logic here later (e.g., very high HP pursues further?)
+                }
 
-                     for (const move of possibleMoves) {
-                         const newDist = Math.abs(closestUnit.row - move.row) + Math.abs(closestUnit.col - move.col);
-                         if (newDist < minTargetDistance) {
-                             minTargetDistance = newDist;
-                             bestMove = move;
+                // If pursuing, find the best move towards the target
+                if (pursueTarget) {
+                    // Find all valid moves first
+                    const possibleMoves = [];
+                     for (const dir of directions) {
+                         const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc;
+                         if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
+                            if (typeof mapData !== 'undefined') { const targetTileType = mapData[targetRow][targetCol];
+                                 if (targetTileType === TILE_LAND) {
+                                    let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol);
+                                    let occupiedByOtherEnemy = false;
+                                    if (enemies && enemies.length > 0) { for (let j = 0; j < enemies.length; j++) { const otherEnemy = enemies[j]; if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0) continue; if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) { occupiedByOtherEnemy = true; break; } } }
+                                    if (!occupiedByPlayer && !occupiedByOtherEnemy) { possibleMoves.push({ row: targetRow, col: targetCol }); } }
+                            } else { console.error("mapData not defined for AI move check!");} }
+                     }
+
+                     // Evaluate possible moves to find one that gets closer to the closestUnit
+                     if (possibleMoves.length > 0) {
+                         let bestMove = null;
+                         let minTargetDistance = minDistance; // Current distance to target
+
+                         for (const move of possibleMoves) {
+                             const newDist = Math.abs(closestUnit.row - move.row) + Math.abs(closestUnit.col - move.col);
+                             if (newDist < minTargetDistance) {
+                                 minTargetDistance = newDist;
+                                 bestMove = move;
+                             }
                          }
-                     }
 
-                     // Execute move towards closest unit if found
-                     if (bestMove) {
-                         const targetId = (closestUnit === player) ? 'Player' : closestUnit.id;
-                         // console.log(`Enemy ${enemy.id || i} moving towards ${targetId}`);
-                         enemy.row = bestMove.row; enemy.col = bestMove.col;
-                         actedThisTurn = true; redrawNeeded = true;
-                     }
-                     // If no move gets closer, fall through to random move below
-                 }
-            } // End if closest unit found
+                         // Execute move towards closest unit if found
+                         if (bestMove) {
+                             const targetId = (closestUnit === player) ? 'Player' : closestUnit.id;
+                             // console.log(`Enemy ${enemy.id || i} moving towards ${targetId}`);
+                             enemy.row = bestMove.row; enemy.col = bestMove.col;
+                             actedThisTurn = true; redrawNeeded = true;
+                         }
+                         // If no move gets closer, fall through to random move below
+                     } // else no possible moves at all
+                } // End if pursueTarget
+            } // End if closest unit found within range
         } // End target seeking block
 
 
         // --- 4. Random Movement Logic (Fallback) ---
-        // Only if AI took no other action (didn't flee storm, attack, or move towards target)
+        // Only if AI took no other action
         if (!actedThisTurn) {
              // console.log(`AI DEBUG: Enemy ${enemy.id} moving randomly.`);
              const possibleMoves = []; // Find valid moves again
@@ -226,14 +202,14 @@ function executeAiTurns() {
                  const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
                  enemy.row = chosenMove.row; enemy.col = chosenMove.col;
                  redrawNeeded = true;
-                 // actedThisTurn = true; // Not strictly necessary to set here as it's the last action possibility
-             } // else { // Enemy stays put, actedThisTurn remains false }
+                 // actedThisTurn = true; // Implicitly true as it's the last block
+             } // else { actedThisTurn = true; /* Stay put counts as acting? */ }
         } // End random movement block
 
     } // End loop through enemies
 
     // End AI turn only if game is still active
     if (!Game.isGameOver()) { Game.endAiTurn(); } // Handles setting turn and redraw if needed
-    else { if (typeof redrawCanvas === 'function') redrawCanvas(); console.log("Game Over - Input Disabled."); }
+    else { if (typeof redrawCanvas === 'function') redrawCanvas(); console.log("Game Over during AI turn - Input Disabled."); }
 
 } // End executeAiTurns
