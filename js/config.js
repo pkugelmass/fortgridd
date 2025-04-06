@@ -3,8 +3,8 @@ console.log("config.js loaded");
 // Game Configuration Constants
 
 // Grid & Display
-const GRID_WIDTH = 25;
-const GRID_HEIGHT = 25;
+const GRID_WIDTH = 35;
+const GRID_HEIGHT = 35;
 const CELL_SIZE = 30;
 
 // Entities

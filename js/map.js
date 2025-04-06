@@ -1,15 +1,19 @@
 console.log("map.js loaded");
 
+// --- Configuration for Map Generation ---
+// (Could move to config.js later if desired)
+const INITIAL_WALL_CHANCE = 0.3; 
+const CA_ITERATIONS = 5;
+const CA_WALL_THRESHOLD = 4;    
+
 // --- Tile Definitions ---
-// Moved from script.js
 const TILE_LAND = 0;
 const TILE_WALL = 1;
 const TILE_TREE = 2;
 const TILE_SCRAP = 3;
 
 // --- Visual Mappings ---
-// Moved from script.js
-const TILE_EMOJIS = {}; // Keep empty if using colors
+const TILE_EMOJIS = {};
 const TILE_COLORS = {
     [TILE_LAND]: '#8FBC8F', // DarkSeaGreen
     [TILE_WALL]: '#A9A9A9', // DarkGray
@@ -18,36 +22,99 @@ const TILE_COLORS = {
 };
 
 /**
- * Creates the initial map data structure (a 2D array).
- * Generates land, walls, trees, and scrap.
- * Now RETURNS the map data array.
- * Assumes GRID_WIDTH and GRID_HEIGHT are available globally (from script.js or config.js later)
+ * Helper function to count wall neighbours around a cell.
+ * Includes diagonals (Moore neighbourhood).
+ * Handles grid boundaries.
+ * @param {number[][]} grid - The map grid data.
+ * @param {number} r - Row of the cell to check.
+ * @param {number} c - Column of the cell to check.
+ * @returns {number} - Count of adjacent walls.
+ */
+function countWallNeighbours(grid, r, c) {
+    let count = 0;
+    for (let i = -1; i <= 1; i++) {
+        for (let j = -1; j <= 1; j++) {
+            // Skip the cell itself
+            if (i === 0 && j === 0) continue;
+
+            const checkRow = r + i;
+            const checkCol = c + j;
+
+            // Check boundaries - treat out-of-bounds as walls to enforce borders
+            if (checkRow < 0 || checkRow >= GRID_HEIGHT || checkCol < 0 || checkCol >= GRID_WIDTH) {
+                count++;
+            }
+            // Otherwise, check the cell type in the grid
+            else if (grid[checkRow] && grid[checkRow][checkCol] === TILE_WALL) {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+/**
+ * Creates map data using Cellular Automata for walls, then places features.
  * @returns {number[][]} The generated map data array.
  */
 function createMapData() {
-    console.log("Creating map data...");
-    const newMapData = []; // Use a local variable
+    console.log("Creating map data using Cellular Automata...");
+    let currentMap = [];
+
+    // 1. Initial Random Fill (Noise)
+    console.log("Generating initial noise...");
     for (let row = 0; row < GRID_HEIGHT; row++) {
-        newMapData[row] = []; // Create a new row array
+        currentMap[row] = [];
         for (let col = 0; col < GRID_WIDTH; col++) {
-            let tile = TILE_LAND;
-            if (row > 0 && row < GRID_HEIGHT - 1 && col > 0 && col < GRID_WIDTH - 1) {
-                const randomValue = Math.random();
-                if (randomValue < 0.05) { // Wall %
-                    tile = TILE_WALL;
-                } else if (randomValue < 0.13) { // Tree % (cumulative)
-                    tile = TILE_TREE;
-                } else if (randomValue < 0.18) { // Scrap % (cumulative)
-                    tile = TILE_SCRAP;
-                }
+            // Make edges walls initially
+            if (row === 0 || row === GRID_HEIGHT - 1 || col === 0 || col === GRID_WIDTH - 1) {
+                currentMap[row][col] = TILE_WALL;
+            } else {
+                currentMap[row][col] = (Math.random() < INITIAL_WALL_CHANCE) ? TILE_WALL : TILE_LAND;
             }
-            newMapData[row][col] = tile;
         }
     }
-    console.log("Map data creation complete (first row sample):", newMapData[0]);
-    return newMapData; // Return the generated map
-}
 
-// We can add more map-specific functions here later, like:
-// function isWalkable(row, col) { ... }
-// function getTileType(row, col) { ... }
+    // 2. Cellular Automata Iterations
+    console.log(`Running ${CA_ITERATIONS} CA iterations...`);
+    let nextMap = []; // Use a temporary grid for simultaneous updates
+    for (let i = 0; i < CA_ITERATIONS; i++) {
+        // Initialize nextMap based on currentMap structure
+        nextMap = currentMap.map(arr => arr.slice()); // Create a copy
+
+        for (let row = 1; row < GRID_HEIGHT - 1; row++) { // Iterate excluding borders
+            for (let col = 1; col < GRID_WIDTH - 1; col++) { // Iterate excluding borders
+                const wallNeighbours = countWallNeighbours(currentMap, row, col);
+
+                // Apply CA rule
+                if (wallNeighbours >= CA_WALL_THRESHOLD) {
+                    nextMap[row][col] = TILE_WALL;
+                } else {
+                    nextMap[row][col] = TILE_LAND;
+                }
+            }
+        }
+        currentMap = nextMap; // Update map for next iteration
+        console.log(`Iteration ${i + 1} complete.`);
+    }
+
+    // 3. Feature Placement (Trees, Scrap) on Land Tiles
+    console.log("Placing features (Trees, Scrap)...");
+    for (let row = 1; row < GRID_HEIGHT - 1; row++) { // Exclude borders
+        for (let col = 1; col < GRID_WIDTH - 1; col++) {
+            // Only place features on land generated by CA
+            if (currentMap[row][col] === TILE_LAND) {
+                const randomValue = Math.random();
+                // Adjust probabilities as needed
+                if (randomValue < 0.08) { // Example: 8% chance for Tree on Land
+                    currentMap[row][col] = TILE_TREE;
+                } else if (randomValue < 0.13) { // Example: 5% chance for Scrap on Land (cumulative)
+                    currentMap[row][col] = TILE_SCRAP;
+                }
+            }
+        }
+    }
+
+    console.log("Map data creation complete (first row sample):", currentMap[0]);
+    return currentMap; // Return the final map
+}
