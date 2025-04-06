@@ -2,9 +2,12 @@ console.log("player.js loaded");
 
 // Simple object to hold player data
 const player = {
-    row: null, // Will be set by findStartPosition
+    row: null,
     col: null,
-    color: '#007bff' // A blue color for the player representation
+    color: '#007bff', // A blue color for the player representation
+    resources: { // Add resources object
+        scrap: 0
+    }
 };
 
 /**
@@ -16,17 +19,15 @@ const player = {
  * @param {number} walkableTileType - The tile type considered valid for starting (e.g., TILE_LAND).
  * @returns {{row: number, col: number} | null} - The starting position or null if none found.
  */
-function findStartPosition(mapData, gridWidth, gridHeight, walkableTileType) { // Added walkableTileType parameter
+function findStartPosition(mapData, gridWidth, gridHeight, walkableTileType) {
     let attempts = 0;
     const maxAttempts = gridWidth * gridHeight * 2; // Safety limit
 
     while (attempts < maxAttempts) {
-        // Generate random coordinates, avoiding the border (1 to width/height - 2)
         const randomRow = Math.floor(Math.random() * (gridHeight - 2)) + 1;
         const randomCol = Math.floor(Math.random() * (gridWidth - 2)) + 1;
 
-        // Check if the randomly selected cell is the specified walkable tile type
-        if (mapData[randomRow] && mapData[randomRow][randomCol] === walkableTileType) { // Use parameter
+        if (mapData[randomRow] && mapData[randomRow][randomCol] === walkableTileType) {
             console.log(`Found start position at: ${randomRow}, ${randomCol}`);
             return { row: randomRow, col: randomCol };
         }
@@ -37,6 +38,4 @@ function findStartPosition(mapData, gridWidth, gridHeight, walkableTileType) { /
     return null; // Indicate failure
 }
 
-// We might add more player-specific functions here later, like:
-// function drawPlayer(ctx, cellSize) { ... } // Can be moved here later
-// function movePlayer(dx, dy) { ... }
+// Other player functions can go here later
