@@ -12,4 +12,7 @@ const NUM_ENEMIES = 3;
 const PLAYER_ATTACK_DAMAGE = 2;
 const AI_ATTACK_DAMAGE = 1;
 
-// Add other constants here as needed (e.g., player starting HP/resources if not hardcoded in player.js)
+// --- NEW: Shrinking Map Config ---
+const SHRINK_INTERVAL = 10; // How many game turns between shrinks
+const SHRINK_AMOUNT = 1;    // How many cells to shrink from each side per interval
+const STORM_DAMAGE = 1;     // Damage per turn taken outside safe zone
