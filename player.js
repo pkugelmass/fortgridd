@@ -1,13 +1,15 @@
 console.log("player.js loaded");
 
-// Simple object to hold player data
 const player = {
     row: null,
     col: null,
-    color: '#007bff', // A blue color for the player representation
-    resources: { // Add resources object
+    color: '#007bff',
+    resources: {
         scrap: 0
-    }
+    },
+    // NEW: Health properties
+    hp: 10,
+    maxHp: 10
 };
 
 /**

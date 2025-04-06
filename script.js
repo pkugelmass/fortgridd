@@ -67,18 +67,38 @@ function drawEnemies(ctx, cellSize) { /* ... same as before ... */
     }
 }
 
-/** Draws UI */
-function drawUI(ctx) { /* ... same as before ... */
-    ctx.fillStyle = 'white'; ctx.font = '16px Arial';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.shadowColor = 'black'; ctx.shadowBlur = 4;
-    if (typeof player !== 'undefined' && player.resources) { ctx.fillText(`Scrap: ${player.resources.scrap}`, 10, 10); }
-    else { ctx.fillText("Scrap: N/A", 10, 10); }
-    // NEW: Display current turn (optional)
-    ctx.fillText(`Turn: ${currentTurn}`, 10, 30);
-    ctx.shadowBlur = 0;
-}
+/** Draws UI - Now includes Player HP */
+function drawUI(ctx) {
+    ctx.fillStyle = 'white';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.shadowColor = 'black';
+    ctx.shadowBlur = 4;
 
+    let yOffset = 10; // Starting Y position for UI text
+
+    // Display Scrap
+    if (typeof player !== 'undefined' && player.resources) {
+        ctx.fillText(`Scrap: ${player.resources.scrap}`, 10, yOffset);
+    } else {
+        ctx.fillText("Scrap: N/A", 10, yOffset);
+    }
+    yOffset += 20; // Move down for next line
+
+    // Display Player HP (NEW)
+    if (typeof player !== 'undefined') {
+         ctx.fillText(`HP: ${player.hp} / ${player.maxHp}`, 10, yOffset);
+    } else {
+         ctx.fillText("HP: N/A", 10, yOffset);
+    }
+    yOffset += 20; // Move down
+
+    // Display Turn
+    ctx.fillText(`Turn: ${currentTurn}`, 10, yOffset);
+
+    ctx.shadowBlur = 0; // Reset shadow
+}
 
 /** Main drawing function */
 function redrawCanvas() {
@@ -263,10 +283,29 @@ if (typeof player !== 'undefined' && typeof findStartPosition === 'function') {
     else { console.error("Player starting position could not be set."); }
 } else { console.error("Player object or findStartPosition function not found!"); }
 
+// --- Initialization ---
+// ... (map creation, player placement) ...
+
 console.log(`Attempting to place ${NUM_ENEMIES} enemies...`);
 if (typeof enemies !== 'undefined' && typeof findStartPosition === 'function') {
-    for (let i = 0; i < NUM_ENEMIES; i++) { /* ... place enemies ... */ const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords); if (enemyStartPos) { const newEnemy = { id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: '#ff0000' }; enemies.push(newEnemy); occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col }); console.log(`Placed enemy ${i + 1} at ${newEnemy.row}, ${newEnemy.col}`); } else { console.error(`Could not find valid position for enemy ${i + 1}`); } }
-} else { console.error("Enemies array or findStartPosition function not found!"); }
+    for (let i = 0; i < NUM_ENEMIES; i++) {
+        const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
+        if (enemyStartPos) {
+            const newEnemy = {
+                id: `enemy_${i}`,
+                row: enemyStartPos.row,
+                col: enemyStartPos.col,
+                color: '#ff0000',
+                // NEW: Add health properties
+                hp: 5,      // Example starting HP for enemies
+                maxHp: 5
+            };
+            enemies.push(newEnemy);
+            occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col });
+            console.log(`Placed enemy ${i + 1} at ${newEnemy.row}, ${newEnemy.col}`);
+        } else { /* ... error handling ... */ }
+    }
+} else { /* ... error handling ... */ }
 
 redrawCanvas(); // Initial draw shows Player's turn
 console.log(`Canvas initialized: ${canvas.width}x${canvas.height}`); /* ... other logs ... */
