@@ -6,62 +6,49 @@ const GRID_HEIGHT = 25;
 const CELL_SIZE = 30;
 
 // --- Map Data ---
-let mapData = [];
+let mapData = []; // This will hold our 2D array for the map state
 
-// Define tile types
+// Define tile types (These need to be accessible BEFORE player.js runs if IT needs them,
+// OR they need to be passed as arguments, or duplicated. Passing is often cleaner.)
+// Consider moving these to a config.js file later if they grow.
 const TILE_LAND = 0;
 const TILE_WALL = 1;
-const TILE_TREE = 2; // Added Tree type
+const TILE_TREE = 2;
 
-// Emojis for tiles - We are REMOVING wall emoji now
+// Emojis for tiles (Keep this empty if using colors)
 const TILE_EMOJIS = {
-    // No emoji for wall, just use color
-    // No emoji for tree, just use color
-    // [TILE_WALL]: '🧱', // Removed or commented out
-    // [TILE_TREE]: '🌳', // Removed or commented out
+    // Example: [TILE_WALL]: '🧱',
 };
 
-// Colors for tiles - Added Tree color
+// Colors for tiles
 const TILE_COLORS = {
     [TILE_LAND]: '#8FBC8F', // DarkSeaGreen
-    [TILE_WALL]: '#A9A9A9', // DarkGray - This will be visible now
-    [TILE_TREE]: '#556B2F', // DarkOliveGreen - Color for trees
+    [TILE_WALL]: '#A9A9A9', // DarkGray
+    [TILE_TREE]: '#556B2F', // DarkOliveGreen
 };
 
 /**
  * Creates the initial map data structure (a 2D array).
- * Reduced wall density, added trees.
  */
 function createMapData() {
-    mapData = []; // Reset map data
+    mapData = [];
     for (let row = 0; row < GRID_HEIGHT; row++) {
-        mapData[row] = []; // Create a new row array
+        mapData[row] = [];
         for (let col = 0; col < GRID_WIDTH; col++) {
-            // Default to land
             let tile = TILE_LAND;
-
-            // Only place features if NOT on the edge border
             if (row > 0 && row < GRID_HEIGHT - 1 && col > 0 && col < GRID_WIDTH - 1) {
                 const randomValue = Math.random();
-
-                // Place walls (Lower probability now)
-                if (randomValue < 0.03) { // Reduced to 5% chance for a wall
+                if (randomValue < 0.05) { // Adjust density as needed
                     tile = TILE_WALL;
-                }
-                // Place trees (if not a wall)
-                else if (randomValue < 0.10) { // Additional 8% chance for trees (0.05 + 0.08 = 0.13 total check)
+                } else if (randomValue < 0.13) { // Adjust density as needed
                     tile = TILE_TREE;
                 }
-                // Add other features here later using else if(randomValue < ...)
             }
-
-            mapData[row][col] = tile; // Assign the chosen tile type
+            mapData[row][col] = tile;
         }
     }
-    // Log only the first row to avoid flooding console, check if it looks reasonable
     console.log("Map data created (first row sample):", mapData[0]);
 }
-
 
 // --- Canvas Setup ---
 const canvas = document.getElementById('gameCanvas');
@@ -75,7 +62,6 @@ canvas.height = GRID_HEIGHT * CELL_SIZE;
 
 /**
  * Draws the grid lines on the canvas.
- * (No changes needed in this function)
  */
 function drawGrid() {
     ctx.strokeStyle = '#ccc';
@@ -96,7 +82,6 @@ function drawGrid() {
 
 /**
  * Draws the contents of each cell based on the mapData.
- * (No changes needed in this function, relies on TILE_EMOJIS/TILE_COLORS)
  */
 function drawMapCells() {
     const fontSize = CELL_SIZE * 0.7;
@@ -110,35 +95,163 @@ function drawMapCells() {
             const cellX = col * CELL_SIZE;
             const cellY = row * CELL_SIZE;
 
-            // 1. Draw background color first
             ctx.fillStyle = TILE_COLORS[tileType] || '#FFFFFF';
             ctx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
 
-            // 2. Draw emoji on top (if one is defined)
             const emoji = TILE_EMOJIS[tileType];
             if (emoji) {
                 const centerX = cellX + CELL_SIZE / 2;
                 const centerY = cellY + CELL_SIZE / 2;
                 ctx.fillText(emoji, centerX, centerY);
             }
-            // Since no emojis are defined for Wall or Tree now, this block won't run for them.
         }
     }
 }
 
 /**
- * Main drawing function.
- * (No changes needed in this function)
+ * Draws the player on the canvas as a circle.
+ * (Relies on the global 'player' object from player.js)
+ * @param {CanvasRenderingContext2D} ctx - The canvas context.
+ * @param {number} cellSize - The size of each grid cell.
+ */
+function drawPlayer(ctx, cellSize) {
+    // Check if player object exists and position is valid
+    if (typeof player === 'undefined' || player.row === null || player.col === null) {
+        return; // Don't draw if position is not set
+    }
+
+    // Calculate the center coordinates of the player's cell
+    const centerX = player.col * cellSize + cellSize / 2;
+    const centerY = player.row * cellSize + cellSize / 2;
+
+    // Calculate the radius - make it slightly smaller than half the cell size
+    // so the underlying tile corners are visible. e.g., 80% of half the cell size.
+    const radius = (cellSize / 2) * 0.8;
+
+    // Set the fill color
+    ctx.fillStyle = player.color; // Use color defined in player.js
+
+    // Draw the circle
+    ctx.beginPath(); // Start drawing path
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); // Define the circle path (x, y, radius, startAngle, endAngle)
+    ctx.fill(); // Fill the circle path
+}
+
+
+/**
+ * Main drawing function (clears canvas and draws all elements).
  */
 function redrawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawMapCells();
-    drawGrid();
+
+    drawMapCells(); // Draw terrain first
+    drawGrid();     // Draw grid lines next
+    drawPlayer(ctx, CELL_SIZE); // Draw player on top
 }
 
+// --- Input Handling ---
+
+/**
+ * Handles keydown events for player movement.
+ * @param {KeyboardEvent} event - The keyboard event object.
+ */
+function handleKeyDown(event) {
+    // console.log("Key pressed:", event.key); // Optional: Log key presses
+
+    let targetRow = player.row;
+    let targetCol = player.col;
+    let moved = false; // Flag to track if player position changed
+
+    // Determine target cell based on arrow key or WASD
+    // Convert key to lowercase to handle both 'w' and 'W', etc.
+    switch (event.key.toLowerCase()) {
+        // --- Arrow Keys ---
+        case 'arrowup':
+        case 'w': // Add 'w' for Up
+            targetRow--;
+            moved = true;
+            break;
+        case 'arrowdown':
+        case 's': // Add 's' for Down
+            targetRow++;
+            moved = true;
+            break;
+        case 'arrowleft':
+        case 'a': // Add 'a' for Left
+            targetCol--;
+            moved = true;
+            break;
+        case 'arrowright':
+        case 'd': // Add 'd' for Right
+            targetCol++;
+            moved = true;
+            break;
+        default:
+            // Ignore other keys
+            return;
+    }
+
+    // Prevent default browser behavior ONLY if a movement key was pressed
+    if (moved) {
+        event.preventDefault(); // Stop arrow keys scrolling, potentially block default WASD actions if any
+    } else {
+        return; // Exit if no relevant key was pressed
+    }
+
+    // --- Validate the move ---
+
+    // 1. Boundary Check: Is the target within the grid?
+    if (targetRow >= 0 && targetRow < GRID_HEIGHT &&
+        targetCol >= 0 && targetCol < GRID_WIDTH) {
+
+        // 2. Walkable Tile Check: Is the target tile land?
+        if (mapData[targetRow][targetCol] === TILE_LAND) {
+            // Move is valid! Update player position
+            player.row = targetRow;
+            player.col = targetCol;
+
+            // Redraw the canvas to show the move
+            redrawCanvas();
+
+            // console.log(`Player moved to: ${player.row}, ${player.col}`); // Optional debug log
+        } else {
+            console.log(`Move blocked: Target tile (${targetRow}, ${targetCol}) is not TILE_LAND.`); // Optional debug log
+        }
+    } else {
+        console.log(`Move blocked: Target (${targetRow}, ${targetCol}) is outside grid boundaries.`); // Optional debug log
+    }
+}
+
+// Add the event listener AFTER the function is defined
+window.addEventListener('keydown', handleKeyDown);
+
+
 // --- Initialization ---
-createMapData();
-redrawCanvas();
+console.log("Initializing game...");
+
+createMapData(); // Create the map data structure
+
+// Find starting position for the player AFTER map is created
+const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND);
+
+if (typeof player !== 'undefined') {
+    if (startPos) {
+        player.row = startPos.row;
+        player.col = startPos.col;
+    } else {
+        console.error("Player starting position could not be set.");
+    }
+} else {
+     console.error("Player object not found. Is player.js loaded correctly BEFORE script.js?");
+}
+
+
+redrawCanvas(); // Initial draw AFTER finding player start pos
 
 console.log(`Canvas initialized: ${canvas.width}x${canvas.height}`);
 console.log(`Grid: ${GRID_WIDTH}x${GRID_HEIGHT}, Cell Size: ${CELL_SIZE}px`);
+if(typeof player !== 'undefined' && player.row !== null) {
+    console.log(`Player starting at: ${player.row}, ${player.col}`);
+} else {
+     console.log("Player position not set.");
+}
