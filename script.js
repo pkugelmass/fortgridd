@@ -1,75 +1,19 @@
 console.log("Game script loaded!");
 
 // --- Configuration ---
+// (GRID_WIDTH, GRID_HEIGHT, CELL_SIZE remain here for now,
+// could move to config.js later)
 const GRID_WIDTH = 25;
 const GRID_HEIGHT = 25;
 const CELL_SIZE = 30;
 
-// --- Map Data ---
-let mapData = []; // This will hold our 2D array for the map state
-
-// Define tile types
-const TILE_LAND = 0;
-const TILE_WALL = 1;
-const TILE_TREE = 2;
-const TILE_SCRAP = 3; // Scrap tile type
-
-// Emojis for tiles (Keep this empty if using colors)
-const TILE_EMOJIS = {};
-
-// Colors for tiles
-const TILE_COLORS = {
-    [TILE_LAND]: '#8FBC8F', // DarkSeaGreen
-    [TILE_WALL]: '#A9A9A9', // DarkGray
-    [TILE_TREE]: '#556B2F', // DarkOliveGreen
-    [TILE_SCRAP]: '#B8860B', // DarkGoldenrod - Color for Scrap nodes
-};
-
-/**
- * Creates the initial map data structure (a 2D array).
- * Generates land, walls, trees, and scrap.
- */
-function createMapData() {
-    console.log("Creating map data...");
-    mapData = []; // Reset map data
-    for (let row = 0; row < GRID_HEIGHT; row++) {
-        mapData[row] = []; // Create a new row array
-        for (let col = 0; col < GRID_WIDTH; col++) {
-            let tile = TILE_LAND; // Default to land
-
-            // Only place features if NOT on the edge border
-            if (row > 0 && row < GRID_HEIGHT - 1 && col > 0 && col < GRID_WIDTH - 1) {
-                // *** IMPORTANT: Define randomValue HERE, inside the edge check, once per cell ***
-                const randomValue = Math.random();
-
-                // Place walls (Example: 5% chance) - Adjust percentages as you like
-                if (randomValue < 0.05) {
-                    tile = TILE_WALL;
-                }
-                // Place trees (Example: 8% chance, cumulative check)
-                else if (randomValue < 0.13) { // 0.05 + 0.08
-                    tile = TILE_TREE;
-                }
-                // Place scrap (Example: 5% chance, cumulative check)
-                else if (randomValue < 0.18) { // 0.13 + 0.05
-                    // Ensure scrap only replaces LAND (implicit here because of else-if chain)
-                    tile = TILE_SCRAP;
-                }
-                // Add other features here later using 'else if (randomValue < ...)'
-            }
-
-            mapData[row][col] = tile; // Assign the chosen tile type for this cell
-        }
-    }
-    // Log only the first row to avoid flooding console, check if it looks reasonable
-    console.log("Map data created (first row sample):", mapData[0]);
-}
+// --- Game State Variables ---
+let mapData = []; // Will be populated by createMapData() from map.js
 
 
 // --- Canvas Setup ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-
 canvas.width = GRID_WIDTH * CELL_SIZE;
 canvas.height = GRID_HEIGHT * CELL_SIZE;
 
@@ -97,25 +41,35 @@ function drawGrid() {
 }
 
 /**
- * Draws the contents of each cell based on the mapData.
+ * Draws the contents of each cell based on the global mapData.
+ * (Relies on TILE_COLORS and TILE_EMOJIS defined in map.js)
  */
 function drawMapCells() {
-    const fontSize = CELL_SIZE * 0.7; // Keep font settings even if not using emojis now
+    // Check if mapData is initialized
+    if (!mapData || mapData.length === 0) {
+         console.warn("drawMapCells called before mapData is initialized.");
+         return;
+    }
+
+    const fontSize = CELL_SIZE * 0.7;
     ctx.font = `${fontSize}px Arial`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
     for (let row = 0; row < GRID_HEIGHT; row++) {
         for (let col = 0; col < GRID_WIDTH; col++) {
+            // Check if the row exists before accessing column
+            if (!mapData[row]) continue;
+
             const tileType = mapData[row][col];
             const cellX = col * CELL_SIZE;
             const cellY = row * CELL_SIZE;
 
-            // 1. Draw background color first
-            ctx.fillStyle = TILE_COLORS[tileType] || '#FFFFFF'; // Default white if undefined
+            // Use TILE_COLORS (defined in map.js, available globally via script order)
+            ctx.fillStyle = TILE_COLORS[tileType] || '#FFFFFF';
             ctx.fillRect(cellX, cellY, CELL_SIZE, CELL_SIZE);
 
-            // 2. Draw emoji on top (if one is defined)
+            // Use TILE_EMOJIS (defined in map.js)
             const emoji = TILE_EMOJIS[tileType];
             if (emoji) {
                 const centerX = cellX + CELL_SIZE / 2;
@@ -133,9 +87,7 @@ function drawMapCells() {
  * @param {number} cellSize - The size of each grid cell.
  */
 function drawPlayer(ctx, cellSize) {
-    if (typeof player === 'undefined' || player.row === null || player.col === null) {
-        return; // Don't draw if position is not set
-    }
+    if (typeof player === 'undefined' || player.row === null || player.col === null) return;
     const centerX = player.col * cellSize + cellSize / 2;
     const centerY = player.row * cellSize + cellSize / 2;
     const radius = (cellSize / 2) * 0.8;
@@ -157,15 +109,13 @@ function drawUI(ctx) {
     ctx.shadowColor = 'black';
     ctx.shadowBlur = 4;
 
-    // Check if player and resources exist before drawing
     if (typeof player !== 'undefined' && player.resources) {
         const scrapText = `Scrap: ${player.resources.scrap}`;
         ctx.fillText(scrapText, 10, 10);
     } else {
-        ctx.fillText("Scrap: N/A", 10, 10); // Show placeholder if player/resources not ready
+        ctx.fillText("Scrap: N/A", 10, 10);
     }
-
-    ctx.shadowBlur = 0; // Reset shadow
+    ctx.shadowBlur = 0;
 }
 
 
@@ -188,11 +138,7 @@ function redrawCanvas() {
  * @param {KeyboardEvent} event - The keyboard event object.
  */
 function handleKeyDown(event) {
-    // Check if player object is ready before processing input
-     if (typeof player === 'undefined' || player.row === null || player.col === null) {
-        console.warn("Player not ready, ignoring input.");
-        return;
-    }
+    if (typeof player === 'undefined' || player.row === null || player.col === null) return;
 
     let targetRow = player.row;
     let targetCol = player.col;
@@ -209,64 +155,60 @@ function handleKeyDown(event) {
     if (moved) event.preventDefault();
     else return;
 
-    // --- Validate the move ---
     if (targetRow >= 0 && targetRow < GRID_HEIGHT &&
         targetCol >= 0 && targetCol < GRID_WIDTH) {
 
-        const targetTileType = mapData[targetRow][targetCol];
+        const targetTileType = mapData[targetRow][targetCol]; // mapData is global
 
-        // --- Walkable Tile Check --- (Land and Scrap are walkable)
+        // Use TILE_LAND, TILE_SCRAP constants (defined in map.js, global)
         if (targetTileType === TILE_LAND || targetTileType === TILE_SCRAP) {
-
-            // --- Actual Movement ---
             player.row = targetRow;
             player.col = targetCol;
 
-            // --- Resource Collection Check (AFTER moving) ---
             if (targetTileType === TILE_SCRAP) {
-                if (player.resources) { // Check if resources object exists
+                if (player.resources) {
                      player.resources.scrap++;
                      console.log(`Collected Scrap! Total: ${player.resources.scrap}`);
-                } else {
-                    console.error("Player.resources not defined!"); // Should not happen if player.js is correct
                 }
-                mapData[player.row][player.col] = TILE_LAND; // Change tile back to land
+                mapData[player.row][player.col] = TILE_LAND; // Use TILE_LAND constant
             }
-
-            redrawCanvas(); // Redraw after potential move and collection
-
-        } // else: move blocked by non-walkable tile
-    } // else: move blocked by boundary
+            redrawCanvas();
+        }
+    }
 }
 
-// Add the event listener AFTER the function is defined
 window.addEventListener('keydown', handleKeyDown);
 
 
 // --- Initialization ---
 console.log("Initializing game...");
 
-createMapData(); // Create the map data structure
+// Assign map data by calling function from map.js
+// Ensure createMapData is defined (map.js loaded first)
+if (typeof createMapData === 'function') {
+     mapData = createMapData();
+} else {
+    console.error("createMapData function not found! Is map.js loaded correctly BEFORE script.js?");
+    mapData = []; // Avoid errors later by ensuring mapData is an array
+}
+
 
 // Find starting position for the player AFTER map is created
-const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND);
-
-// Ensure player object exists (from player.js) before using it
-if (typeof player !== 'undefined') {
+// Ensure findStartPosition is defined (player.js loaded first)
+if (typeof player !== 'undefined' && typeof findStartPosition === 'function') {
+    // Pass TILE_LAND constant (defined in map.js, global)
+    const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND);
     if (startPos) {
         player.row = startPos.row;
         player.col = startPos.col;
-        // Ensure resources are initialized if findStartPosition succeeded
-        if (!player.resources) {
-            player.resources = { scrap: 0 }; // Safety initialization
-             console.warn("player.resources was undefined, initialized.");
-        }
+        if (!player.resources) player.resources = { scrap: 0 };
     } else {
         console.error("Player starting position could not be set.");
     }
 } else {
-     console.error("Player object not found. Is player.js loaded correctly BEFORE script.js?");
+     console.error("Player object or findStartPosition function not found! Check script load order.");
 }
+
 
 redrawCanvas(); // Initial draw
 
