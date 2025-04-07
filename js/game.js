@@ -27,117 +27,124 @@ const Game = {
         else { console.error("redrawCanvas not found when setting game over!"); }
     },
 
-    // --- Logging ---
-    /** Adds a message to the END of the game log, trims old messages from the START */
-    logMessage: function(message) {
-        // console.log("LOG:", message); // Optional: Keep console log for debug
+    // --- Logging --- (MODIFIED: Accepts optional className)
+    /** Adds a message object {message, cssClass} to the game log */
+    logMessage: function(message, className = null) { // Default class is null
+        console.log("LOG:", message);
         const messageWithTurn = `T${this.turnNumber}: ${message}`;
-        this.gameLog.push(messageWithTurn); // *** USE PUSH ***
-        // Use MAX_LOG_MESSAGES from config.js (global)
-        if (this.gameLog.length > (MAX_LOG_MESSAGES || 15)) { // Use constant or fallback
-            this.gameLog.shift(); // *** USE SHIFT *** Remove oldest from beginning
+        // Store as an object
+        this.gameLog.push({ message: messageWithTurn, cssClass: className }); // Use push
+        if (this.gameLog.length > (MAX_LOG_MESSAGES || 15)) {
+            this.gameLog.shift(); // Use shift
         }
-        // Trigger display update - relies on updateLogDisplay being globally available
-        if (typeof updateLogDisplay === 'function') {
-             updateLogDisplay();
-        } else {
-             // This might happen initially if game.js loads slightly before main.js defines it fully
-             // console.warn("updateLogDisplay function not found when logging message.");
-        }
+        if (typeof updateLogDisplay === 'function') { updateLogDisplay(); }
+        else { console.warn("updateLogDisplay function not found!"); }
     },
 
-    // --- End Condition Check ---
+    // --- End Condition Check --- (MODIFIED: Pass class to logMessage)
     /** Checks end conditions and logs/calls setGameOver if met */
     checkEndConditions: function() {
-        if (this.isGameOver()) return true; // Already over
-
-        // Check Player Loss (ensure player object exists)
+        if (this.isGameOver()) return true;
         if (typeof player !== 'undefined' && player.hp <= 0) {
-            this.logMessage("Player eliminated! GAME OVER!"); // Log game end
-            this.setGameOver();
-            return true; // Game ended
+            this.logMessage("Player eliminated! GAME OVER!", 'log-player-event log-negative'); // <<< Added class
+            this.setGameOver(); return true;
         }
-        // Check Player Win (ensure enemies array exists and check LIVING enemies)
         if (typeof enemies !== 'undefined' && enemies.filter(e => e && e.hp > 0).length === 0) {
-            this.logMessage("All enemies eliminated! YOU WIN!"); // Log game end
-            this.setGameOver();
-            return true; // Game ended
+            this.logMessage("All enemies eliminated! YOU WIN!", 'log-player-event log-positive'); // <<< Added class
+            this.setGameOver(); return true;
         }
-        return false; // Game continues
+        return false;
     },
-
 
     // --- Shrink Logic ---
-    /** Shrinks the safe zone boundaries and logs if it happens */
+    /**
+     * Shrinks the safe zone boundaries based on SHRINK_AMOUNT.
+     * Includes checks to prevent zone inversion.
+     * Called from endAiTurn.
+     * @returns {boolean} - True if the zone boundaries actually changed.
+     */
     shrinkSafeZone: function() {
-        // Use SHRINK_INTERVAL, SHRINK_AMOUNT from config.js
-        if (this.turnNumber <= 1 || (this.turnNumber -1) % SHRINK_INTERVAL !== 0) { return false; }
-        const oldZoneJSON = JSON.stringify(this.safeZone); // Store for comparison
-        const newMinRow = this.safeZone.minRow + SHRINK_AMOUNT; const newMaxRow = this.safeZone.maxRow - SHRINK_AMOUNT;
-        const newMinCol = this.safeZone.minCol + SHRINK_AMOUNT; const newMaxCol = this.safeZone.maxCol - SHRINK_AMOUNT;
-        let shrunk = false;
-        // Apply changes with checks to prevent inversion
-        if (newMinRow <= newMaxRow) { this.safeZone.minRow = newMinRow; this.safeZone.maxRow = newMaxRow; }
-        if (newMinCol <= newMaxCol) { this.safeZone.minCol = newMinCol; this.safeZone.maxCol = newMaxCol; }
-        // Check if boundaries actually changed
-        if (JSON.stringify(this.safeZone) !== oldZoneJSON) { shrunk = true; }
-
-        if (shrunk) {
-             const zone = this.safeZone;
-             // *** Log shrink event ***
-             this.logMessage(`Storm shrinks! Safe Zone: R[${zone.minRow}-${zone.maxRow}], C[${zone.minCol}-${zone.maxCol}]`);
-             console.log("After Shrink:", JSON.stringify(this.safeZone)); // Keep console log for debug
+        // Check if it's time to shrink (uses SHRINK_INTERVAL from config.js)
+        // Compare (turnNumber - 1) to shrink *after* the interval turn completes
+        if (this.turnNumber <= 1 || (this.turnNumber - 1) % SHRINK_INTERVAL !== 0) {
+             return false; // Not time to shrink
         }
-        return shrunk;
+
+        console.log("SHRINKING SAFE ZONE!");
+        // console.log("Before Shrink:", JSON.stringify(this.safeZone)); // Optional debug
+        const oldZoneJSON = JSON.stringify(this.safeZone); // For accurate change detection
+
+        // --- Ensure these definitions exist ---
+        const newMinRow = this.safeZone.minRow + SHRINK_AMOUNT; // Uses SHRINK_AMOUNT from config.js
+        const newMaxRow = this.safeZone.maxRow - SHRINK_AMOUNT;
+        const newMinCol = this.safeZone.minCol + SHRINK_AMOUNT;
+        const newMaxCol = this.safeZone.maxCol - SHRINK_AMOUNT;
+        // --- End definitions ---
+
+        let shrunk = false; // Flag if dimensions actually changed
+
+        // Apply changes with checks to prevent inversion (min crossing max)
+        // Check newMin <= newMax to prevent crossing
+        if (newMinRow <= newMaxRow) {
+            this.safeZone.minRow = newMinRow;
+            this.safeZone.maxRow = newMaxRow;
+            // Note: shrunk flag will be set below based on actual change
+        } else {
+            // Min/Max have met or crossed, stop shrinking rows
+            console.log("Shrink prevented rows: Min/max met or crossed.");
+        }
+
+        if (newMinCol <= newMaxCol) {
+            this.safeZone.minCol = newMinCol;
+            this.safeZone.maxCol = newMaxCol;
+        } else {
+            // Min/Max have met or crossed, stop shrinking cols
+            console.log("Shrink prevented cols: Col min/max met or crossed.");
+        }
+
+        // Check if the zone actually changed compared to before
+        if (JSON.stringify(this.safeZone) !== oldZoneJSON){
+            shrunk = true;
+            const zone = this.safeZone; // Use local var for log clarity
+            this.logMessage(`Storm shrinks! Safe Zone: R[${zone.minRow}-${zone.maxRow}], C[${zone.minCol}-${zone.maxCol}]`, 'log-system');
+            console.log("After Shrink:", JSON.stringify(this.safeZone)); // Keep console log for debug
+        } else {
+            // console.log("Shrink calculated but resulted in no change."); // Optional log
+        }
+
+        return shrunk; // Indicate if shrink happened
     },
 
-    // --- Storm Damage Logic ---
-    /** Applies storm damage and checks end conditions, logs damage/defeats */
+    // --- Storm Damage Logic --- (MODIFIED: Pass class to logMessage)
+    /** Applies storm damage and checks end conditions */
     applyStormDamage: function() {
         if (this.isGameOver()) return false;
-        const zone = this.safeZone;
-        let stateChanged = false;
-        let gameEnded = false; // Flag to prevent further checks if game ends mid-function
-
+        const zone = this.safeZone; let stateChanged = false; let gameEnded = false;
         // Check Player
         if (typeof player !== 'undefined' && player.hp > 0) {
              if (player.row < zone.minRow || player.row > zone.maxRow || player.col < zone.minCol || player.col > zone.maxCol) {
-                  const damage = STORM_DAMAGE; // Use constant
-                  // *** Log Player storm damage ***
-                  this.logMessage(`Player at (${player.row},${player.col}) takes ${damage} storm damage!`);
+                  const damage = STORM_DAMAGE;
+                  this.logMessage(`Player at (${player.row},${player.col}) takes ${damage} storm damage!`, 'log-player-event log-negative'); // <<< Added class
                   player.hp -= damage; stateChanged = true;
-                  // console.log(`Player HP: ${player.hp}/${player.maxHp}`); // Logged by UI update
-                  if (this.checkEndConditions()) { gameEnded = true; /* Game ended, message logged by checkEndConditions */ }
+                  if (this.checkEndConditions()) { gameEnded = true; }
              }
         }
-        // Check Enemies only if game didn't just end
+        // Check Enemies
         if (!gameEnded && typeof enemies !== 'undefined') {
             let enemiesKilledByStorm = 0;
-            enemies = enemies.filter(enemy => { // Use filter for safe removal
-                if (!enemy || enemy.hp <= 0) return false; // Skip already dead
-                // Check if enemy is outside safe zone
+            enemies = enemies.filter(enemy => {
+                if (!enemy || enemy.hp <= 0) return false;
                 if (enemy.row < zone.minRow || enemy.row > zone.maxRow || enemy.col < zone.minCol || enemy.col > zone.maxCol) {
                      const damage = STORM_DAMAGE;
-                     // *** Log Enemy storm damage ***
-                     this.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) takes ${damage} storm damage!`);
+                     this.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) takes ${damage} storm damage!`, 'log-enemy-event'); // <<< Added class
                      enemy.hp -= damage; stateChanged = true;
-                     if (enemy.hp <= 0) {
-                          // *** Log defeat by storm ***
-                          this.logMessage(`Enemy ${enemy.id} eliminated by storm!`);
-                          enemiesKilledByStorm++;
-                          return false; // Remove dead enemy from array
-                     }
+                     if (enemy.hp <= 0) { this.logMessage(`Enemy ${enemy.id} eliminated by storm!`, 'log-enemy-event'); enemiesKilledByStorm++; return false; } // <<< Added class
                 }
-                return true; // Keep enemy
+                return true;
             });
-
-             // Check immediately if last enemy died from storm
-             if (enemiesKilledByStorm > 0) {
-                 stateChanged = true; // Ensure redraw if only change was enemy death
-                 if (this.checkEndConditions()) { gameEnded = true; /* Game ended, message logged by checkEndConditions */ }
-             }
+             if (enemiesKilledByStorm > 0) { stateChanged = true; if (this.checkEndConditions()) { gameEnded = true; } }
         }
-         return stateChanged; // Return true if any HP changed or enemies died (for redraw logic)
+         return stateChanged;
     },
 
 

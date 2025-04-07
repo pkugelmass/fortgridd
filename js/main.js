@@ -81,16 +81,19 @@ function updateStatusBar() {
     }
 }
 
-// --- Log Display Update Function --- (MODIFIED for Auto-Scroll)
+// --- Log Display Update Function --- (MODIFIED to use cssClass)
 /** Updates the HTML log container and scrolls to bottom. */
 function updateLogDisplay() {
     const logContainer = document.getElementById('logContainer');
     if (!logContainer || typeof Game === 'undefined' || typeof Game.getLog !== 'function') { return; }
     try {
-        const messages = Game.getLog();
-        logContainer.innerHTML = messages.map(msg => `<p>${msg}</p>`).join('');
-        // Force scroll to bottom AFTER updating content
-        logContainer.scrollTop = logContainer.scrollHeight; // <<< ADDED/ENSURED THIS LINE
+        const logEntries = Game.getLog(); // Get array of {message, cssClass} objects
+        // Map entries to HTML paragraphs with optional class
+        logContainer.innerHTML = logEntries.map(entry =>
+             `<p class="${entry.cssClass || ''}">${entry.message}</p>`
+        ).join('');
+        // Force scroll to bottom
+        logContainer.scrollTop = logContainer.scrollHeight;
     } catch (error) { console.error("Error updating log display:", error); }
 }
 
@@ -136,102 +139,235 @@ function resizeAndDraw() {
     else { /* ... Handle missing Game object ... */ }
 }
 
-
-// --- AI Turn Logic --- (Defined in ai.js)
-// --- Input Handling --- (Defined in input.js)
-
-// --- Reset Game Logic --- (MODIFIED to use config constants)
+// --- Reset Game Logic --- 
 /** Resets the entire game state */
 function resetGame() {
     console.log("--- GAME RESETTING ---");
-    // 1. Reset Game Manager State (uses config constants implicitly)
-    if (typeof Game !== 'undefined') { Game.currentTurn = 'player'; Game.gameActive = true; Game.turnNumber = 1; Game.safeZone = { minRow: 0, maxRow: GRID_HEIGHT - 1, minCol: 0, maxCol: GRID_WIDTH - 1 }; Game.gameLog = [];Game.logMessage("Game Reset."); } else { return; }
-    // 2. Regenerate Map (uses config constants implicitly)
-    if (typeof createMapData === 'function') { mapData = createMapData(); } else { Game.setGameOver(); return; }
-    // 3. Reset Player (Uses config constants)
-    const occupiedCoords = [];
+    // 1. Reset Game Manager State (uses config constants implicitly via init state)
+    if (typeof Game !== 'undefined') {
+        Game.currentTurn = 'player'; Game.gameActive = true; Game.turnNumber = 1;
+        // Use constants for grid size if needed, though likely set already
+        Game.safeZone = { minRow: 0, maxRow: (GRID_HEIGHT || 25) - 1, minCol: 0, maxCol: (GRID_WIDTH || 25) - 1 };
+        Game.gameLog = []; // Clear log array first
+        Game.logMessage("Game Reset.", 'log-system'); // Use logMessage
+    } else { console.error("RESET ERROR: Game object missing!"); return; } // Cannot proceed
+
+    // 2. Regenerate Map (uses config constants implicitly via createMapData)
+    if (typeof createMapData === 'function') {
+        mapData = createMapData();
+        console.log("INIT (Reset): Map regenerated.");
+    } else { console.error("RESET ERROR: createMapData missing!"); Game.setGameOver(); return; }
+
+    // 3. Reset Player (Uses config constants for starting resources/HP)
+    const occupiedCoords = []; // Reset occupied list for this reset run
     if (typeof player !== 'undefined' && typeof findStartPosition === 'function') {
-        player.maxHp = PLAYER_MAX_HP || 10; // Set maxHP from config
+        player.maxHp = PLAYER_MAX_HP || 10; // Set maxHP from config (provide fallback)
         player.hp = player.maxHp;           // Reset HP to new max
         player.resources = {
             medkits: PLAYER_START_MEDKITS || 0, // Use config
             ammo: PLAYER_START_AMMO || 3        // Use config
         };
         const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
-        if (startPos) { player.row = startPos.row; player.col = startPos.col; occupiedCoords.push({ row: player.row, col: player.col }); }
-        else { console.error("RESET ERROR: Player start pos not found!"); Game.setGameOver(); return; }
-    } else { console.error("RESET ERROR: Player/findStartPos missing!"); Game.setGameOver(); return; }
-    // 4. Reset and Replace Enemies (Uses config constants)
+        if (startPos) {
+            player.row = startPos.row; player.col = startPos.col;
+            occupiedCoords.push({ row: player.row, col: player.col });
+            console.log("INIT (Reset): Player state reset and placed.");
+        } else {
+            console.error("RESET ERROR: Player start pos not found on new map!"); Game.setGameOver(); return;
+        }
+    } else { console.error("RESET ERROR: Player object or findStartPosition missing!"); Game.setGameOver(); return; }
+
+    // 4. Reset and Replace Enemies (Uses config constants for variation ranges)
     if (typeof enemies !== 'undefined' && typeof findStartPosition === 'function') {
-        enemies.length = 0;
-        for (let i = 0; i < NUM_ENEMIES; i++) { // Use NUM_ENEMIES from config
+        enemies.length = 0; // Clear the existing enemies array
+        console.log(`INIT (Reset): Placing ${NUM_ENEMIES || 3} enemies...`); // Use NUM_ENEMIES from config
+        for (let i = 0; i < (NUM_ENEMIES || 3); i++) {
             const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
             if (enemyStartPos) {
-                // Use constants from config.js for variation ranges
-                const enemyMaxHp = Math.floor(Math.random() * (AI_HP_MAX - AI_HP_MIN + 1)) + AI_HP_MIN;
-                const enemyDetectionRange = Math.floor(Math.random() * (AI_RANGE_MAX - AI_RANGE_MIN + 1)) + AI_RANGE_MIN;
-                const enemyStartingAmmo = Math.floor(Math.random() * (AI_AMMO_MAX - AI_AMMO_MIN + 1)) + AI_AMMO_MIN;
-                const newEnemy = { id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: '#ff0000', hp: enemyMaxHp, maxHp: enemyMaxHp, detectionRange: enemyDetectionRange, resources: { ammo: enemyStartingAmmo }};
-                enemies.push(newEnemy); occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col });
-            } else { /*...*/ }
+                // Use constants from config.js for variation ranges (with fallbacks)
+                const hpMin = AI_HP_MIN || 4; const hpMax = AI_HP_MAX || 6;
+                const rangeMin = AI_RANGE_MIN || 6; const rangeMax = AI_RANGE_MAX || 10;
+                const ammoMin = AI_AMMO_MIN || 1; const ammoMax = AI_AMMO_MAX || 2;
+
+                const enemyMaxHp = Math.floor(Math.random() * (hpMax - hpMin + 1)) + hpMin;
+                const enemyDetectionRange = Math.floor(Math.random() * (rangeMax - rangeMin + 1)) + rangeMin;
+                const enemyStartingAmmo = Math.floor(Math.random() * (ammoMax - ammoMin + 1)) + ammoMin;
+
+                const newEnemy = {
+                    id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: '#ff0000',
+                    hp: enemyMaxHp, maxHp: enemyMaxHp,
+                    detectionRange: enemyDetectionRange,
+                    resources: { ammo: enemyStartingAmmo }
+                };
+                enemies.push(newEnemy);
+                occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col });
+            } else {
+                console.error(`RESET ERROR: Could not find valid position for enemy ${i + 1}.`);
+            }
         }
-        console.log(`INIT (Reset): Placed ${enemies.length} enemies.`);
-    } else { /*...*/ return; }
-    // 5. Perform Initial Size/Draw
-    if (typeof resizeAndDraw === 'function') { resizeAndDraw(); } else { /*...*/ return; }
-    if (typeof updateLogDisplay === 'function') { updateLogDisplay(); }
+        console.log(`INIT (Reset): Finished placing ${enemies.length} enemies.`);
+    } else { console.error("RESET ERROR: Enemies array or findStartPosition missing!"); Game.setGameOver(); return; }
+
+    // 5. Perform Initial Size/Draw for the new game state
+    if (typeof resizeAndDraw === 'function') {
+        resizeAndDraw(); // Resizes canvas and triggers redraw
+        console.log("INIT (Reset): resizeAndDraw complete.");
+    } else {
+        console.error("RESET ERROR: resizeAndDraw missing!"); Game.setGameOver(); return;
+    }
+
+    // Update log display to show the "Game Reset" message
+    if (typeof updateLogDisplay === 'function') {
+        updateLogDisplay();
+    }
+
     console.log("--- GAME RESET COMPLETE ---");
 }
 
-// --- Initialization ---
+
+// --- Initialization --- (MODIFIED to use logMessage)
 /** Runs the initial game setup */
 function initializeGame() {
     console.log("Initializing game...");
-    if (typeof Game === 'undefined' || typeof redrawCanvas !== 'function' || typeof resizeAndDraw !== 'function') { console.error("FATAL: Core objects/functions missing!"); return false; }
-
-    // 1. Create Map, 2. Place Player, 3. Place Enemies (Full logic assumed here)
-    if (!Game.isGameOver() && typeof createMapData === 'function') { mapData = createMapData(); } else if (!Game.isGameOver()) { console.error("INIT ERROR: createMapData missing!"); Game.setGameOver(); return false; } const occupiedCoords = []; if (!Game.isGameOver() && typeof player !== 'undefined' && typeof findStartPosition === 'function') { const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords); if (startPos) { player.row = startPos.row; player.col = startPos.col; occupiedCoords.push({ row: player.row, col: player.col }); player.maxHp = PLAYER_MAX_HP || 10; player.hp = player.maxHp; player.resources = { medkits: PLAYER_START_MEDKITS || 0, ammo: PLAYER_START_AMMO || 3 }; console.log("INIT: Player placed."); } else { console.error("INIT ERROR: Player start pos not found!"); Game.setGameOver(); return false; } } else if (!Game.isGameOver()) { console.error("INIT ERROR: Player/findStartPos missing!"); Game.setGameOver(); return false; } if (!Game.isGameOver() && typeof enemies !== 'undefined' && typeof findStartPosition === 'function') { enemies.length = 0; for (let i = 0; i < NUM_ENEMIES; i++) { const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords); if (enemyStartPos) { const enemyMaxHp = Math.floor(Math.random() * (AI_HP_MAX - AI_HP_MIN + 1)) + AI_HP_MIN; const enemyDetectionRange = Math.floor(Math.random() * (AI_RANGE_MAX - AI_RANGE_MIN + 1)) + AI_RANGE_MIN; const enemyStartingAmmo = Math.floor(Math.random() * (AI_AMMO_MAX - AI_AMMO_MIN + 1)) + AI_AMMO_MIN; const newEnemy = { id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: '#ff0000', hp: enemyMaxHp, maxHp: enemyMaxHp, detectionRange: enemyDetectionRange, resources: { ammo: enemyStartingAmmo }}; enemies.push(newEnemy); occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col }); } else { console.error(`INIT ERROR: No valid position for enemy ${i + 1}.`); } } console.log(`INIT: Placed ${enemies.length} enemies.`); } else if (!Game.isGameOver()) { console.error("INIT ERROR: Enemies/findStartPos missing!"); Game.setGameOver(); return false; }
-
-    // 4. Initial Size & Draw
-    if (!Game.isGameOver()) { resizeAndDraw(); }
-    else { console.error("INIT: Game initialization failed."); redrawCanvas(); return false; }
-
-    // --- Attach Listeners (Only ONCE) ---
-    if (!window.initListenersAttached) {
-        console.log("INIT: Attaching listeners...");
-        // Resize Listener
-        if (typeof resizeAndDraw === 'function') { window.addEventListener('resize', resizeAndDraw); console.log("INIT: Resize listener attached."); }
-        else { console.error("INIT ERROR: Cannot attach resize listener.") }
-        // Input Listener
-        if (typeof handleKeyDown === 'function') { window.addEventListener('keydown', handleKeyDown); console.log("INIT: Input handler attached."); }
-        else { console.error("handleKeyDown function not found!"); }
-        // Restart Button Listener
-        const restartBtn = document.getElementById('restartButton');
-        if (restartBtn && typeof resetGame === 'function') { restartBtn.addEventListener('click', resetGame); console.log("INIT: Restart button listener attached."); }
-        else { console.error("INIT ERROR: Restart button or resetGame function missing!"); }
-
-        // --- NEW: Toggle Log Button Listener ---
-        const toggleLogBtn = document.getElementById('toggleLogButton');
-        const logContainer = document.getElementById('logContainer');
-        if (toggleLogBtn && logContainer) {
-            toggleLogBtn.addEventListener('click', () => {
-                logContainer.classList.toggle('hidden'); // Add or remove the 'hidden' class
-                console.log(`Log visibility toggled. Currently hidden: ${logContainer.classList.contains('hidden')}`);
-            });
-            console.log("INIT: Toggle Log button listener attached.");
-        } else if (!toggleLogBtn) { console.error("INIT ERROR: Toggle Log button not found!"); }
-          else { console.error("INIT ERROR: Log container not found for toggle!"); }
-        // --- End New Section ---
-
-        window.initListenersAttached = true; // Set flag
-    } else {
-         console.log("INIT: Listeners already attached.");
+    // Check essential dependencies early
+    if (typeof Game === 'undefined' || typeof redrawCanvas !== 'function' || typeof resizeAndDraw !== 'function') {
+        console.error("FATAL: Core objects/functions missing! Check script load order.");
+        // Attempt to draw fatal error if possible
+        if(ctx){ ctx.fillStyle = 'black'; ctx.fillRect(0, 0, 300, 150); ctx.font = '20px Arial'; ctx.fillStyle = 'red'; ctx.textAlign = 'center'; ctx.fillText('FATAL ERROR: Core setup failed.', 150, 75); }
+        return false; // Stop initialization
     }
 
+    // 1. Create Map (Uses map gen constants from config implicitly)
+    if (!Game.isGameOver() && typeof createMapData === 'function') {
+        mapData = createMapData();
+    } else if (!Game.isGameOver()) {
+        console.error("INIT ERROR: createMapData missing!"); Game.setGameOver(); return false;
+    } else { console.log("INIT: Skipping map creation (Game Over state)."); return false; } // Should not happen on first init
+
+    // 2. Place Player (Set initial resources/HP from config)
+    const occupiedCoords = [];
+    if (!Game.isGameOver() && typeof player !== 'undefined' && typeof findStartPosition === 'function') {
+        const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
+        if (startPos) {
+            player.row = startPos.row; player.col = startPos.col;
+            occupiedCoords.push({ row: player.row, col: player.col });
+            // Use constants from config.js (provide fallbacks just in case)
+            player.maxHp = PLAYER_MAX_HP || 10;
+            player.hp = player.maxHp; // Start at full health
+            player.resources = {
+                medkits: PLAYER_START_MEDKITS || 0,
+                ammo: PLAYER_START_AMMO || 3
+            };
+            console.log("INIT: Player placed successfully.");
+        } else {
+            console.error("INIT ERROR: Player start pos not found!"); Game.setGameOver(); return false;
+        }
+    } else if (!Game.isGameOver()) {
+        console.error("INIT ERROR: Player object or findStartPosition missing!"); Game.setGameOver(); return false;
+    } else { console.log("INIT: Skipping player placement (Game Over state)."); return false; }
+
+    // 3. Place Enemies (Uses NUM_ENEMIES and variation ranges from config)
+    if (!Game.isGameOver() && typeof enemies !== 'undefined' && typeof findStartPosition === 'function') {
+        enemies.length = 0; // Ensure array is empty before populating
+        const numEnemiesToPlace = NUM_ENEMIES || 3; // Use config or fallback
+        console.log(`INIT: Placing ${numEnemiesToPlace} enemies...`);
+        for (let i = 0; i < numEnemiesToPlace; i++) {
+            const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
+            if (enemyStartPos) {
+                // Use constants from config.js for variation ranges (with fallbacks)
+                const hpMin = AI_HP_MIN || 4; const hpMax = AI_HP_MAX || 6;
+                const rangeMin = AI_RANGE_MIN || 6; const rangeMax = AI_RANGE_MAX || 10;
+                const ammoMin = AI_AMMO_MIN || 1; const ammoMax = AI_AMMO_MAX || 2;
+
+                const enemyMaxHp = Math.floor(Math.random() * (hpMax - hpMin + 1)) + hpMin;
+                const enemyDetectionRange = Math.floor(Math.random() * (rangeMax - rangeMin + 1)) + rangeMin;
+                const enemyStartingAmmo = Math.floor(Math.random() * (ammoMax - ammoMin + 1)) + ammoMin;
+
+                const newEnemy = {
+                    id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: '#ff0000',
+                    hp: enemyMaxHp, maxHp: enemyMaxHp,
+                    detectionRange: enemyDetectionRange,
+                    resources: { ammo: enemyStartingAmmo }
+                };
+                enemies.push(newEnemy); // enemies array from ai.js
+                occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col });
+            } else {
+                console.error(`INIT ERROR: No valid position found for enemy ${i + 1}. Placing fewer enemies.`);
+                // Optionally break or just place fewer
+            }
+        }
+         console.log(`INIT: Placed ${enemies.length} enemies.`);
+    } else if (!Game.isGameOver()) {
+        console.error("INIT ERROR: Enemies array or findStartPosition missing!"); Game.setGameOver(); return false;
+    } else { console.log("INIT: Skipping enemy placement (Game Over state)."); }
+
+    // 4. Initial Size & Draw
+    if (!Game.isGameOver()) {
+        resizeAndDraw(); // Handles initial sizing and drawing
+        console.log("INIT: Initial resize and draw completed.");
+    } else {
+        console.error("INIT: Game initialization failed before initial draw.");
+        redrawCanvas(); // Attempt to draw error UI
+        return false;
+    }
+
+// --- 5. Attach Listeners (Only ONCE) ---
+if (!window.initListenersAttached) {
+    console.log("INIT: Attaching listeners...");
+    // Resize Listener
+    if (typeof resizeAndDraw === 'function') { window.addEventListener('resize', resizeAndDraw); console.log("INIT: Resize listener attached."); }
+    else { console.error("INIT ERROR: Cannot attach resize listener.") }
+    // Input Listener
+    if (typeof handleKeyDown === 'function') { window.addEventListener('keydown', handleKeyDown); console.log("INIT: Input handler attached."); }
+    else { console.error("handleKeyDown function not found!"); }
+    // Restart Button Listener
+    const restartBtn = document.getElementById('restartButton');
+    if (restartBtn && typeof resetGame === 'function') { restartBtn.addEventListener('click', resetGame); console.log("INIT: Restart button listener attached."); }
+    else { console.error("INIT ERROR: Restart button or resetGame function missing!"); }
+
+    // --- Toggle Log Button Listener (WITH DEBUG LOGS) ---
+    const toggleLogBtn = document.getElementById('toggleLogButton');
+    const logContainer = document.getElementById('logContainer');
+    // Log whether elements were found during setup
+    console.log("INIT: Toggle Log Button Found:", toggleLogBtn);
+    console.log("INIT: Log Container Found:", logContainer);
+
+    if (toggleLogBtn && logContainer) {
+        toggleLogBtn.addEventListener('click', () => {
+            // Log when the button is actually clicked
+            console.log('--- Toggle Log Button CLICKED! ---');
+            // Log the container element again inside the handler
+            console.log('Handler: Log container element:', logContainer);
+            // Log classes BEFORE toggling
+            console.log('Handler: Classes BEFORE toggle:', logContainer.className);
+            // Perform the toggle
+            logContainer.classList.toggle('hidden');
+             // Log classes AFTER toggling
+            console.log('Handler: Classes AFTER toggle:', logContainer.className);
+            // Log the expected state
+            console.log(`Handler: Log visibility toggled. Currently hidden: ${logContainer.classList.contains('hidden')}`);
+        });
+        console.log("INIT: Toggle Log button listener attached successfully.");
+    } else {
+         // Log if setup failed
+         if (!toggleLogBtn) console.error("INIT ERROR: Toggle Log button not found! Check ID 'toggleLogButton' in HTML.");
+         if (!logContainer) console.error("INIT ERROR: Log container not found! Check ID 'logContainer' in HTML.");
+    }
+    // --- End Toggle Log Button Listener ---
+
+    window.initListenersAttached = true; // Set flag
+} else {
+     console.log("INIT: Listeners already attached.");
+}
+
     console.log("INIT: Initialization sequence complete.");
-    // Final status logs...
-    if (typeof Game !== 'undefined') Game.logMessage("Game Started."); 
-    return true;
+    // Final status logs & Log Game Started
+    if (typeof Game !== 'undefined') { Game.logMessage("Game Started.", 'log-system'); console.log(`Initial Turn: ${Game.getCurrentTurn()}`); }
+    else { console.log("Game object not defined."); }
+    if(typeof player !== 'undefined' && player.row !== null) { console.log(`Player starting at: ${player.row}, ${player.col}`); console.log(`Initial resources:`, player.resources); }
+    if(typeof enemies !== 'undefined') console.log(`Placed ${enemies.length} enemies.`);
+
+    return true; // Indicate success
 }
 
 // --- Start Game ---
