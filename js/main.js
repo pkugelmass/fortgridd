@@ -186,96 +186,53 @@ function resetGame() {
 // --- Initialization ---
 /** Runs the initial game setup */
 function initializeGame() {
-    console.log("Initializing game..."); // Keep
+    console.log("Initializing game...");
     if (typeof Game === 'undefined' || typeof redrawCanvas !== 'function' || typeof resizeAndDraw !== 'function') { console.error("FATAL: Core objects/functions missing!"); return false; }
-   
-    // 1. Create Map
-    console.log("INIT: --- Step 1: Create Map ---"); // Log Step
-    if (!Game.isGameOver() && typeof createMapData === 'function') { mapData = createMapData(); } else if (!Game.isGameOver()) { console.error("INIT ERROR: createMapData missing!"); Game.setGameOver(); return false; } else {console.log("INIT: Skipping map create (Game Over)"); return false;}
-   
-    // 2. Place Player
-    console.log("INIT: --- Step 2: Place Player ---"); // Log Step
-    const occupiedCoords = []; // Reset for this init run
-    if (!Game.isGameOver() && typeof player !== 'undefined' && typeof findStartPosition === 'function') {
-        const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
-        if (startPos) { player.row = startPos.row; player.col = startPos.col; occupiedCoords.push({ row: player.row, col: player.col }); player.resources = { medkits: PLAYER_START_MEDKITS || 0, ammo: PLAYER_START_AMMO || 3 }; player.maxHp = PLAYER_MAX_HP || 10; player.hp = player.maxHp; console.log("INIT: Player placed successfully."); }
-        else { console.error("INIT ERROR: Player start pos not found!"); Game.setGameOver(); return false; }
-    } else if (!Game.isGameOver()) { console.error("INIT ERROR: Player/findStartPos missing!"); Game.setGameOver(); return false; }
-      else {console.log("INIT: Skipping player place (Game Over)"); return false;}
-   
-   
-    // 3. Place Enemies
-    console.log("INIT: --- Step 3: Place Enemies ---"); // Log Step
-    // >>> ADDED Log & Check <<<
-    console.log(`INIT: Checking prerequisites... Game Over? ${Game.isGameOver()}, Enemies defined? ${typeof enemies !== 'undefined'}, findStartPosition defined? ${typeof findStartPosition === 'function'}`);
-    if (!Game.isGameOver() && typeof enemies !== 'undefined' && typeof findStartPosition === 'function') {
-        console.log(`INIT: Placing ${NUM_ENEMIES} enemies...`); // Log before loop
-        enemies.length = 0; // Ensure array is empty
-        let placedCount = 0; // Track successful placements
-        for (let i = 0; i < NUM_ENEMIES; i++) {
-            console.log(`INIT: Attempting placement for enemy ${i + 1}...`); // Log each attempt
-            const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
-            if (enemyStartPos) {
-                 console.log(`INIT: Found position for enemy ${i + 1} at (${enemyStartPos.row}, ${enemyStartPos.col}). Creating enemy...`); // Log success
-                 // Check if all config constants exist before using them
-                 if (typeof AI_HP_MIN === 'undefined' || typeof AI_HP_MAX === 'undefined' || typeof AI_RANGE_MIN === 'undefined' || typeof AI_RANGE_MAX === 'undefined' || typeof AI_AMMO_MIN === 'undefined' || typeof AI_AMMO_MAX === 'undefined') {
-                     console.error(`INIT ERROR: AI stat range constant(s) missing in config.js! Cannot create enemy ${i + 1}.`);
-                     continue; // Skip this enemy
-                 }
-                 // Use constants from config.js for variation ranges
-                 const enemyMaxHp = Math.floor(Math.random() * (AI_HP_MAX - AI_HP_MIN + 1)) + AI_HP_MIN;
-                 const enemyDetectionRange = Math.floor(Math.random() * (AI_RANGE_MAX - AI_RANGE_MIN + 1)) + AI_RANGE_MIN;
-                 const enemyStartingAmmo = Math.floor(Math.random() * (AI_AMMO_MAX - AI_AMMO_MIN + 1)) + AI_AMMO_MIN;
-                 const newEnemy = { id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: '#ff0000', hp: enemyMaxHp, maxHp: enemyMaxHp, detectionRange: enemyDetectionRange, resources: { ammo: enemyStartingAmmo }};
-                 enemies.push(newEnemy); // enemies array from ai.js
-                 occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col });
-                 placedCount++; // Increment count
-            } else { console.error(`INIT ERROR: Could not find valid position for enemy ${i + 1}.`); }
-        }
-        console.log(`INIT: Finished placing enemies loop. Total successfully placed: ${placedCount}`); // Log after loop
-    } else if (!Game.isGameOver()) {
-         // Log exactly why we skipped
-         console.error(`INIT ERROR: Skipping enemy placement. Enemies array defined: ${typeof enemies !== 'undefined'}. findStartPosition defined: ${typeof findStartPosition === 'function'}.`);
-         Game.setGameOver(); // Assume critical error if dependencies missing
-         return false;
-    } else { console.log("INIT: Skipping enemy placement (Game Over)."); }
-   
-   
+
+    // 1. Create Map, 2. Place Player, 3. Place Enemies (Full logic assumed here)
+    if (!Game.isGameOver() && typeof createMapData === 'function') { mapData = createMapData(); } else if (!Game.isGameOver()) { console.error("INIT ERROR: createMapData missing!"); Game.setGameOver(); return false; } const occupiedCoords = []; if (!Game.isGameOver() && typeof player !== 'undefined' && typeof findStartPosition === 'function') { const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords); if (startPos) { player.row = startPos.row; player.col = startPos.col; occupiedCoords.push({ row: player.row, col: player.col }); player.maxHp = PLAYER_MAX_HP || 10; player.hp = player.maxHp; player.resources = { medkits: PLAYER_START_MEDKITS || 0, ammo: PLAYER_START_AMMO || 3 }; console.log("INIT: Player placed."); } else { console.error("INIT ERROR: Player start pos not found!"); Game.setGameOver(); return false; } } else if (!Game.isGameOver()) { console.error("INIT ERROR: Player/findStartPos missing!"); Game.setGameOver(); return false; } if (!Game.isGameOver() && typeof enemies !== 'undefined' && typeof findStartPosition === 'function') { enemies.length = 0; for (let i = 0; i < NUM_ENEMIES; i++) { const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords); if (enemyStartPos) { const enemyMaxHp = Math.floor(Math.random() * (AI_HP_MAX - AI_HP_MIN + 1)) + AI_HP_MIN; const enemyDetectionRange = Math.floor(Math.random() * (AI_RANGE_MAX - AI_RANGE_MIN + 1)) + AI_RANGE_MIN; const enemyStartingAmmo = Math.floor(Math.random() * (AI_AMMO_MAX - AI_AMMO_MIN + 1)) + AI_AMMO_MIN; const newEnemy = { id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: '#ff0000', hp: enemyMaxHp, maxHp: enemyMaxHp, detectionRange: enemyDetectionRange, resources: { ammo: enemyStartingAmmo }}; enemies.push(newEnemy); occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col }); } else { console.error(`INIT ERROR: No valid position for enemy ${i + 1}.`); } } console.log(`INIT: Placed ${enemies.length} enemies.`); } else if (!Game.isGameOver()) { console.error("INIT ERROR: Enemies/findStartPos missing!"); Game.setGameOver(); return false; }
+
     // 4. Initial Size & Draw
-    console.log("INIT: --- Step 4: Initial Size & Draw ---"); // Log Step
-    console.log(`INIT: Checking gameActive status via !Game.isGameOver() before initial draw: ${!Game.isGameOver()}`); // Log status
-    if (!Game.isGameOver()) {
-        console.log("INIT: Calling initial resizeAndDraw()...");
-        if (typeof resizeAndDraw === 'function') { resizeAndDraw(); }
-        else { console.error("INIT ERROR: resizeAndDraw missing!"); Game.setGameOver(); return false; }
-        console.log("INIT: Initial resize and draw seems complete."); // Log success
+    if (!Game.isGameOver()) { resizeAndDraw(); }
+    else { console.error("INIT: Game initialization failed."); redrawCanvas(); return false; }
+
+    // --- Attach Listeners (Only ONCE) ---
+    if (!window.initListenersAttached) {
+        console.log("INIT: Attaching listeners...");
+        // Resize Listener
+        if (typeof resizeAndDraw === 'function') { window.addEventListener('resize', resizeAndDraw); console.log("INIT: Resize listener attached."); }
+        else { console.error("INIT ERROR: Cannot attach resize listener.") }
+        // Input Listener
+        if (typeof handleKeyDown === 'function') { window.addEventListener('keydown', handleKeyDown); console.log("INIT: Input handler attached."); }
+        else { console.error("handleKeyDown function not found!"); }
+        // Restart Button Listener
+        const restartBtn = document.getElementById('restartButton');
+        if (restartBtn && typeof resetGame === 'function') { restartBtn.addEventListener('click', resetGame); console.log("INIT: Restart button listener attached."); }
+        else { console.error("INIT ERROR: Restart button or resetGame function missing!"); }
+
+        // --- NEW: Toggle Log Button Listener ---
+        const toggleLogBtn = document.getElementById('toggleLogButton');
+        const logContainer = document.getElementById('logContainer');
+        if (toggleLogBtn && logContainer) {
+            toggleLogBtn.addEventListener('click', () => {
+                logContainer.classList.toggle('hidden'); // Add or remove the 'hidden' class
+                console.log(`Log visibility toggled. Currently hidden: ${logContainer.classList.contains('hidden')}`);
+            });
+            console.log("INIT: Toggle Log button listener attached.");
+        } else if (!toggleLogBtn) { console.error("INIT ERROR: Toggle Log button not found!"); }
+          else { console.error("INIT ERROR: Log container not found for toggle!"); }
+        // --- End New Section ---
+
+        window.initListenersAttached = true; // Set flag
     } else {
-        console.error("INIT: Game initialization failed before initial draw.");
-        if(ctx) { /* Draw error message */ }
-        return false;
+         console.log("INIT: Listeners already attached.");
     }
-   
-// --- 5. Attach Listeners (Correction: Moved inside init, ensure runs only once) ---
-if (!window.initListenersAttached) {
-    console.log("INIT: Attaching listeners..."); // Log attachment
-    // Resize Listener
-    if (typeof resizeAndDraw === 'function') { window.addEventListener('resize', resizeAndDraw); console.log("INIT: Resize listener attached."); }
-    else { console.error("INIT ERROR: Cannot attach resize listener.") }
-    // Input Listener
-    if (typeof handleKeyDown === 'function') { window.addEventListener('keydown', handleKeyDown); console.log("INIT: Input handler attached."); }
-    else { console.error("handleKeyDown function not found!"); }
-    // Restart Button Listener
-    const restartBtn = document.getElementById('restartButton');
-    if (restartBtn && typeof resetGame === 'function') { restartBtn.addEventListener('click', resetGame); console.log("INIT: Restart button listener attached."); }
-    else { console.error("INIT ERROR: Restart button or resetGame function missing!"); }
-    window.initListenersAttached = true; // Set flag AFTER attaching
-} else {
-     console.log("INIT: Listeners already attached."); // Log if skipped
-}
-   
-    console.log("INIT: Initialization sequence complete."); // Log Final Step
-    // Final status logs ... (Keep these)
+
+    console.log("INIT: Initialization sequence complete.");
+    // Final status logs...
+    if (typeof Game !== 'undefined') Game.logMessage("Game Started.");
     return true;
-   }
+}
+
 // --- Start Game ---
 initializeGame();

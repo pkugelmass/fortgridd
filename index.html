@@ -8,7 +8,8 @@
 <body>
     <div id="toolbar">
         <h1>FortGridd</h1>
-        <button id="restartButton">Restart Game</button>
+        <div> <button id="toggleLogButton">Log</button> <button id="restartButton">Restart Game</button>
+        </div>
     </div>
 
     <div id="statusBar">
@@ -20,7 +21,7 @@
     </div>
 
     <div id="mainContent">
-        <canvas id="gameCanvas"></canvas> <div id="logContainer">          <p>Welcome to FortGridd!</p> </div>
+        <canvas id="gameCanvas"></canvas> <div id="logContainer" class="hidden">          <p>Welcome to FortGridd!</p> </div>
     </div>
     <script src="js/config.js"></script>   <script src="js/map.js"></script>      <script src="js/player.js"></script>   <script src="js/ai.js"></script>        <script src="js/game.js"></script>     <script src="js/drawing.js"></script>  <script src="js/input.js"></script>    <script src="js/main.js"></script>  
 </body>

@@ -24,7 +24,7 @@ const PLAYER_START_AMMO = 3;
 const PLAYER_START_MEDKITS = 0;
 
 // AI Stats & Variations
-const NUM_ENEMIES = 5;              // Example Count
+const NUM_ENEMIES = 15;              // Example Count
 const AI_ATTACK_DAMAGE = 1;
 const AI_HP_MIN = 4;                // Min starting HP for AI variation
 const AI_HP_MAX = 6;                // Max starting HP for AI variation
