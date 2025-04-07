@@ -50,8 +50,8 @@ function resizeAndDraw() {
 
     if (currentCellSize <= 0 || !isFinite(currentCellSize) || GRID_WIDTH <= 0 || GRID_HEIGHT <= 0 || !isFinite(GRID_WIDTH) || !isFinite(GRID_HEIGHT)) {
         console.error(`Resize failed: Invalid calculated dimensions. Cell: ${currentCellSize}, Grid: ${GRID_WIDTH}x${GRID_HEIGHT}. Using minimum.`);
-        currentCellSize = MIN_CELL_SIZE; // Fallback
-        if(GRID_WIDTH <= 0 || GRID_HEIGHT <= 0) return; // Cannot resize canvas if grid dims invalid
+        currentCellSize = MIN_CELL_SIZE;
+        if(GRID_WIDTH <= 0 || GRID_HEIGHT <= 0) return;
     }
 
     canvas.width = GRID_WIDTH * currentCellSize;
@@ -78,8 +78,8 @@ else { console.error("handleKeyDown function not found!"); }
 
 // --- Initialization ---
 console.log("Initializing game...");
-if (typeof Game === 'undefined') { /* ... Fatal error handling ... */
-    console.error("FATAL: Game object not defined!");
+if (typeof Game === 'undefined') {
+    console.error("FATAL: Game object not defined! Is game.js loaded?");
      if(ctx){ ctx.fillStyle = 'black'; ctx.fillRect(0, 0, 300, 150); ctx.font = '20px Arial'; ctx.fillStyle = 'red'; ctx.textAlign = 'center'; ctx.fillText('FATAL ERROR: Game object missing.', 150, 75); }
 } else {
     // 1. Create Map
@@ -90,11 +90,11 @@ if (typeof Game === 'undefined') { /* ... Fatal error handling ... */
     const occupiedCoords = [];
     if (!Game.isGameOver() && typeof player !== 'undefined' && typeof findStartPosition === 'function') {
         const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
-        if (startPos) { player.row = startPos.row; player.col = startPos.col; occupiedCoords.push({ row: player.row, col: player.col }); if (!player.resources) player.resources = { scrap: 0 }; player.hp = player.maxHp; console.log("INIT: Player placed."); }
+        if (startPos) { player.row = startPos.row; player.col = startPos.col; occupiedCoords.push({ row: player.row, col: player.col }); if (!player.resources) player.resources = { medkits: 0, ammo: 3 }; /* Give player ammo too */ player.hp = player.maxHp; console.log("INIT: Player placed."); } // Initialized player resources here fully
         else { console.error("INIT ERROR: Player starting position could not be set."); Game.setGameOver(); }
     } else if (!Game.isGameOver()) { console.error("INIT ERROR: Player object/findStartPosition missing!"); Game.setGameOver(); }
 
-    // 3. Place Enemies (MODIFIED with Variations)
+    // 3. Place Enemies (MODIFIED with Ammo)
     console.log("INIT: Attempting enemy placement with variations...");
     if (!Game.isGameOver() && typeof enemies !== 'undefined' && typeof findStartPosition === 'function') {
         console.log(`INIT: Placing ${NUM_ENEMIES} enemies...`);
@@ -102,24 +102,25 @@ if (typeof Game === 'undefined') { /* ... Fatal error handling ... */
         for (let i = 0; i < NUM_ENEMIES; i++) {
             const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
             if (enemyStartPos) {
-                // --- Add Variations ---
-                const maxHpVariation = Math.floor(Math.random() * 3) + 4; // Max HP between 4 and 6
-                const detectionRangeVariation = Math.floor(Math.random() * 5) + 6; // Range between 6 and 10
+                // Add Variations
+                const maxHpVariation = Math.floor(Math.random() * 3) + 4; // 4-6 HP
+                const detectionRangeVariation = Math.floor(Math.random() * 5) + 6; // 6-10 Range
+                const startingAmmo = Math.floor(Math.random() * 2) + 1; // Start with 1 or 2 ammo
 
                 const newEnemy = {
                     id: `enemy_${i}`,
                     row: enemyStartPos.row,
                     col: enemyStartPos.col,
                     color: '#ff0000',
-                    hp: maxHpVariation,         // Start at max HP
-                    maxHp: maxHpVariation,      // Store max HP
-                    detectionRange: detectionRangeVariation // Store individual range
-                    // Add radiusMultiplier here later if doing visual size variation
-                    // radiusMultiplier: 1.0 + (maxHpVariation - 5) * 0.05 // Example: +/- 5% size per HP from base 5
+                    hp: maxHpVariation,
+                    maxHp: maxHpVariation,
+                    detectionRange: detectionRangeVariation,
+                    resources: { ammo: startingAmmo } // *** ADDED STARTING AMMO ***
+                    // radiusMultiplier: 1.0 + (maxHpVariation - 5) * 0.05 // Optional size variation
                 };
                 enemies.push(newEnemy);
                 occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col });
-                console.log(`INIT: Placed enemy ${i + 1} (HP:${newEnemy.hp}, Range:${newEnemy.detectionRange})`);
+                console.log(`INIT: Placed enemy ${i + 1} (HP:${newEnemy.hp}, Range:${newEnemy.detectionRange}, Ammo:${newEnemy.resources.ammo})`);
             } else { console.error(`INIT ERROR: Could not find valid position for enemy ${i + 1}.`); }
         }
         console.log(`INIT: Finished placing enemies. Total placed: ${enemies.length}`);
@@ -131,7 +132,7 @@ if (typeof Game === 'undefined') { /* ... Fatal error handling ... */
         else { console.error("INIT ERROR: resizeAndDraw missing!"); Game.setGameOver(); }
     } else {
         console.error("INIT: Game initialization failed.");
-        if(ctx) { /* Draw init failure message */ }
+         if(ctx) { /* Draw init failure message */ }
     }
 
     // 5. Add Resize Listener
