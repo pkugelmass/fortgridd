@@ -12,16 +12,73 @@ const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getCont
 
 
 // --- Status Bar Update Function ---
-/** Updates the HTML status bar */
+/**
+ * Updates the text content of the HTML status bar elements.
+ */
 function updateStatusBar() {
-    if (typeof Game === 'undefined' || typeof player === 'undefined') { return; }
-    const medkitEl = document.getElementById('medkitsValue'); const ammoEl = document.getElementById('ammoValue'); const hpEl = document.getElementById('hpValue'); const shrinkEl = document.getElementById('shrinkValue');
+    // Check if crucial objects/functions exist first
+    if (typeof Game === 'undefined' || typeof player === 'undefined' || typeof Game.getTurnNumber !== 'function' || typeof Game.isGameOver !== 'function') {
+        console.warn("updateStatusBar skipped: Game or Player object/functions missing.");
+        return;
+    }
+
+    // Get elements references
+    const medkitEl = document.getElementById('medkitsValue');
+    const ammoEl = document.getElementById('ammoValue');
+    const hpEl = document.getElementById('hpValue');
+    const shrinkEl = document.getElementById('shrinkValue');
+    const enemiesEl = document.getElementById('enemiesValue'); // Assuming this exists from previous step
+
     try {
+        // Update Medkits
         if (medkitEl && player.resources) { medkitEl.textContent = player.resources.medkits || 0; }
+        else if (medkitEl) { medkitEl.textContent = '--'; }
+
+        // Update Ammo
         if (ammoEl && player.resources) { ammoEl.textContent = player.resources.ammo || 0; }
+        else if (ammoEl) { ammoEl.textContent = '--'; }
+
+        // Update HP
         if (hpEl) { hpEl.textContent = `${player.hp ?? '--'} / ${player.maxHp || '--'}`; }
-        if (shrinkEl && typeof SHRINK_INTERVAL !== 'undefined' && SHRINK_INTERVAL > 0) { if(Game.isGameOver()){ shrinkEl.textContent = "N/A"; } else { const currentTurn = Game.getTurnNumber(); const turnsSinceLastShrink = (currentTurn - 1) % SHRINK_INTERVAL; const turnsLeft = SHRINK_INTERVAL - turnsSinceLastShrink; shrinkEl.textContent = turnsLeft; } } else if (shrinkEl) { shrinkEl.textContent = "N/A"; }
-    } catch (error) { console.error("Error updating status bar:", error); }
+        else { console.warn("updateStatusBar: hpValue element missing."); }
+
+        // Update Enemies Left
+        if (enemiesEl && typeof enemies !== 'undefined') { enemiesEl.textContent = enemies.filter(e => e && e.hp > 0).length; }
+        else if (enemiesEl) { enemiesEl.textContent = '--'; }
+        else { console.warn("updateStatusBar: enemiesValue element missing."); }
+
+        // --- Update Shrink Countdown ---
+        if (shrinkEl) { // Check if the element itself exists first
+            if (typeof SHRINK_INTERVAL !== 'undefined' && SHRINK_INTERVAL > 0) {
+                if (Game.isGameOver()) {
+                    shrinkEl.textContent = "N/A";
+                } else {
+                    const currentTurn = Game.getTurnNumber();
+                    // Ensure currentTurn is a valid number before calculating
+                    if (typeof currentTurn === 'number' && currentTurn > 0 && isFinite(currentTurn)) {
+                        const turnsSinceLastShrink = (currentTurn - 1) % SHRINK_INTERVAL;
+                        const turnsLeft = SHRINK_INTERVAL - turnsSinceLastShrink;
+                        shrinkEl.textContent = turnsLeft; // Set the calculated value
+                        // console.log(`DEBUG: Update Shrink - Turn: ${currentTurn}, Left: ${turnsLeft}`); // Keep commented unless needed
+                    } else {
+                         console.warn(`updateStatusBar: Invalid currentTurn number: ${currentTurn}`);
+                         shrinkEl.textContent = "?"; // Indicate calculation issue
+                    }
+                }
+            } else {
+                 // SHRINK_INTERVAL constant might be missing or invalid
+                 shrinkEl.textContent = "N/A";
+                 console.warn("updateStatusBar: SHRINK_INTERVAL missing or invalid.");
+            }
+        } else {
+             // Element with ID 'shrinkValue' was not found in HTML
+             console.warn("updateStatusBar: Element with ID 'shrinkValue' not found.");
+        }
+        // --- End Update Shrink Countdown ---
+
+    } catch (error) {
+        console.error("Error updating status bar:", error);
+    }
 }
 
 // --- Log Display Update Function --- (MODIFIED for Auto-Scroll)

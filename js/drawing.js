@@ -84,6 +84,13 @@ function drawPlayer(ctx, cellSize) {
     ctx.fillStyle = player.color;
     ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
 
+    // --- NEW: Draw Player Outline ---
+    ctx.strokeStyle = '#FFFFFF'; // White outline (or black '#000000')
+    ctx.lineWidth = 2; // Make it slightly thicker
+    ctx.beginPath(); // Need a new path for stroke
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke(); // Draw the outline
+
     // --- Draw Player HP Bar --- (Using helper)
     const barWidth = cellSize * 0.8;
     const barHeight = 5;
