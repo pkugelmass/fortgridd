@@ -1,22 +1,48 @@
-/* Add this if you want */
-body {
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Center items horizontally */
-    background-color: #222;
-    color: white;
-    font-family: sans-serif;
+/* Add these new rules */
+
+#toolbar {
+    display: flex;           /* Arrange children (h1, button) in a row */
+    justify-content: space-between; /* Space items out (title left, button right) */
+    /* Other options for justify-content: 'center', 'flex-start', 'space-around' */
+    align-items: center;     /* Vertically align items in the middle */
+    width: 80%;              /* Set a width for the toolbar (adjust as needed) */
+    max-width: 800px;        /* Optional: Max width matching canvas potentially */
+    margin-bottom: 10px;     /* Add some space below the toolbar */
+    padding: 5px 0;          /* Add a little vertical padding */
 }
 
-canvas {
-    border: 1px solid #555;
-    background-color: #eee; /* Keep canvas background light */
-    margin-top: 10px; /* Add space above canvas */
+/* Optional: Remove default margins from h1 inside toolbar for better alignment */
+#toolbar h1 {
+    margin: 0; 
+    font-size: 1.8em; /* Adjust size if needed */
 }
 
-button#restartButton {
-    margin-top: 10px; /* Space above button */
+/* Optional: Adjust button margin if needed */
+#toolbar button {
+    margin: 0; 
+    /* Keep previous button styles */
     padding: 8px 15px;
     font-size: 1em;
     cursor: pointer;
 }
+
+/* Ensure body still centers the toolbar and canvas */
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center; 
+    background-color: #222;
+    color: white;
+    font-family: sans-serif;
+    padding-top: 10px; /* Add padding at the top */
+}
+
+canvas {
+    border: 1px solid #555;
+    background-color: #eee;
+    /* Remove margin-top if toolbar provides enough space */
+    /* margin-top: 10px;  */
+}
+
+/* Remove button styling from general button if needed */
+/* button { ... } */
