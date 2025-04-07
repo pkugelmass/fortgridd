@@ -1,6 +1,8 @@
 console.log("drawing.js loaded");
 
 // --- Drawing Functions ---
+// Relies on global variables/objects: ctx, mapData, player, enemies, TILE_COLORS,
+// CELL_SIZE, GRID_WIDTH, GRID_HEIGHT, Game object etc.
 
 /** Draws grid lines */
 function drawGrid(ctx, gridWidth, gridHeight, cellSize) {
@@ -12,9 +14,13 @@ function drawGrid(ctx, gridWidth, gridHeight, cellSize) {
 
 /** Draws map cell contents, including storm visual */
 function drawMapCells(ctx, gridWidth, gridHeight, cellSize) {
-    if (!mapData || mapData.length === 0 || typeof Game === 'undefined' || typeof Game.getSafeZone !== 'function') { return; }
+    // Added safety checks for required globals
+    if (!mapData || mapData.length === 0 || typeof Game === 'undefined' || typeof Game.getSafeZone !== 'function' || typeof TILE_COLORS === 'undefined') {
+        console.warn("drawMapCells skipped: Critical data missing (mapData, Game, TILE_COLORS).");
+        return;
+    }
 
-    const fontSize = cellSize * 0.7; ctx.font = `${fontSize}px Arial`;
+    const fontSize = cellSize * 0.7; ctx.font = `${fontSize}px Arial`; // Still set font in case we add text later
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const safeZone = Game.getSafeZone();
 
@@ -24,162 +30,71 @@ function drawMapCells(ctx, gridWidth, gridHeight, cellSize) {
             const tileType = mapData[row][col];
             const cellX = col * cellSize; const cellY = row * cellSize;
 
-            // 1. Draw base terrain color
+            // 1. Draw base terrain color (Uses TILE_COLORS from map.js)
             const color = TILE_COLORS[tileType];
-            ctx.fillStyle = color || '#FFFFFF';
+            ctx.fillStyle = color || '#FFFFFF'; // Default white if color undefined
             ctx.fillRect(cellX, cellY, cellSize, cellSize);
 
-            // 2. Draw emoji if applicable
-            const emoji = TILE_EMOJIS[tileType];
-            if (emoji) { /* ... draw emoji ... */ }
+            // 2. --- REMOVED Emoji Logic ---
+            // const emoji = TILE_EMOJIS[tileType]; // TILE_EMOJIS no longer exists
+            // if (emoji) { ... }
 
-            // 3. --- MODIFIED: Draw Storm Overlay if outside safe zone ---
+            // 3. Draw Storm Overlay if outside safe zone
             if (row < safeZone.minRow || row > safeZone.maxRow || col < safeZone.minCol || col > safeZone.maxCol) {
-                 // Apply a base color tint first
-                 ctx.fillStyle = 'rgba(90, 19, 157, 0.3)'; // Darker Red, slightly more opaque
+                 ctx.fillStyle = 'rgba(98, 13, 114, 0.35)'; // Use the non-red color if preferred 'rgba(138, 43, 226, 0.30)'
                  ctx.fillRect(cellX, cellY, cellSize, cellSize);
-
-                 // Add subtle diagonal lines for texture (optional)
-                 ctx.strokeStyle = 'rgba(75, 0, 130, 0.35)'; // Even darker red for lines
-                 ctx.lineWidth = 1;
-                 ctx.beginPath();
-                 for (let i = -cellSize; i < cellSize * 2; i += 4) { // Draw lines across a wider area, clip later
-                     ctx.moveTo(cellX + i, cellY);
-                     ctx.lineTo(cellX + i + cellSize, cellY + cellSize);
-                 }
-                 // Clip drawing to the current cell before stroking lines
-                 ctx.save(); // Save current context state
-                 ctx.beginPath(); // Start a new path for clipping
-                 ctx.rect(cellX, cellY, cellSize, cellSize); // Define clipping rectangle
-                 ctx.clip(); // Apply clipping
-                 ctx.stroke(); // Draw the lines (only visible within the cell)
-                 ctx.restore(); // Restore context state (remove clipping)
+                 // Keep optional line pattern if desired
+                 ctx.strokeStyle = 'rgba(100, 0, 0, 0.35)'; // Match base color 'rgba(75, 0, 130, 0.35)'
+                 ctx.lineWidth = 1; ctx.beginPath();
+                 for (let i = -cellSize; i < cellSize * 2; i += 4) { ctx.moveTo(cellX + i, cellY); ctx.lineTo(cellX + i + cellSize, cellY + cellSize); }
+                 ctx.save(); ctx.beginPath(); ctx.rect(cellX, cellY, cellSize, cellSize); ctx.clip(); ctx.stroke(); ctx.restore();
             }
         }
     }
 }
 
-// --- NEW: Health Bar Helper Function ---
-/**
- * Draws a health bar at a specified location, anchored by its bottom-center.
- * @param {CanvasRenderingContext2D} ctx - The drawing context.
- * @param {number} centerX - Center X coordinate to position the bar relative to.
- * @param {number} bottomY - The Y coordinate for the BOTTOM of the bar.
- * @param {number} width - The total width of the health bar.
- * @param {number} height - The height of the health bar.
- * @param {number} currentHp - Current HP of the unit.
- * @param {number} maxHp - Maximum HP of the unit.
- */
+/** Draws Health Bar Helper */
 function drawHealthBar(ctx, centerX, bottomY, width, height, currentHp, maxHp) {
-    // Calculate position (centered horizontally, positioned vertically by bottomY)
-    const barX = centerX - width / 2;
-    const barY = bottomY - height; // Calculate top Y based on desired bottom Y
-
-    // Calculate health percentage (clamped 0-1)
-    const currentMaxHp = maxHp || 1; // Avoid division by zero if maxHp is missing or 0
-    const healthPercent = Math.max(0, Math.min(1, currentHp / currentMaxHp));
+    const barX = centerX - width / 2; const barY = bottomY - height;
+    const currentMaxHp = maxHp || 1; const healthPercent = Math.max(0, Math.min(1, currentHp / currentMaxHp));
     const fillWidth = width * healthPercent;
-
-    // Draw background bar (e.g., dark grey)
-    ctx.fillStyle = '#333';
-    ctx.fillRect(barX, barY, width, height);
-
-    // Determine fill color based on health percentage
-    let barColor = '#dc3545'; // Red (low HP) default
-    if (healthPercent > 0.6) { barColor = '#28a745'; } // Green (high HP)
-    else if (healthPercent > 0.3) { barColor = '#ffc107'; } // Yellow (medium HP)
-
-    // Draw foreground health bar only if HP > 0
-    if (fillWidth > 0 && currentHp > 0) { // Also ensure currentHp > 0 before drawing fill
-        ctx.fillStyle = barColor;
-        ctx.fillRect(barX, barY, fillWidth, height);
-    }
-    // Optional: Draw border
-    // ctx.strokeStyle = '#555'; ctx.lineWidth = 1; ctx.strokeRect(barX, barY, width, height);
+    ctx.fillStyle = '#333'; ctx.fillRect(barX, barY, width, height);
+    let barColor = '#dc3545'; if (healthPercent > 0.6) { barColor = '#28a745'; } else if (healthPercent > 0.3) { barColor = '#ffc107'; }
+    if (fillWidth > 0 && currentHp > 0) { ctx.fillStyle = barColor; ctx.fillRect(barX, barY, fillWidth, height); }
 }
 
-
-/** Draws the player WITH HP BAR (using helper) */
+/** Draws the player WITH HP BAR and Outline */
 function drawPlayer(ctx, cellSize) {
-    if (typeof player === 'undefined' || player.row === null || player.col === null || typeof player.hp === 'undefined' || player.hp <= 0) return; // Skip if invalid or dead
-
-    const centerX = player.col * cellSize + cellSize / 2;
-    const centerY = player.row * cellSize + cellSize / 2;
-    const radius = (cellSize / 2) * 0.8;
-
-    // --- Draw Player Circle ---
-    ctx.fillStyle = player.color;
-    ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
-
-    // --- NEW: Draw Player Outline ---
-    ctx.strokeStyle = '#FFFFFF'; // White outline (or black '#000000')
-    ctx.lineWidth = 2; // Make it slightly thicker
-    ctx.beginPath(); // Need a new path for stroke
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.stroke(); // Draw the outline
-
-    // --- Draw Player HP Bar --- (Using helper)
-    const barWidth = cellSize * 0.8;
-    const barHeight = 5;
-    const barBottomY = centerY + radius + barHeight + 3; // Position bottom of bar relative to circle center Y + radius + desired gap
-
-    // Call helper function
-    // Ensure player.maxHp exists or provide a default
+    if (typeof player === 'undefined' || player.row === null || player.col === null || typeof player.hp === 'undefined' || player.hp <= 0) return;
+    const centerX = player.col * cellSize + cellSize / 2; const centerY = player.row * cellSize + cellSize / 2; const radius = (cellSize / 2) * 0.8;
+    ctx.fillStyle = player.color; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#FFFFFF'; ctx.lineWidth = 2; ctx.stroke(); // Outline
+    const barWidth = cellSize * 0.8; const barHeight = 5; const barBottomY = centerY + radius + barHeight + 3;
     drawHealthBar(ctx, centerX, barBottomY, barWidth, barHeight, player.hp, player.maxHp || 10);
 }
 
-
-/** Draws all enemies WITH HP BARS (using helper) */
+/** Draws all enemies WITH HP BARS */
 function drawEnemies(ctx, cellSize) {
     if (typeof enemies === 'undefined' || enemies.length === 0) return;
-    const baseRadius = (cellSize / 2) * 0.7;
-    const defaultColor = '#ff0000';
-    const barWidth = cellSize * 0.8; // Use same width as player bar
-    const barHeight = 5;        // Use same height
-    const barYOffset = 3;       // Use same offset from bottom of circle visual
-
+    const baseRadius = (cellSize / 2) * 0.7; const defaultColor = '#ff0000';
+    const barWidth = cellSize * 0.8; const barHeight = 5; const barYOffset = 3;
     for (const enemy of enemies) {
-        // Skip drawing dead or invalid enemies
         if (!enemy || enemy.row === null || enemy.col === null || typeof enemy.hp === 'undefined' || enemy.hp <= 0) continue;
-
-        const centerX = enemy.col * cellSize + cellSize / 2;
-        const centerY = enemy.row * cellSize + cellSize / 2;
-        const radiusMultiplier = enemy.radiusMultiplier || 1.0;
-        const radius = baseRadius * radiusMultiplier; // Use final radius for positioning
-
-        // --- Draw Enemy Circle ---
-        ctx.fillStyle = enemy.color || defaultColor;
-        ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
-
-        // --- Draw Enemy HP Bar --- (Using helper)
-        const barBottomY = centerY + radius + barHeight + barYOffset; // Position based on final radius
-        const maxHp = enemy.maxHp || 5; // Use maxHp or fallback
-
-        // Call helper function
+        const centerX = enemy.col * cellSize + cellSize / 2; const centerY = enemy.row * cellSize + cellSize / 2; const radiusMultiplier = enemy.radiusMultiplier || 1.0; const radius = baseRadius * radiusMultiplier;
+        ctx.fillStyle = enemy.color || defaultColor; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
+        const barBottomY = centerY + radius + barHeight + barYOffset; const maxHp = enemy.maxHp || 5;
         drawHealthBar(ctx, centerX, barBottomY, barWidth, barHeight, enemy.hp, maxHp);
     }
 }
 
-
-/** Draws UI */
+/** Draws UI - ONLY Game Over/Win Overlay now */
 function drawUI(ctx) {
-    // console.log("DRAW: drawUI START"); // Removed log
     if (typeof Game === 'undefined') { console.error("Game object not defined in drawUI!"); return; }
-
-    // <<< REMOVED text drawing for Medkits, Ammo, HP, Turn >>>
-
-    // Display game over/win messages - Use Game object
     if (Game.isGameOver()) {
-        // console.log("DRAW: Drawing win/loss overlay because Game.isGameOver() is true."); // Removed log
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, canvas.height / 2 - 30, canvas.width, 60); // Ensure canvas ref is ok, maybe pass width/height? Or use global.
-        ctx.font = '30px Arial'; ctx.fillStyle = 'red';
-        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        // Check player state directly for message content
-        if (typeof player !== 'undefined' && player.hp <= 0) { ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2); }
-        else { ctx.fillStyle = 'lime'; ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2); }
-        // Note: Shadow was reset outside this block before, should be okay. If text looks bad, reset shadowBlur here too.
-        // ctx.shadowBlur = 0;
+        const canvasWidth = ctx.canvas.width; const canvasHeight = ctx.canvas.height;
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, canvasHeight / 2 - 30, canvasWidth, 60);
+        ctx.font = '30px Arial'; ctx.fillStyle = 'red'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        if (typeof player !== 'undefined' && player.hp <= 0) { ctx.fillText('GAME OVER', canvasWidth / 2, canvasHeight / 2); }
+        else { ctx.fillStyle = 'lime'; ctx.fillText('YOU WIN!', canvasWidth / 2, canvasHeight / 2); }
     }
-    // console.log("DRAW: drawUI END"); // Removed log
 }
