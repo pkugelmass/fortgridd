@@ -3,7 +3,7 @@ console.log("input.js loaded");
 /**
  * Handles keydown events for player actions: movement, attack, wait, heal, shoot.
  * Uses the global Game object to check/manage state and turns.
- * Calls Game.checkEndConditions() after actions that could end the game.
+ * Logs actions via Game.logMessage.
  */
 function handleKeyDown(event) {
     // console.log("handleKeyDown Fired! Key:", event.key);
@@ -36,9 +36,9 @@ function handleKeyDown(event) {
     // --- Process Actions ---
 
     if (actionType === 'wait') {
-        console.log("Player waits.");
+        Game.logMessage("Player waits."); // Log Wait
         if (typeof redrawCanvas === 'function') redrawCanvas();
-        Game.endPlayerTurn(); // End turn
+        Game.endPlayerTurn();
         return;
     }
 
@@ -49,39 +49,49 @@ function handleKeyDown(event) {
                 if (player.hp < player.maxHp) {
                     const healAmountActual = Math.min(HEAL_AMOUNT, player.maxHp - player.hp);
                     player.resources.medkits -= HEAL_COST; player.hp += healAmountActual;
-                    console.log(`Player healed for ${healAmountActual} HP. HP: ${player.hp}/${player.maxHp}, Medkits: ${player.resources.medkits}`); // Simplified log
+                    Game.logMessage(`Player heals for ${healAmountActual} HP (Cost: ${HEAL_COST} Medkits).`); // Log Heal
                     if (typeof redrawCanvas === 'function') redrawCanvas();
                     Game.endPlayerTurn(); // Healing takes a turn
-                } else { console.log("Cannot heal: Full health."); }
-            } else { console.log(`Cannot heal: Need ${HEAL_COST} medkits.`); }
+                } else { Game.logMessage("Cannot heal: Full health."); } // Log Fail
+            } else { Game.logMessage(`Cannot heal: Need ${HEAL_COST} medkits (Have: ${player.resources.medkits || 0}).`); } // Log Fail
         } else { console.error("Healing failed: Dependencies missing."); }
         return; // Heal action attempt complete
     }
 
     if (actionType === 'shoot') {
-        // console.log(`Player attempts to shoot [${shootDirection.dr}, ${shootDirection.dc}]...`); // Quieter
-        if (typeof player.resources === 'undefined' || typeof RANGED_ATTACK_RANGE === 'undefined' || typeof RANGED_ATTACK_DAMAGE === 'undefined' || typeof mapData === 'undefined' || typeof TILE_WALL === 'undefined' || typeof TILE_TREE === 'undefined') {
-            console.error("Shooting failed: Dependencies missing."); return;
-        }
+        // console.log(`Player attempts to shoot...`); // Quieter
+        if (typeof player.resources === 'undefined' || typeof RANGED_ATTACK_RANGE === 'undefined' || typeof RANGED_ATTACK_DAMAGE === 'undefined' || typeof mapData === 'undefined' || typeof TILE_WALL === 'undefined' || typeof TILE_TREE === 'undefined') { console.error("Shooting failed: Dependencies missing."); return; }
 
         if (player.resources.ammo > 0) {
-            player.resources.ammo--; console.log(`Ammo remaining: ${player.resources.ammo}`);
+            player.resources.ammo--; // Consume ammo first
             let shotHit = false; let hitTarget = null; let blocked = false;
-            // Trace LoS
-            for (let dist = 1; dist <= RANGED_ATTACK_RANGE; dist++) { const checkRow = player.row + shootDirection.dr * dist; const checkCol = player.col + shootDirection.dc * dist; if (checkRow < 0 || checkRow >= GRID_HEIGHT || checkCol < 0 || checkCol >= GRID_WIDTH) { blocked = true; break; } const tileType = mapData[checkRow][checkCol]; if (tileType === TILE_WALL || tileType === TILE_TREE) { blocked = true; break; } if (typeof enemies !== 'undefined') { for (const enemy of enemies) { if (enemy.hp > 0 && enemy.row === checkRow && enemy.col === checkCol) { hitTarget = enemy; shotHit = true; break; } } } if (shotHit) break; }
+            let blockedBy = "";
 
-            if (shotHit && hitTarget) { // Apply damage
-                hitTarget.hp -= RANGED_ATTACK_DAMAGE; console.log(`Enemy ${hitTarget.id || '??'} hit! HP: ${hitTarget.hp}/${hitTarget.maxHp}`);
-                if (hitTarget.hp <= 0) { console.log(`Enemy ${hitTarget.id || '??'} defeated!`); enemies = enemies.filter(e => e !== hitTarget); } // Remove dead enemy
-            } else if (!blocked) { console.log("Shot missed."); } else { console.log("Shot blocked.");}
+            // Trace LoS
+            for (let dist = 1; dist <= RANGED_ATTACK_RANGE; dist++) {
+                 const checkRow = player.row + shootDirection.dr * dist; const checkCol = player.col + shootDirection.dc * dist;
+                 if (checkRow < 0 || checkRow >= GRID_HEIGHT || checkCol < 0 || checkCol >= GRID_WIDTH) { blocked = true; blockedBy = "Map Edge"; break; }
+                 const tileType = mapData[checkRow][checkCol];
+                 if (tileType === TILE_WALL || tileType === TILE_TREE) { blocked = true; blockedBy = (tileType === TILE_WALL ? "Wall" : "Tree"); break; }
+                 if (typeof enemies !== 'undefined') { for (const enemy of enemies) { if (enemy.hp > 0 && enemy.row === checkRow && enemy.col === checkCol) { hitTarget = enemy; shotHit = true; break; } } }
+                 if (shotHit) break;
+            }
+
+            let logMsg = `Player shoots ${shootDirection.dr === -1 ? 'Up' : shootDirection.dr === 1 ? 'Down' : shootDirection.dc === -1 ? 'Left' : 'Right'}.`;
+
+            if (shotHit && hitTarget) { // Hit
+                const targetId = hitTarget.id || '??'; const damage = RANGED_ATTACK_DAMAGE;
+                hitTarget.hp -= damage;
+                logMsg += ` Hit ${targetId} for ${damage} damage! (HP: ${hitTarget.hp}/${hitTarget.maxHp})`;
+                Game.logMessage(logMsg); // Log Hit first
+                if (hitTarget.hp <= 0) { enemies = enemies.filter(e => e !== hitTarget); Game.logMessage(`${targetId} defeated!`); } // Log Defeat
+            } else if (blocked) { logMsg += ` Blocked by ${blockedBy}.`; Game.logMessage(logMsg); } // Log Block
+              else { logMsg += " Missed."; Game.logMessage(logMsg); } // Log Miss
 
             if (typeof redrawCanvas === 'function') redrawCanvas(); // Show results
-            // *** Check end conditions AFTER potential enemy removal ***
-            if (!Game.checkEndConditions()) { // If game didn't end...
-                 Game.endPlayerTurn(); // ...end the player's turn
-            } // If game DID end, checkEndConditions handled it
+            if (!Game.checkEndConditions()) { Game.endPlayerTurn(); } // Check end conditions & end turn
 
-        } else { console.log("Cannot shoot: Out of ammo!"); }
+        } else { Game.logMessage("Cannot shoot: Out of ammo!"); } // Log Fail
         return; // Shoot action attempt complete
     }
 
@@ -93,14 +103,12 @@ function handleKeyDown(event) {
 
             // A) ATTACK LOGIC
             if (targetEnemy) {
-                console.log(`Player attacks Enemy ${targetEnemy.id || '??'}!`);
-                targetEnemy.hp -= PLAYER_ATTACK_DAMAGE; console.log(`Enemy HP: ${targetEnemy.hp}/${targetEnemy.maxHp}`);
-                if (targetEnemy.hp <= 0) { console.log(`Enemy ${targetEnemy.id || '??'} defeated!`); enemies = enemies.filter(enemy => enemy !== targetEnemy); } // Remove dead enemy
+                const targetId = targetEnemy.id || '??'; const damage = PLAYER_ATTACK_DAMAGE;
+                Game.logMessage(`Player attacks ${targetId} for ${damage} damage.`); // Log Attack
+                targetEnemy.hp -= damage; // console.log(`Enemy HP...`); // Quieter
+                if (targetEnemy.hp <= 0) { enemies = enemies.filter(enemy => enemy !== targetEnemy); Game.logMessage(`${targetId} defeated!`); } // Log Defeat
                 if (typeof redrawCanvas === 'function') redrawCanvas(); // Show attack results
-                // *** Check end conditions AFTER potential enemy removal ***
-                if (!Game.checkEndConditions()) { // If game didn't end...
-                     Game.endPlayerTurn(); // ...end the player's turn
-                } // If game DID end, checkEndConditions handled it
+                if (!Game.checkEndConditions()) { Game.endPlayerTurn(); } // Check end conditions & end turn
 
             }
             // B) MOVEMENT LOGIC
@@ -108,13 +116,17 @@ function handleKeyDown(event) {
                 const targetTileType = mapData[targetRow][targetCol];
                 if (targetTileType === TILE_LAND || targetTileType === TILE_MEDKIT || targetTileType === TILE_AMMO) { // Walkable Check
                     player.row = targetRow; player.col = targetCol; // Move player
-                    let collectedResource = false;
-                    if (targetTileType === TILE_MEDKIT) { if (player.resources) { player.resources.medkits++; console.log(`Collected Medkit! Total: ${player.resources.medkits}`); } mapData[player.row][player.col] = TILE_LAND; collectedResource = true; }
-                    else if (targetTileType === TILE_AMMO) { if (player.resources) { player.resources.ammo++; console.log(`Collected Ammo! Total: ${player.resources.ammo}`); } mapData[player.row][player.col] = TILE_LAND; collectedResource = true; }
+                    let resourceCollected = false; let resourceType = "";
+                    if (targetTileType === TILE_MEDKIT) { if (player.resources) { player.resources.medkits++; resourceType = "Medkit"; } mapData[player.row][player.col] = TILE_LAND; collectedResource = true; }
+                    else if (targetTileType === TILE_AMMO) { if (player.resources) { player.resources.ammo++; resourceType = "Ammo"; } mapData[player.row][player.col] = TILE_LAND; collectedResource = true; }
+
+                    if (resourceCollected) { Game.logMessage(`Player collected ${resourceType}.`); } // Log collection
+                    // Game.logMessage("Player moved."); // Decided against logging every move
+
                     if (typeof redrawCanvas === 'function') redrawCanvas();
                     Game.endPlayerTurn(); // End turn after move
-                } else { console.log(`Move blocked: Target tile (${targetRow}, ${targetCol}) type ${targetTileType} is not walkable.`); }
+                } else { console.log(`Move blocked: Target tile (${targetRow}, ${targetCol}) type ${targetTileType} is not walkable.`); } // Keep console log
             } // End Movement Logic
-        } else { console.log(`Move blocked: Target (${targetRow}, ${targetCol}) is outside grid boundaries.`); }
+        } else { console.log(`Move blocked: Target (${targetRow}, ${targetCol}) is outside grid boundaries.`); } // Keep console log
     } // End Move or Attack block
-}
+} // End handleKeyDown
