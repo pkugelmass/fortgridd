@@ -79,3 +79,27 @@ canvas {
     margin-left: auto; /* Center canvas if body isn't already */
     margin-right: auto;
 }
+
+#logContainer {
+    width: 80%;              /* Match other elements */
+    max-width: 800px;
+    height: 100px;           /* Fixed height for the log box */
+    background-color: #333;  /* Dark background */
+    border: 1px solid #666;
+    border-radius: 4px;
+    margin-top: 15px;        /* Space above the log */
+    padding: 5px 10px;       /* Padding inside */
+    overflow-y: scroll;      /* Add scrollbar if content exceeds height */
+    font-size: 0.9em;
+    color: #ddd;              /* Light grey text */
+    box-sizing: border-box;
+    /* To make newest messages appear at bottom and scroll down: */
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+/* Style individual log messages if needed */
+#logContainer p {
+    margin: 2px 0; /* Spacing between messages */
+    line-height: 1.2;
+}
