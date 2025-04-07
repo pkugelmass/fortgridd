@@ -48,4 +48,4 @@ const HEAL_COST = 1;             // Medkits required to heal
 const HEAL_AMOUNT = 1;
 
 // UI / Game Logic
-const MAX_LOG_MESSAGES = 15;        // Moved from game.js
+const MAX_LOG_MESSAGES = 50;        // Moved from game.js

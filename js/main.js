@@ -145,7 +145,7 @@ function resizeAndDraw() {
 function resetGame() {
     console.log("--- GAME RESETTING ---");
     // 1. Reset Game Manager State (uses config constants implicitly)
-    if (typeof Game !== 'undefined') { Game.currentTurn = 'player'; Game.gameActive = true; Game.turnNumber = 1; Game.safeZone = { minRow: 0, maxRow: GRID_HEIGHT - 1, minCol: 0, maxCol: GRID_WIDTH - 1 }; Game.gameLog = ["Game Reset."]; } else { return; }
+    if (typeof Game !== 'undefined') { Game.currentTurn = 'player'; Game.gameActive = true; Game.turnNumber = 1; Game.safeZone = { minRow: 0, maxRow: GRID_HEIGHT - 1, minCol: 0, maxCol: GRID_WIDTH - 1 }; Game.gameLog = [];Game.logMessage("Game Reset."); } else { return; }
     // 2. Regenerate Map (uses config constants implicitly)
     if (typeof createMapData === 'function') { mapData = createMapData(); } else { Game.setGameOver(); return; }
     // 3. Reset Player (Uses config constants)
@@ -230,7 +230,7 @@ function initializeGame() {
 
     console.log("INIT: Initialization sequence complete.");
     // Final status logs...
-    if (typeof Game !== 'undefined') Game.logMessage("Game Started.");
+    if (typeof Game !== 'undefined') Game.logMessage("Game Started."); 
     return true;
 }
 

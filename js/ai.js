@@ -74,7 +74,7 @@ function executeAiTurns() {
     if (typeof Game === 'undefined' || Game.isGameOver() || Game.getCurrentTurn() !== 'ai' || typeof enemies === 'undefined') { if (typeof Game !== 'undefined' && !Game.isGameOver() && Game.getCurrentTurn() === 'ai') { Game.endAiTurn(); } return; }
 
     let redrawNeeded = false;
-    const currentEnemiesTurnOrder = [...enemies];
+    const currentEnemiesTurnOrder = [...enemies]; // Iterate over a snapshot
 
     for (let i = 0; i < currentEnemiesTurnOrder.length; i++) {
         const enemy = enemies.find(e => e.id === currentEnemiesTurnOrder[i].id);
@@ -84,45 +84,50 @@ function executeAiTurns() {
         const directions = [ { dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
         const zone = Game.getSafeZone();
 
-        // 1. Storm Avoidance
+        // --- 1. Check Storm Avoidance ---
         const isOutside = enemy.row < zone.minRow || enemy.row > zone.maxRow || enemy.col < zone.minCol || enemy.col > zone.maxCol;
         if (isOutside) {
             const possibleMoves = []; /* Find valid moves */ for (const dir of directions) { const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc; if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) { if (typeof mapData !== 'undefined') { const targetTileType = mapData[targetRow][targetCol]; if (targetTileType === TILE_LAND) { let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol); let occupiedByOtherEnemy = false; if (enemies && enemies.length > 0) { for (let j = 0; j < enemies.length; j++) { const otherEnemy = enemies[j]; if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0) continue; if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) { occupiedByOtherEnemy = true; break; } } } if (!occupiedByPlayer && !occupiedByOtherEnemy) { possibleMoves.push({ row: targetRow, col: targetCol }); } } } else { console.error("mapData error");} } }
-            if (possibleMoves.length > 0) { const helpfulMoves = []; /* Find helpful moves */ for (const move of possibleMoves) { let isHelpful = false; if (enemy.row < zone.minRow && move.row > enemy.row) isHelpful = true; else if (enemy.row > zone.maxRow && move.row < enemy.row) isHelpful = true; else if (enemy.col < zone.minCol && move.col > enemy.col) isHelpful = true; else if (enemy.col > zone.maxCol && move.col < enemy.col) isHelpful = true; else if ((enemy.row >= zone.minRow && enemy.row <= zone.maxRow) && ((enemy.col < zone.minCol && move.col > enemy.col) || (enemy.col > zone.maxCol && move.col < enemy.col))) isHelpful = true; else if ((enemy.col >= zone.minCol && enemy.col <= zone.maxCol) && ((enemy.row < zone.minRow && move.row > enemy.row) || (enemy.row > zone.maxRow && move.row < enemy.row))) isHelpful = true; if (isHelpful) { helpfulMoves.push(move); } } let chosenMove = null; if (helpfulMoves.length > 0) { chosenMove = helpfulMoves[Math.floor(Math.random() * helpfulMoves.length)]; } else { chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)]; } Game.logMessage(`Enemy ${enemy.id || i} moves towards safety.`); enemy.row = chosenMove.row; enemy.col = chosenMove.col; actedThisTurn = true; redrawNeeded = true; }
-            else { Game.logMessage(`Enemy ${enemy.id || i} waits (stuck in storm).`); actedThisTurn = true; } // Log waiting
+            if (possibleMoves.length > 0) { const helpfulMoves = []; /* Find helpful moves */ for (const move of possibleMoves) { let isHelpful = false; if (enemy.row < zone.minRow && move.row > enemy.row) isHelpful = true; else if (enemy.row > zone.maxRow && move.row < enemy.row) isHelpful = true; else if (enemy.col < zone.minCol && move.col > enemy.col) isHelpful = true; else if (enemy.col > zone.maxCol && move.col < enemy.col) isHelpful = true; else if ((enemy.row >= zone.minRow && enemy.row <= zone.maxRow) && ((enemy.col < zone.minCol && move.col > enemy.col) || (enemy.col > zone.maxCol && move.col < enemy.col))) isHelpful = true; else if ((enemy.col >= zone.minCol && enemy.col <= zone.maxCol) && ((enemy.row < zone.minRow && move.row > enemy.row) || (enemy.row > zone.maxRow && move.row < enemy.row))) isHelpful = true; if (isHelpful) { helpfulMoves.push(move); } } let chosenMove = null; if (helpfulMoves.length > 0) { chosenMove = helpfulMoves[Math.floor(Math.random() * helpfulMoves.length)]; } else { chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)]; }
+                Game.logMessage(`Enemy ${enemy.id || i} moves towards safety to (${chosenMove.row},${chosenMove.col}).`); // <<< LOG
+                enemy.row = chosenMove.row; enemy.col = chosenMove.col; actedThisTurn = true; redrawNeeded = true;
+            } else {
+                 Game.logMessage(`Enemy ${enemy.id || i} waits (stuck in storm).`); // <<< LOG
+                 actedThisTurn = true;
+            }
         }
 
-        // 2. Melee Attack Adjacent Unit
+        // --- 2. Melee Attack Adjacent Unit ---
         if (!actedThisTurn) {
              let adjacentTarget = null; let targetList = []; /* Find adjacent targets */ if (typeof player !== 'undefined' && player.hp > 0 && player.row !== null) { for (const dir of directions) { if (enemy.row + dir.dr === player.row && enemy.col + dir.dc === player.col) { targetList.push(player); break; } } } if (typeof enemies !== 'undefined') { for (const otherEnemy of enemies) { if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0 || otherEnemy.row === null) continue; for (const dir of directions) { if (enemy.row + dir.dr === otherEnemy.row && enemy.col + dir.dc === otherEnemy.col) { targetList.push(otherEnemy); break; } } } }
              if (targetList.length > 0) {
                 adjacentTarget = targetList[0]; const isTargetPlayer = (adjacentTarget === player); const targetId = isTargetPlayer ? 'Player' : (adjacentTarget.id || '??'); const damage = AI_ATTACK_DAMAGE;
-                Game.logMessage(`Enemy ${enemy.id || i} attacks ${targetId} for ${damage} damage.`); // Log Attack
-                adjacentTarget.hp -= damage; // console.log(`${targetId} HP...`); // Quieter
+                Game.logMessage(`Enemy ${enemy.id || i} attacks ${targetId} at (${adjacentTarget.row},${adjacentTarget.col}) for ${damage} damage.`); // <<< LOG Attack
+                adjacentTarget.hp -= damage;
                 actedThisTurn = true; redrawNeeded = true;
                 if (adjacentTarget.hp <= 0) { // Check if target died
-                    // Defeat message logged by checkEndConditions
-                    if (!isTargetPlayer) { enemies = enemies.filter(e => e.id !== adjacentTarget.id); Game.logMessage(`Enemy ${adjacentTarget.id} defeated by Enemy ${enemy.id}!`);} // Log AIvAI kill specifically
+                    // Defeat message logged by checkEndConditions unless AI kills AI
+                    if (!isTargetPlayer) { enemies = enemies.filter(e => e.id !== adjacentTarget.id); Game.logMessage(`Enemy ${adjacentTarget.id} defeated by Enemy ${enemy.id}!`); } // Log AIvAI kill
                 }
                  if (Game.checkEndConditions()) return; // Check end conditions & stop if ended
             }
         }
 
-        if (Game.isGameOver()) return; // Exit if game ended during this AI's turn
+        if (Game.isGameOver()) return;
 
-        // 3. Ranged Attack Player
+        // --- 3. Ranged Attack Player ---
         if (!actedThisTurn && typeof player !== 'undefined' && player.hp > 0 && player.row !== null && enemy.resources && enemy.resources.ammo > 0) {
             const distToPlayer = Math.abs(player.row - enemy.row) + Math.abs(player.col - enemy.col);
-            // Use RANGED_ATTACK_RANGE from config.js
+            const enemyDetectionRange = enemy.detectionRange || 8; // Should use RANGED_ATTACK_RANGE here? Yes.
             if (distToPlayer <= RANGED_ATTACK_RANGE && canShootTarget(enemy, player, RANGED_ATTACK_RANGE)) {
                  enemy.resources.ammo--; const damage = AI_ATTACK_DAMAGE; player.hp -= damage;
-                 Game.logMessage(`Enemy ${enemy.id || i} shoots Player for ${damage} damage! (Ammo: ${enemy.resources.ammo})`); // Log Shot
+                 Game.logMessage(`Enemy ${enemy.id || i} shoots Player for ${damage} damage! (Ammo: ${enemy.resources.ammo})`); // <<< LOG Shot
                  actedThisTurn = true; redrawNeeded = true;
-                 if (Game.checkEndConditions()) return; // Check end conditions & stop if ended
+                 if (Game.checkEndConditions()) return; // Check end conditions
             }
         }
 
-        // 4. Move Towards Nearest Unit
+        // --- 4. Move Towards Nearest Unit ---
         if (!actedThisTurn && typeof player !== 'undefined' && player.hp > 0 && player.row !== null) {
              let closestUnit = null; let minDistance = Infinity; /* Find closest unit */ let playerDist = Math.abs(player.row - enemy.row) + Math.abs(player.col - enemy.col); if (player.hp > 0 && playerDist < minDistance) { minDistance = playerDist; closestUnit = player; } if (typeof enemies !== 'undefined') { for (const otherEnemy of enemies) { if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0 || otherEnemy.row === null) continue; const dist = Math.abs(otherEnemy.row - enemy.row) + Math.abs(otherEnemy.col - enemy.col); if (dist < minDistance) { minDistance = dist; closestUnit = otherEnemy; } } }
              const enemyDetectionRange = enemy.detectionRange || 8;
@@ -130,22 +135,22 @@ function executeAiTurns() {
                 const hpPercent = enemy.hp / (enemy.maxHp || 1); let pursueTarget = (hpPercent > 0.3);
                 if (pursueTarget) {
                     const possibleMoves = []; /* Find valid moves */ for (const dir of directions) { const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc; if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) { if (typeof mapData !== 'undefined') { const targetTileType = mapData[targetRow][targetCol]; if (targetTileType === TILE_LAND) { let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol); let occupiedByOtherEnemy = false; if (enemies && enemies.length > 0) { for (let j = 0; j < enemies.length; j++) { const otherEnemyCheck = enemies[j]; if (!otherEnemyCheck || otherEnemyCheck.id === enemy.id || otherEnemyCheck.hp <= 0) continue; if (otherEnemyCheck.row === targetRow && otherEnemyCheck.col === targetCol) { occupiedByOtherEnemy = true; break; } } } if (!occupiedByPlayer && !occupiedByOtherEnemy) { possibleMoves.push({ row: targetRow, col: targetCol }); } } } else { console.error("mapData error");} } }
-                    if (possibleMoves.length > 0) { let bestMove = null; let minTargetDistance = minDistance; for (const move of possibleMoves) { const newDist = Math.abs(closestUnit.row - move.row) + Math.abs(closestUnit.col - move.col); if (newDist < minTargetDistance) { minTargetDistance = newDist; bestMove = move; } } if (bestMove) { const targetId = (closestUnit === player) ? 'Player' : closestUnit.id; Game.logMessage(`Enemy ${enemy.id || i} moves towards ${targetId}.`); enemy.row = bestMove.row; enemy.col = bestMove.col; actedThisTurn = true; redrawNeeded = true;} }
-                } else { Game.logMessage(`Enemy ${enemy.id || i} is cautious (low HP), moves randomly.`); } // Log caution
+                    if (possibleMoves.length > 0) { let bestMove = null; let minTargetDistance = minDistance; for (const move of possibleMoves) { const newDist = Math.abs(closestUnit.row - move.row) + Math.abs(closestUnit.col - move.col); if (newDist < minTargetDistance) { minTargetDistance = newDist; bestMove = move; } } if (bestMove) { const targetId = (closestUnit === player) ? 'Player' : closestUnit.id; Game.logMessage(`Enemy ${enemy.id || i} moves towards ${targetId} at (${bestMove.row},${bestMove.col}).`); enemy.row = bestMove.row; enemy.col = bestMove.col; actedThisTurn = true; redrawNeeded = true;} } // <<< LOG Move Target
+                } else { Game.logMessage(`Enemy ${enemy.id || i} is cautious (low HP).`); } // <<< LOG Caution
              }
         }
 
-        // 5. Random Movement (Fallback)
+        // --- 5. Random Movement (Fallback) ---
         if (!actedThisTurn) {
              const possibleMoves = []; /* Find valid moves */ for (const dir of directions) { const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc; if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) { if (typeof mapData !== 'undefined') { const targetTileType = mapData[targetRow][targetCol]; if (targetTileType === TILE_LAND) { let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol); let occupiedByOtherEnemy = false; if (enemies && enemies.length > 0) { for (let j = 0; j < enemies.length; j++) { const otherEnemy = enemies[j]; if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0) continue; if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) { occupiedByOtherEnemy = true; break; } } } if (!occupiedByPlayer && !occupiedByOtherEnemy) { possibleMoves.push({ row: targetRow, col: targetCol }); } } } else { console.error("mapData error");} } }
-             if (possibleMoves.length > 0) { const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)]; Game.logMessage(`Enemy ${enemy.id || i} moves randomly.`); enemy.row = chosenMove.row; enemy.col = chosenMove.col; redrawNeeded = true; }
-             else { Game.logMessage(`Enemy ${enemy.id || i} waits (no moves).`); actedThisTurn = true; /* Also counts as acting if stuck */ }
+             if (possibleMoves.length > 0) { const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)]; Game.logMessage(`Enemy ${enemy.id || i} moves randomly to (${chosenMove.row},${chosenMove.col}).`); enemy.row = chosenMove.row; enemy.col = chosenMove.col; redrawNeeded = true; } // <<< LOG Random Move
+             else { Game.logMessage(`Enemy ${enemy.id || i} waits (no moves).`); actedThisTurn = true; } // <<< LOG Wait
         }
 
     } // End enemy loop
 
     // End AI turn only if game is still active
-    if (!Game.isGameOver()) { Game.endAiTurn(); }
-    // else { if (typeof redrawCanvas === 'function') redrawCanvas(); } // Let setGameOver handle final redraw
+    if (!Game.isGameOver()) { Game.endAiTurn(); } // Handles setting turn and redraw if needed
+    // else { if (typeof redrawCanvas === 'function') redrawCanvas(); } // Let setGameOver handle final draw
 
 } // End executeAiTurns
