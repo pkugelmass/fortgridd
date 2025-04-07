@@ -3,10 +3,6 @@ console.log("input.js loaded");
 /**
  * Handles keydown events for player movement, attack, wait, OR heal ('h').
  * Uses the global Game object to check/manage state and turns.
- * Relies on global vars: player, enemies, mapData, GRID_WIDTH/HEIGHT, TILE_LAND/MEDKIT, PLAYER_ATTACK_DAMAGE, HEAL_COST, HEAL_AMOUNT.
- * Relies on global functions: redrawCanvas.
- * Calls Game.endPlayerTurn(), Game.setGameOver(), Game.isPlayerTurn(), Game.isGameOver().
- * @param {KeyboardEvent} event - The keyboard event object.
  */
 function handleKeyDown(event) {
     // console.log("handleKeyDown Fired! Key:", event.key); // Optional debug
@@ -35,35 +31,26 @@ function handleKeyDown(event) {
 
     if (actionType === 'wait') {
         console.log("Player waits.");
-        if (typeof redrawCanvas === 'function') redrawCanvas(); // Update UI immediately
-        Game.endPlayerTurn(); // End turn
-        return; // Action complete
+        if (typeof redrawCanvas === 'function') redrawCanvas();
+        Game.endPlayerTurn();
+        return;
     }
 
     if (actionType === 'heal') {
         console.log("Player attempts to heal...");
-        // Use constants from config.js and resources from player.js
         if (typeof player.resources !== 'undefined' && typeof HEAL_COST !== 'undefined' && typeof HEAL_AMOUNT !== 'undefined' && typeof player.maxHp !== 'undefined') {
             if (player.resources.medkits >= HEAL_COST) {
                 if (player.hp < player.maxHp) {
-                    const healAmountActual = Math.min(HEAL_AMOUNT, player.maxHp - player.hp); // Heal only up to max HP
+                    const healAmountActual = Math.min(HEAL_AMOUNT, player.maxHp - player.hp);
                     player.resources.medkits -= HEAL_COST;
                     player.hp += healAmountActual;
                     console.log(`Player healed for ${healAmountActual} HP using ${HEAL_COST} medkits. Current HP: ${player.hp}/${player.maxHp}, Medkits: ${player.resources.medkits}`);
-                    if (typeof redrawCanvas === 'function') redrawCanvas(); // Show updated state
-                    Game.endPlayerTurn(); // Healing takes a turn
-                } else {
-                    console.log("Cannot heal: Already at full health.");
-                    // Do not end turn if action fails
-                }
-            } else {
-                console.log(`Cannot heal: Need ${HEAL_COST} medkits, have ${player.resources.medkits || 0}.`);
-                // Do not end turn if action fails
-            }
-        } else {
-            console.error("Healing failed: Player resources, cost/amount constants, or maxHP missing.");
-        }
-        return; // Heal action attempt complete (success or fail)
+                    if (typeof redrawCanvas === 'function') redrawCanvas();
+                    Game.endPlayerTurn();
+                } else { console.log("Cannot heal: Already at full health."); }
+            } else { console.log(`Cannot heal: Need ${HEAL_COST} medkits, have ${player.resources.medkits || 0}.`); }
+        } else { console.error("Healing failed: Dependencies missing."); }
+        return;
     }
 
     if (actionType === 'move_or_attack') {
@@ -75,35 +62,46 @@ function handleKeyDown(event) {
             // A) ATTACK LOGIC
             if (targetEnemy) {
                 console.log(`Player attacks Enemy ${targetEnemy.id || '??'}!`);
-                targetEnemy.hp -= PLAYER_ATTACK_DAMAGE; // Assumes PLAYER_ATTACK_DAMAGE is global
-                console.log(`Enemy HP: ${targetEnemy.hp}/${targetEnemy.maxHp}`);
-                if (targetEnemy.hp <= 0) { // Check defeat
-                    console.log(`Enemy ${targetEnemy.id || '??'} defeated!`);
-                    enemies = enemies.filter(enemy => enemy !== targetEnemy); // Remove enemy
-                    if (enemies.length === 0) { // Check Win
-                        console.log("All enemies defeated! YOU WIN!"); Game.setGameOver(); alert("YOU WIN!"); return;
-                    }
-                }
-                if (typeof redrawCanvas === 'function') redrawCanvas(); // Redraw after attack results
-                Game.endPlayerTurn(); // End turn after attack
+                targetEnemy.hp -= PLAYER_ATTACK_DAMAGE; console.log(`Enemy HP: ${targetEnemy.hp}/${targetEnemy.maxHp}`);
+                if (targetEnemy.hp <= 0) { console.log(`Enemy ${targetEnemy.id || '??'} defeated!`); enemies = enemies.filter(enemy => enemy !== targetEnemy); if (enemies.length === 0) { console.log("All enemies defeated! YOU WIN!"); Game.setGameOver(); alert("YOU WIN!"); return; } }
+                if (typeof redrawCanvas === 'function') redrawCanvas();
+                Game.endPlayerTurn();
             }
             // B) MOVEMENT LOGIC
             else {
-                const targetTileType = mapData[targetRow][targetCol]; // Assumes mapData is global
-                // Use TILE_MEDKIT constant from map.js
-                if (targetTileType === TILE_LAND || targetTileType === TILE_MEDKIT) { // Walkable Check
+                const targetTileType = mapData[targetRow][targetCol];
+
+                // *** UPDATED Walkable Check: Now includes TILE_AMMO ***
+                if (targetTileType === TILE_LAND || targetTileType === TILE_MEDKIT || targetTileType === TILE_AMMO) {
                     player.row = targetRow; player.col = targetCol; // Move player
 
-                    // Use TILE_MEDKIT and player.resources.medkits
-                    if (targetTileType === TILE_MEDKIT) { // Resource Check
+                    let collectedResource = false; // Flag to only collect one type per move
+
+                    // Check for Medkit collection
+                    if (targetTileType === TILE_MEDKIT) {
                         if (player.resources) { player.resources.medkits++; console.log(`Collected Medkit! Total: ${player.resources.medkits}`); }
                         mapData[player.row][player.col] = TILE_LAND; // Change tile back to land
+                        collectedResource = true;
                     }
-                    if (typeof redrawCanvas === 'function') redrawCanvas(); // Show move results
+                    // *** NEW: Check for Ammo collection (only if not a medkit) ***
+                    else if (targetTileType === TILE_AMMO) {
+                         if (player.resources) { player.resources.ammo++; console.log(`Collected Ammo! Total: ${player.resources.ammo}`); }
+                         mapData[player.row][player.col] = TILE_LAND; // Change tile back to land
+                         collectedResource = true;
+                    }
+
+                    // Always redraw after valid move (shows movement & potential UI/map change)
+                    if (typeof redrawCanvas === 'function') redrawCanvas();
                     Game.endPlayerTurn(); // End turn after move
 
-                } else { console.log(`Move blocked: Target tile (${targetRow}, ${targetCol}) type ${targetTileType} is not walkable.`); }
+                } else {
+                    // Log blocked move by terrain/obstacle
+                    console.log(`Move blocked: Target tile (${targetRow}, ${targetCol}) type ${targetTileType} is not walkable.`);
+                }
             } // End Movement Logic
-        } else { console.log(`Move blocked: Target (${targetRow}, ${targetCol}) is outside grid boundaries.`); }
+        } else {
+             // Log blocked move by boundary
+            console.log(`Move blocked: Target (${targetRow}, ${targetCol}) is outside grid boundaries.`);
+        }
     } // End Move or Attack block
 }

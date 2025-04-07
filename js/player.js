@@ -5,7 +5,8 @@ const player = {
     col: null,
     color: '#007bff',
     resources: {
-        medkits: 0
+        medkits: 0,
+        ammo: 3,
     },
     // NEW: Health properties
     hp: 10,
