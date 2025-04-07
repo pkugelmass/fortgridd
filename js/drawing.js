@@ -13,20 +13,47 @@ function drawGrid(ctx, gridWidth, gridHeight, cellSize) {
 /** Draws map cell contents, including storm visual */
 function drawMapCells(ctx, gridWidth, gridHeight, cellSize) {
     if (!mapData || mapData.length === 0 || typeof Game === 'undefined' || typeof Game.getSafeZone !== 'function') { return; }
+
     const fontSize = cellSize * 0.7; ctx.font = `${fontSize}px Arial`;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     const safeZone = Game.getSafeZone();
+
     for (let row = 0; row < gridHeight; row++) {
         for (let col = 0; col < gridWidth; col++) {
             if (!mapData[row]) continue;
             const tileType = mapData[row][col];
             const cellX = col * cellSize; const cellY = row * cellSize;
-            const color = TILE_COLORS[tileType]; ctx.fillStyle = color || '#FFFFFF';
+
+            // 1. Draw base terrain color
+            const color = TILE_COLORS[tileType];
+            ctx.fillStyle = color || '#FFFFFF';
             ctx.fillRect(cellX, cellY, cellSize, cellSize);
+
+            // 2. Draw emoji if applicable
             const emoji = TILE_EMOJIS[tileType];
-            if (emoji) { const centerX = cellX + cellSize / 2; const centerY = cellY + cellSize / 2; ctx.fillText(emoji, centerX, centerY); }
+            if (emoji) { /* ... draw emoji ... */ }
+
+            // 3. --- MODIFIED: Draw Storm Overlay if outside safe zone ---
             if (row < safeZone.minRow || row > safeZone.maxRow || col < safeZone.minCol || col > safeZone.maxCol) {
-                 ctx.fillStyle = 'rgba(255, 0, 0, 0.3)'; ctx.fillRect(cellX, cellY, cellSize, cellSize);
+                 // Apply a base color tint first
+                 ctx.fillStyle = 'rgba(90, 19, 157, 0.3)'; // Darker Red, slightly more opaque
+                 ctx.fillRect(cellX, cellY, cellSize, cellSize);
+
+                 // Add subtle diagonal lines for texture (optional)
+                 ctx.strokeStyle = 'rgba(75, 0, 130, 0.35)'; // Even darker red for lines
+                 ctx.lineWidth = 1;
+                 ctx.beginPath();
+                 for (let i = -cellSize; i < cellSize * 2; i += 4) { // Draw lines across a wider area, clip later
+                     ctx.moveTo(cellX + i, cellY);
+                     ctx.lineTo(cellX + i + cellSize, cellY + cellSize);
+                 }
+                 // Clip drawing to the current cell before stroking lines
+                 ctx.save(); // Save current context state
+                 ctx.beginPath(); // Start a new path for clipping
+                 ctx.rect(cellX, cellY, cellSize, cellSize); // Define clipping rectangle
+                 ctx.clip(); // Apply clipping
+                 ctx.stroke(); // Draw the lines (only visible within the cell)
+                 ctx.restore(); // Restore context state (remove clipping)
             }
         }
     }

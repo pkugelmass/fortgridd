@@ -17,7 +17,7 @@ const TILE_AMMO = 4;   // *** NEW: Ammo tile type ***
 const TILE_EMOJIS = {};
 const TILE_COLORS = {
     [TILE_LAND]: '#8FBC8F',   // DarkSeaGreen
-    [TILE_WALL]: '#A9A9A9',   // DarkGray
+    [TILE_WALL]: '#999999',   // DarkGray
     [TILE_TREE]: '#556B2F',   // DarkOliveGreen
     [TILE_MEDKIT]: '#FF6347', // Tomato Red
     [TILE_AMMO]: '#4682B4',   // *** NEW: SteelBlue for Ammo ***
