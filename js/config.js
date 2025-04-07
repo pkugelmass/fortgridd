@@ -4,8 +4,8 @@ console.log("config.js loaded");
 
 // Grid & Display
 const GRID_WIDTH = 50; // Or your preferred size
-const GRID_HEIGHT = 50;
-const MIN_CELL_SIZE = 8;
+const GRID_HEIGHT = 45;
+const MIN_CELL_SIZE = 7;
 const CANVAS_PADDING = 20;
 
 // Entities

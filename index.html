@@ -4,27 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FortGridd</title>
-    <link rel="stylesheet" href="style.css">
-</head>
+    <link rel="stylesheet" href="style.css"> </head>
 <body>
     <div id="toolbar">
         <h1>FortGridd</h1>
-        <button id="restartButton">Restart Game</button> 
+        <button id="restartButton">Restart Game</button>
     </div>
 
     <div id="statusBar">
         <span class="status-item" id="medkitStatus">Medkits: <span id="medkitsValue">0</span></span>
         <span class="status-item" id="ammoStatus">Ammo: <span id="ammoValue">0</span></span>
         <span class="status-item" id="hpStatus">HP: <span id="hpValue">--/--</span></span>
-        <span class="status-item" id="shrinkStatus">Shrink in: <span id="shrinkValue">--</span></span> 
+        <span class="status-item" id="shrinkStatus">Shrink in: <span id="shrinkValue">--</span></span>
     </div>
-    
-    <canvas id="gameCanvas"></canvas> 
 
-    <div id="logContainer">
-        <p>Welcome to FortGridd!</p> 
+    <div id="mainContent">
+        <canvas id="gameCanvas"></canvas> <div id="logContainer">          <p>Welcome to FortGridd!</p> </div>
     </div>
-    
     <script src="js/config.js"></script>
     <script src="js/map.js"></script>
     <script src="js/player.js"></script>
@@ -32,6 +28,5 @@
     <script src="js/game.js"></script>
     <script src="js/drawing.js"></script>
     <script src="js/input.js"></script>
-    <script src="js/main.js"></script> 
-</body>
+    <script src="js/main.js"></script> </body>
 </html>
