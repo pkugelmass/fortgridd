@@ -129,19 +129,23 @@ function drawEnemies(ctx, cellSize) {
 
 /** Draws UI */
 function drawUI(ctx) {
+    // console.log("DRAW: drawUI START"); // Removed log
     if (typeof Game === 'undefined') { console.error("Game object not defined in drawUI!"); return; }
-    ctx.fillStyle = 'white'; ctx.font = '16px Arial';
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    ctx.shadowColor = 'black'; ctx.shadowBlur = 4; let yOffset = 10;
-    if (typeof player !== 'undefined' && player.resources) { ctx.fillText(`Medkits: ${player.resources.medkits || 0}`, 10, yOffset); } else { ctx.fillText("Medkits: N/A", 10, yOffset); } yOffset += 20;
-    if (typeof player !== 'undefined' && player.resources) { ctx.fillText(`Ammo: ${player.resources.ammo || 0}`, 10, yOffset); } else { ctx.fillText("Ammo: N/A", 10, yOffset); } yOffset += 20;
-    if (typeof player !== 'undefined') { ctx.fillText(`HP: ${player.hp} / ${player.maxHp}`, 10, yOffset); } else { ctx.fillText("HP: N/A", 10, yOffset); } yOffset += 20;
-    ctx.fillText(`Turn: ${Game.getCurrentTurn()}`, 10, yOffset);
+
+    // <<< REMOVED text drawing for Medkits, Ammo, HP, Turn >>>
+
+    // Display game over/win messages - Use Game object
     if (Game.isGameOver()) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, canvas.height / 2 - 30, canvas.width, 60);
-        ctx.font = '30px Arial'; ctx.fillStyle = 'red'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        // console.log("DRAW: Drawing win/loss overlay because Game.isGameOver() is true."); // Removed log
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, canvas.height / 2 - 30, canvas.width, 60); // Ensure canvas ref is ok, maybe pass width/height? Or use global.
+        ctx.font = '30px Arial'; ctx.fillStyle = 'red';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        // Check player state directly for message content
         if (typeof player !== 'undefined' && player.hp <= 0) { ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2); }
         else { ctx.fillStyle = 'lime'; ctx.fillText('YOU WIN!', canvas.width / 2, canvas.height / 2); }
+        // Note: Shadow was reset outside this block before, should be okay. If text looks bad, reset shadowBlur here too.
+        // ctx.shadowBlur = 0;
     }
-    ctx.shadowBlur = 0;
+    // console.log("DRAW: drawUI END"); // Removed log
 }

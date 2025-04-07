@@ -11,8 +11,16 @@
         <h1>FortGridd</h1>
         <button id="restartButton">Restart Game</button> 
     </div>
+
+    <div id="statusBar">
+        <span class="status-item" id="medkitStatus">Medkits: <span id="medkitsValue">0</span></span>
+        <span class="status-item" id="ammoStatus">Ammo: <span id="ammoValue">0</span></span>
+        <span class="status-item" id="hpStatus">HP: <span id="hpValue">--/--</span></span>
+        <span class="status-item" id="shrinkStatus">Shrink in: <span id="shrinkValue">--</span></span> 
+    </div>
     
-    <canvas id="gameCanvas"></canvas> <script src="js/config.js"></script>
+    <canvas id="gameCanvas"></canvas> 
+    <script src="js/config.js"></script>
     <script src="js/map.js"></script>
     <script src="js/player.js"></script>
     <script src="js/ai.js"></script>

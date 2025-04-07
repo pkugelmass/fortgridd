@@ -1,32 +1,4 @@
-/* Add these new rules */
 
-#toolbar {
-    display: flex;           /* Arrange children (h1, button) in a row */
-    justify-content: space-between; /* Space items out (title left, button right) */
-    /* Other options for justify-content: 'center', 'flex-start', 'space-around' */
-    align-items: center;     /* Vertically align items in the middle */
-    width: 80%;              /* Set a width for the toolbar (adjust as needed) */
-    max-width: 800px;        /* Optional: Max width matching canvas potentially */
-    margin-bottom: 10px;     /* Add some space below the toolbar */
-    padding: 5px 0;          /* Add a little vertical padding */
-}
-
-/* Optional: Remove default margins from h1 inside toolbar for better alignment */
-#toolbar h1 {
-    margin: 0; 
-    font-size: 1.8em; /* Adjust size if needed */
-}
-
-/* Optional: Adjust button margin if needed */
-#toolbar button {
-    margin: 0; 
-    /* Keep previous button styles */
-    padding: 8px 15px;
-    font-size: 1em;
-    cursor: pointer;
-}
-
-/* Ensure body still centers the toolbar and canvas */
 body {
     display: flex;
     flex-direction: column;
@@ -37,12 +9,73 @@ body {
     padding-top: 10px; /* Add padding at the top */
 }
 
+/* Toolbar and Status Bar Alignment */
+#toolbar,
+#statusBar {
+    display: flex;
+    align-items: center;
+    width: 80%;      /* Make them same width */
+    max-width: 800px; /* Set a max width */
+    box-sizing: border-box;
+    margin-left: auto; /* Center align if needed, body might do this too */
+    margin-right: auto;
+}
+
+#toolbar {
+    justify-content: space-between;
+    margin-bottom: 10px;
+    padding: 5px 0;
+}
+
+#statusBar {
+    justify-content: space-around;
+    margin-bottom: 15px;
+    padding: 8px 15px;
+    background-color: #444;
+    border-radius: 4px;
+    border: 1px solid #666;
+}
+
+#toolbar h1 { margin: 0; font-size: 1.8em; }
+#toolbar button { margin: 0; padding: 8px 15px; font-size: 1em; cursor: pointer; }
+
+/* Status Bar Item Styling */
+.status-item {
+    margin: 0 5px; /* Adjust spacing */
+    font-weight: bold;
+    white-space: nowrap; /* Prevent wrapping */
+}
+
+/* Value Span Styling */
+.status-item span { /* Targeting the inner value span */
+    font-weight: normal;
+    color: #FFF; /* Default value color */
+    min-width: 25px; /* Ensure some space */
+    display: inline-block;
+    text-align: right;
+    margin-left: 4px;
+}
+
+/* Specific Colors for Resources */
+#medkitStatus span { /* Color for Medkit value */
+    color: #FF6347; /* Tomato Red - Match TILE_COLORS[TILE_MEDKIT] */
+}
+#ammoStatus span { /* Color for Ammo value */
+    color: #4682B4; /* SteelBlue - Match TILE_COLORS[TILE_AMMO] */
+}
+#hpStatus span { /* Optional: Color for HP value */
+    color: #90EE90; /* LightGreen perhaps */
+}
+#turnStatus span, #shrinkStatus span {
+     color: #FFF; /* White for turn info */
+}
+
+
+/* Canvas styling */
 canvas {
     border: 1px solid #555;
     background-color: #eee;
-    /* Remove margin-top if toolbar provides enough space */
-    /* margin-top: 10px;  */
+    display: block; /* Prevents extra space below canvas */
+    margin-left: auto; /* Center canvas if body isn't already */
+    margin-right: auto;
 }
-
-/* Remove button styling from general button if needed */
-/* button { ... } */
