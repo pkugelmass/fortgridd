@@ -139,7 +139,56 @@ function resizeAndDraw() {
     else { /* ... Handle missing Game object ... */ }
 }
 
-// --- Reset Game Logic --- 
+
+// --- Enemy Creation Helper ---
+/**
+ * Creates a single enemy with randomized stats, finds a valid starting position,
+ * adds the position to occupiedCoords, and returns the enemy object.
+ * Includes the initial FSM state.
+ * @param {number} enemyIndex - The index for generating the enemy ID.
+ * @param {Array<object>} occupiedCoords - Array of {row, col} objects to avoid placing on.
+ * @returns {object|null} The created enemy object or null if placement fails.
+ */
+function createAndPlaceEnemy(enemyIndex, occupiedCoords) {
+    if (typeof findStartPosition !== 'function' || typeof mapData === 'undefined' || typeof GRID_WIDTH === 'undefined' || typeof GRID_HEIGHT === 'undefined' || typeof TILE_LAND === 'undefined') {
+        console.error("createAndPlaceEnemy: Missing required functions or globals.");
+        return null;
+    }
+
+    const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
+
+    if (enemyStartPos) {
+        // Use constants from config.js for variation ranges (with fallbacks)
+        const hpMin = AI_HP_MIN || 4; const hpMax = AI_HP_MAX || 6;
+        const rangeMin = AI_RANGE_MIN || 6; const rangeMax = AI_RANGE_MAX || 10;
+        const ammoMin = AI_AMMO_MIN || 1; const ammoMax = AI_AMMO_MAX || 2;
+
+        const enemyMaxHp = Math.floor(Math.random() * (hpMax - hpMin + 1)) + hpMin;
+        const enemyDetectionRange = Math.floor(Math.random() * (rangeMax - rangeMin + 1)) + rangeMin;
+        const enemyStartingAmmo = Math.floor(Math.random() * (ammoMax - ammoMin + 1)) + ammoMin;
+
+        const newEnemy = {
+            id: `enemy_${enemyIndex}`, row: enemyStartPos.row, col: enemyStartPos.col, color: ENEMY_DEFAULT_COLOR, // Use constant
+            hp: enemyMaxHp, maxHp: enemyMaxHp,
+            detectionRange: enemyDetectionRange,
+            resources: {
+                ammo: enemyStartingAmmo,
+                medkits: AI_START_MEDKITS // Add starting medkits from config
+            },
+            state: AI_STATE_EXPLORING, // <<< Added initial state here
+            targetEnemy: null, // Initialize targetEnemy property
+            targetResourceCoords: null // Initialize targetResourceCoords property
+        };
+        occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col }); // Update occupied list
+        return newEnemy;
+    } else {
+        console.error(`createAndPlaceEnemy: Could not find valid position for enemy ${enemyIndex + 1}.`);
+        return null; // Indicate failure
+    }
+}
+
+
+// --- Reset Game Logic ---
 /** Resets the entire game state */
 function resetGame() {
     console.log("--- GAME RESETTING ---");
@@ -177,36 +226,19 @@ function resetGame() {
         }
     } else { console.error("RESET ERROR: Player object or findStartPosition missing!"); Game.setGameOver(); return; }
 
-    // 4. Reset and Replace Enemies (Uses config constants for variation ranges)
-    if (typeof enemies !== 'undefined' && typeof findStartPosition === 'function') {
+    // 4. Reset and Replace Enemies (Uses helper function)
+    if (typeof enemies !== 'undefined' && typeof createAndPlaceEnemy === 'function') {
         enemies.length = 0; // Clear the existing enemies array
-        console.log(`INIT (Reset): Placing ${NUM_ENEMIES || 3} enemies...`); // Use NUM_ENEMIES from config
-        for (let i = 0; i < (NUM_ENEMIES || 3); i++) {
-            const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
-            if (enemyStartPos) {
-                // Use constants from config.js for variation ranges (with fallbacks)
-                const hpMin = AI_HP_MIN || 4; const hpMax = AI_HP_MAX || 6;
-                const rangeMin = AI_RANGE_MIN || 6; const rangeMax = AI_RANGE_MAX || 10;
-                const ammoMin = AI_AMMO_MIN || 1; const ammoMax = AI_AMMO_MAX || 2;
-
-                const enemyMaxHp = Math.floor(Math.random() * (hpMax - hpMin + 1)) + hpMin;
-                const enemyDetectionRange = Math.floor(Math.random() * (rangeMax - rangeMin + 1)) + rangeMin;
-                const enemyStartingAmmo = Math.floor(Math.random() * (ammoMax - ammoMin + 1)) + ammoMin;
-
-                const newEnemy = {
-                    id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: ENEMY_DEFAULT_COLOR, // Use constant
-                    hp: enemyMaxHp, maxHp: enemyMaxHp,
-                    detectionRange: enemyDetectionRange,
-                    resources: { ammo: enemyStartingAmmo }
-                };
+        const numEnemiesToPlace = NUM_ENEMIES || 3; // Use config or fallback
+        console.log(`INIT (Reset): Placing ${numEnemiesToPlace} enemies...`);
+        for (let i = 0; i < numEnemiesToPlace; i++) {
+            const newEnemy = createAndPlaceEnemy(i, occupiedCoords); // Call helper
+            if (newEnemy) {
                 enemies.push(newEnemy);
-                occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col });
-            } else {
-                console.error(`RESET ERROR: Could not find valid position for enemy ${i + 1}.`);
-            }
+            } // Error logged within helper if placement failed
         }
         console.log(`INIT (Reset): Finished placing ${enemies.length} enemies.`);
-    } else { console.error("RESET ERROR: Enemies array or findStartPosition missing!"); Game.setGameOver(); return; }
+    } else { console.error("RESET ERROR: Enemies array or createAndPlaceEnemy missing!"); Game.setGameOver(); return; }
 
     // 5. Perform Initial Size/Draw for the new game state
     if (typeof resizeAndDraw === 'function') {
@@ -266,39 +298,20 @@ function initializeGame() {
         console.error("INIT ERROR: Player object or findStartPosition missing!"); Game.setGameOver(); return false;
     } else { console.log("INIT: Skipping player placement (Game Over state)."); return false; }
 
-    // 3. Place Enemies (Uses NUM_ENEMIES and variation ranges from config)
-    if (!Game.isGameOver() && typeof enemies !== 'undefined' && typeof findStartPosition === 'function') {
+    // 3. Place Enemies (Uses helper function)
+    if (!Game.isGameOver() && typeof enemies !== 'undefined' && typeof createAndPlaceEnemy === 'function') {
         enemies.length = 0; // Ensure array is empty before populating
         const numEnemiesToPlace = NUM_ENEMIES || 3; // Use config or fallback
         console.log(`INIT: Placing ${numEnemiesToPlace} enemies...`);
         for (let i = 0; i < numEnemiesToPlace; i++) {
-            const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
-            if (enemyStartPos) {
-                // Use constants from config.js for variation ranges (with fallbacks)
-                const hpMin = AI_HP_MIN || 4; const hpMax = AI_HP_MAX || 6;
-                const rangeMin = AI_RANGE_MIN || 6; const rangeMax = AI_RANGE_MAX || 10;
-                const ammoMin = AI_AMMO_MIN || 1; const ammoMax = AI_AMMO_MAX || 2;
-
-                const enemyMaxHp = Math.floor(Math.random() * (hpMax - hpMin + 1)) + hpMin;
-                const enemyDetectionRange = Math.floor(Math.random() * (rangeMax - rangeMin + 1)) + rangeMin;
-                const enemyStartingAmmo = Math.floor(Math.random() * (ammoMax - ammoMin + 1)) + ammoMin;
-
-                const newEnemy = {
-                    id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: ENEMY_DEFAULT_COLOR, // Use constant
-                    hp: enemyMaxHp, maxHp: enemyMaxHp,
-                    detectionRange: enemyDetectionRange,
-                    resources: { ammo: enemyStartingAmmo }
-                };
-                enemies.push(newEnemy); // enemies array from ai.js
-                occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col });
-            } else {
-                console.error(`INIT ERROR: No valid position found for enemy ${i + 1}. Placing fewer enemies.`);
-                // Optionally break or just place fewer
-            }
+            const newEnemy = createAndPlaceEnemy(i, occupiedCoords); // Call helper
+            if (newEnemy) {
+                enemies.push(newEnemy);
+            } // Error logged within helper if placement failed
         }
-         console.log(`INIT: Placed ${enemies.length} enemies.`);
+        console.log(`INIT: Placed ${enemies.length} enemies.`);
     } else if (!Game.isGameOver()) {
-        console.error("INIT ERROR: Enemies array or findStartPosition missing!"); Game.setGameOver(); return false;
+        console.error("INIT ERROR: Enemies array or createAndPlaceEnemy missing!"); Game.setGameOver(); return false;
     } else { console.log("INIT: Skipping enemy placement (Game Over state)."); }
 
     // 4. Initial Size & Draw

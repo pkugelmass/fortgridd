@@ -26,16 +26,38 @@
 
 ### Deeper Refactoring & Consistency
 
-4.  **Code Cleanup & Refactoring:**
-    *   [ ] Review all `.js` files for redundant comments.
-    *   [ ] Identify and extract duplicated code into reusable helper functions (consider `js/utils.js`).
-    *   [ ] Break down long/complex functions.
-    *   [ ] Ensure consistent naming conventions and formatting.
-    *   [ ] **Develop unit tests for refactored code to verify functionality.**
+---
+## Phase 2: AI Evolution (Started: 2025-04-08)
 
-5.  **Establish Consistent Logging:**
-    *   [ ] Define a logging convention (e.g., prefixes, basic utility function).
-    *   [ ] Apply logging convention consistently.
+### Implement Finite State Machine (FSM)
+
+1.  **Define States & Config:** (Completed: 2025-04-08)
+    *   [x] Add AI state constants (`AI_STATE_EXPLORING`, `AI_STATE_SEEKING_RESOURCES`, `AI_STATE_ENGAGING_ENEMY`, `AI_STATE_FLEEING`) to `js/config.js`.
+    *   [x] Add AI decision thresholds (`AI_SEEK_HEALTH_THRESHOLD`, `AI_FLEE_HEALTH_THRESHOLD`) to `js/config.js`.
+    *   [x] Add resource pickup constants (`AI_AMMO_PICKUP_AMOUNT`) to `js/config.js`.
+    *   [x] Add AI medkit property (`AI_START_MEDKITS`) to `js/config.js`.
+
+2.  **Enhance AI Object:** (Completed: 2025-04-08)
+    *   [x] Add `state` property to AI objects in `js/ai.js`, initialized to `EXPLORING`. (Completed via refactor 2025-04-08)
+    *   [x] Add `medkits` property to AI objects in `js/ai.js`. (Completed in createAndPlaceEnemy 2025-04-08)
+    *   [x] Add `targetEnemy` property to AI objects in `js/ai.js`. (Completed in createAndPlaceEnemy 2025-04-08)
+    *   [x] Add `targetResourceCoords` property to AI objects in `js/ai.js`. (Completed in createAndPlaceEnemy 2025-04-08)
+
+3.  **Implement FSM Logic:** (Completed: 2025-04-08)
+    *   [ ] Refactor main AI turn function in `js/ai.js` to use state handlers.
+    *   [ ] Implement `handleExploringState` function (scan, decide transitions).
+    *   [ ] Implement `handleSeekingResourcesState` function (move to target, pickup logic, transitions).
+    *   [ ] Implement `handleEngagingEnemyState` function (move/attack target, transitions).
+    *   [ ] Implement `handleFleeingState` function (move away from threat, transitions).
+    *   [ ] Implement perception/scanning logic within state handlers (using range, LOS).
+    *   [ ] Implement resource pickup logic (update AI stats, update map).
+
+4.  **Unit Testing:** (Completed: 2025-04-08)
+    *   [ ] Create `tests/ai.test.js`.
+    *   [ ] Add tests for initial AI state and properties.
+    *   [ ] Add tests for state transitions based on various conditions.
+    *   [ ] Add tests for resource pickup functionality.
+    *   [ ] Add tests for basic state actions (moving, fleeing).
 
 ### Ongoing
 
@@ -45,7 +67,19 @@
 ---
 ## Discovered During Work
 *(Add new tasks identified during development here)*
+*   [ ] Investigate creating a shared `canMoveTo(unit, targetRow, targetCol)` utility function for player/AI move validation. (Discovered: 2025-04-08)
+*   [x] Refactor duplicated enemy creation logic from initializeGame/resetGame into createAndPlaceEnemy helper function. (Completed: 2025-04-08)
+*   [x] Add unit tests for createAndPlaceEnemy helper function in tests/main.test.js. (Completed: 2025-04-08)
 
 ---
 ## Completed Tasks
 *(Move completed task lines here)*
+4.  **Code Cleanup & Refactoring:** (Completed: 2025-04-08)
+    *   [x] Review all `.js` files for redundant comments.
+    *   [x] Identify and extract duplicated code into reusable helper functions (created `js/utils.js` with `isCellOccupied`, `traceLine`).
+    *   [x] Break down long/complex functions (refactored `executeAiTurns` into helpers).
+    *   [x] Ensure consistent naming conventions and formatting (addressed during refactoring).
+    *   [x] **Develop unit tests for refactored code to verify functionality** (added tests for `isCellOccupied`, `traceLine`).
+5.  **Establish Consistent Logging:** (Completed: 2025-04-08)
+    *   [x] Define a logging convention (reviewed existing: `console.log` for load/debug, `console.warn` for non-critical, `console.error` for critical, `Game.logMessage` for UI).
+    *   [x] Apply logging convention consistently (reviewed files, minor cleanup).

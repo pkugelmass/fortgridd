@@ -12,13 +12,22 @@
   <div id="qunit-fixture"></div>
 
   <!-- Load Game Scripts (Dependencies for Tests) -->
-  <!-- Add more game scripts here as needed by tests -->
+  <!-- Order attempts to respect dependencies -->
   <script src="../js/config.js"></script>
+  <script src="../js/map.js"></script>
+  <script src="../js/player.js"></script>
+  <script src="../js/ai.js"></script>
+  <script src="../js/game.js"></script>
+  <script src="../js/drawing.js"></script>
+  <script src="../js/input.js"></script>
+  <script src="../js/main.js"></script>
 
   <!-- Load Test Scripts -->
   <!-- Add test files here -->
   <script src="config.test.js"></script>
+  <script src="main.test.js"></script> <!-- Added main.js tests -->
   <!-- <script src="utils.test.js"></script> -->
+  <!-- <script src="ai.test.js"></script> --> <!-- Add AI tests when ready -->
 
 </body>
 </html>

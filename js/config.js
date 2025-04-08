@@ -47,6 +47,20 @@ const AI_AMMO_MIN = 1;              // Min starting ammo for AI variation
 const AI_AMMO_MAX = 2;              // Max starting ammo for AI variation
 const AI_PURSUE_HP_THRESHOLD = 0.3; // HP percentage above which AI will pursue targets
 
+// --- AI FSM States ---
+const AI_STATE_EXPLORING = 'EXPLORING';
+const AI_STATE_SEEKING_RESOURCES = 'SEEKING_RESOURCES';
+const AI_STATE_ENGAGING_ENEMY = 'ENGAGING_ENEMY';
+const AI_STATE_FLEEING = 'FLEEING';
+
+// --- AI FSM Decision Thresholds ---
+const AI_SEEK_HEALTH_THRESHOLD = 0.5; // Example: Seek medkit if health < 50%
+const AI_FLEE_HEALTH_THRESHOLD = 0.25; // Example: Flee if health < 25%
+
+// --- AI Resource Interaction ---
+const AI_AMMO_PICKUP_AMOUNT = 1; // Example: Amount of ammo AI gains from pickup
+const AI_START_MEDKITS = 0;      // Example: Starting medkits for AI
+
 // Combat
 const PLAYER_ATTACK_DAMAGE = 2;     // Melee damage dealt by player
 const RANGED_ATTACK_RANGE = 5;      // Max range for player/AI ranged attacks

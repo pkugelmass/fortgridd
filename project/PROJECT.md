@@ -16,14 +16,15 @@ FortGridd is envisioned as a turn-based tactical survival game very much inspire
 
 ## 3. Notes on process
 * This is a fun project for me to learn more about game design, javascript, etc. Please advise me when you're doing something interesting or making use of a design pattern.
-* I'm intermediate with git - particularly best practices for how often to commit, branch, merge, etc. Appreciate your advice on that. 
+* I'm intermediate with git - particularly best practices for how often to commit, branch, merge, etc. Appreciate your advice on that.
 * Let's build unit tests as we go and keep them current.
 * I'm working on a corporate laptop so don't have node.js installed.
-* Check `TASK.md` before starting a new task. If the task isn’t listed, add it with a brief description and today's date.
-- **Mark completed tasks in `TASK.md`** immediately after finishing them.
-- Add new sub-tasks or TODOs discovered during development to `TASK.md` under a “Discovered During Work” section.
-* *Use consistent naming conventions, file structure, and architecture patterns.
-- Never assume missing context. Ask questions if uncertain.
+* Check `TASKS.md` for the next task. If a task isn’t listed, add it with a brief description and today's date.
+* **Before starting any single line item** in `TASKS.md` (including sub-tasks): Explain your plan for that item and ask for my agreement to proceed.
+* **After completing any single line item**: Mark it as complete in `TASKS.md`, then stop and check in with me before identifying the next item.
+* Add new sub-tasks or TODOs discovered during development to `TASKS.md` under a “Discovered During Work” section.
+* Use consistent naming conventions, file structure, and architecture patterns.
+* Never assume missing context. Ask questions if uncertain.
 
 
 ## 4. Road Map
