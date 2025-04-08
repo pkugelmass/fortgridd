@@ -43,15 +43,13 @@ function handleKeyDown(event) {
     if (actionKey) event.preventDefault(); else return;
 
     // --- Define Log message classes ---
-    const playerEvent = 'log-player-event';
-    const playerBad = 'log-player-event log-negative';
-    const playerGood = 'log-player-event log-positive';
+    // REMOVED - Using global constants from config.js now
 
     // --- Process Actions ---
 
     // WAIT Action
     if (actionType === 'wait') {
-        Game.logMessage("Player waits.", playerEvent);
+        Game.logMessage("Player waits.", LOG_CLASS_PLAYER_NEUTRAL);
         if (typeof redrawCanvas === 'function') redrawCanvas(); // Update UI immediately (turn indicator)
         Game.endPlayerTurn(); // End turn
         return; // Action complete
@@ -64,11 +62,11 @@ function handleKeyDown(event) {
                 if (player.hp < player.maxHp) {
                     const healAmountActual = Math.min(HEAL_AMOUNT, player.maxHp - player.hp);
                     player.resources.medkits -= HEAL_COST; player.hp += healAmountActual;
-                    Game.logMessage(`Player uses Medkit, heals ${healAmountActual} HP.`, playerGood); // Log Heal success
+                    Game.logMessage(`Player uses Medkit, heals ${healAmountActual} HP.`, LOG_CLASS_PLAYER_GOOD); // Log Heal success
                     if (typeof redrawCanvas === 'function') redrawCanvas(); // Show updated state
                     Game.endPlayerTurn(); // Healing takes a turn
-                } else { Game.logMessage("Cannot heal: Full health.", playerEvent); } // Log Fail reason
-            } else { Game.logMessage(`Cannot heal: Need ${HEAL_COST} medkits (Have: ${player.resources.medkits || 0}).`, playerEvent); } // Log Fail reason
+                } else { Game.logMessage("Cannot heal: Full health.", LOG_CLASS_PLAYER_NEUTRAL); } // Log Fail reason
+            } else { Game.logMessage(`Cannot heal: Need ${HEAL_COST} medkits (Have: ${player.resources.medkits || 0}).`, LOG_CLASS_PLAYER_NEUTRAL); } // Log Fail reason
         } else { console.error("Healing failed: Dependencies missing."); } // Keep console error for dev
         return; // Heal action attempt complete (success or fail)
     }
@@ -100,16 +98,16 @@ function handleKeyDown(event) {
 
             let logMsg = `Player shoots ${shootDirection.dr === -1 ? 'Up' : shootDirection.dr === 1 ? 'Down' : shootDirection.dc === -1 ? 'Left' : 'Right'}`;
             let targetDefeated = false;
-            let msgClass = playerEvent; // Default log style
+            let msgClass = LOG_CLASS_PLAYER_NEUTRAL; // Default log style
 
             if (shotHit && hitTarget) { // Apply damage if hit
                 const targetId = hitTarget.id || '??'; const damage = RANGED_ATTACK_DAMAGE;
                 hitTarget.hp -= damage;
                 logMsg += ` -> hits ${targetId} at (${hitTarget.row},${hitTarget.col}) for ${damage} damage! (HP: ${hitTarget.hp}/${hitTarget.maxHp})`;
-                msgClass = playerGood; // Style hit as positive for player
+                msgClass = LOG_CLASS_PLAYER_GOOD; // Style hit as positive for player
                 if (hitTarget.hp <= 0) { targetDefeated = true; } // Mark for removal below
-            } else if (blocked) { logMsg += ` -> blocked by ${blockedBy}` + (hitCoord ? ` at (${hitCoord.row},${hitCoord.col})` : '') + "."; msgClass = playerEvent; } // Neutral style for block
-              else { logMsg += " -> missed."; msgClass = playerEvent; } // Neutral style for miss
+            } else if (blocked) { logMsg += ` -> blocked by ${blockedBy}` + (hitCoord ? ` at (${hitCoord.row},${hitCoord.col})` : '') + "."; msgClass = LOG_CLASS_PLAYER_NEUTRAL; } // Neutral style for block
+              else { logMsg += " -> missed."; msgClass = LOG_CLASS_PLAYER_NEUTRAL; } // Neutral style for miss
 
             Game.logMessage(logMsg, msgClass); // Log the outcome
 
@@ -120,7 +118,7 @@ function handleKeyDown(event) {
             if (typeof redrawCanvas === 'function') redrawCanvas(); // Show results immediately
             if (!Game.checkEndConditions()) { Game.endPlayerTurn(); } // Check end conditions & end turn if game continues
 
-        } else { Game.logMessage("Cannot shoot: Out of ammo!", playerBad); } // Log Fail with negative style
+        } else { Game.logMessage("Cannot shoot: Out of ammo!", LOG_CLASS_PLAYER_BAD); } // Log Fail with negative style
         return; // Shoot action attempt complete
     }
 
@@ -134,7 +132,7 @@ function handleKeyDown(event) {
             // A) ATTACK LOGIC
             if (targetEnemy) {
                 const targetId = targetEnemy.id || '??'; const damage = PLAYER_ATTACK_DAMAGE;
-                Game.logMessage(`Player attacks ${targetId} at (${targetRow},${targetCol}) for ${damage} damage.`, playerGood); // Log Attack as positive
+                Game.logMessage(`Player attacks ${targetId} at (${targetRow},${targetCol}) for ${damage} damage.`, LOG_CLASS_PLAYER_GOOD); // Log Attack as positive
                 targetEnemy.hp -= damage;
                 let targetDefeated = false;
                 if (targetEnemy.hp <= 0) { targetDefeated = true; }
@@ -155,21 +153,21 @@ function handleKeyDown(event) {
                     if (targetTileType === TILE_MEDKIT) { if (player.resources) { player.resources.medkits++; resourceType = "Medkit"; } mapData[player.row][player.col] = TILE_LAND; collectedResource = true; }
                     else if (targetTileType === TILE_AMMO) { if (player.resources) { player.resources.ammo++; resourceType = "Ammo"; } mapData[player.row][player.col] = TILE_LAND; collectedResource = true; }
 
-                    if (resourceCollected) { Game.logMessage(`Player moves to ${resourceLoc} & collects ${resourceType}.`, playerEvent); } // Log collection
-                    // else { Game.logMessage(`Player moves to (${targetRow},${targetCol}).`, playerEvent); } // Optional move log
+                    if (resourceCollected) { Game.logMessage(`Player moves to ${resourceLoc} & collects ${resourceType}.`, LOG_CLASS_PLAYER_NEUTRAL); } // Log collection
+                    // else { Game.logMessage(`Player moves to (${targetRow},${targetCol}).`, LOG_CLASS_PLAYER_NEUTRAL); } // Optional move log
 
                     if (typeof redrawCanvas === 'function') redrawCanvas(); // Show move results
                     Game.endPlayerTurn(); // End turn after move
                 } else {
                     // Log blocked move by terrain
                     console.log(`Move blocked: Target tile (${targetRow}, ${targetCol}) type ${targetTileType} is not walkable.`);
-                    Game.logMessage(`Player move blocked by terrain at (${targetRow},${targetCol}).`, playerEvent); // Add to game log too
+                    Game.logMessage(`Player move blocked by terrain at (${targetRow},${targetCol}).`, LOG_CLASS_PLAYER_NEUTRAL); // Add to game log too
                 }
             } // End Movement Logic
         } else {
             // Log blocked move by boundary
             console.log(`Move blocked: Target (${targetRow}, ${targetCol}) is outside grid boundaries.`);
-            Game.logMessage(`Player move blocked by map edge at (${targetRow},${targetCol}).`, playerEvent); // Add to game log too
+            Game.logMessage(`Player move blocked by map edge at (${targetRow},${targetCol}).`, LOG_CLASS_PLAYER_NEUTRAL); // Add to game log too
         }
     } // End Move or Attack block
 } // End handleKeyDown

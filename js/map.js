@@ -4,19 +4,10 @@ console.log("map.js loaded");
 // MOVED to config.js
 
 // --- Tile Definitions ---
-const TILE_LAND = 0;
-const TILE_WALL = 1;
-const TILE_TREE = 2;
-const TILE_MEDKIT = 3;
-const TILE_AMMO = 4;
+// MOVED to config.js
 
 // --- Visual Mappings ---
-// TILE_EMOJIS removed
-const TILE_COLORS = {
-    [TILE_LAND]: '#8FBC8F',   [TILE_WALL]: '#A9A9A9',
-    [TILE_TREE]: '#556B2F',   [TILE_MEDKIT]: '#FF6347',
-    [TILE_AMMO]: '#4682B4',
-};
+// MOVED to config.js
 
 /** Helper function to count wall neighbours */
 function countWallNeighbours(grid, r, c) {

@@ -3,7 +3,7 @@ console.log("player.js loaded");
 const player = {
     row: null,
     col: null,
-    color: '#007bff', // Player visual color
+    color: PLAYER_COLOR, // Player visual color
     resources: {
         // Initial values set during Game Initialization/Reset using config constants
         medkits: 0,

@@ -34,7 +34,7 @@ const Game = {
         const messageWithTurn = `T${this.turnNumber}: ${message}`;
         // Store as an object
         this.gameLog.push({ message: messageWithTurn, cssClass: className }); // Use push
-        if (this.gameLog.length > (MAX_LOG_MESSAGES || 15)) {
+        if (this.gameLog.length > MAX_LOG_MESSAGES) { // Use constant directly
             this.gameLog.shift(); // Use shift
         }
         if (typeof updateLogDisplay === 'function') { updateLogDisplay(); }
@@ -46,11 +46,11 @@ const Game = {
     checkEndConditions: function() {
         if (this.isGameOver()) return true;
         if (typeof player !== 'undefined' && player.hp <= 0) {
-            this.logMessage("Player eliminated! GAME OVER!", 'log-player-event log-negative'); // <<< Added class
+            this.logMessage("Player eliminated! GAME OVER!", LOG_CLASS_PLAYER_BAD); // Use constant
             this.setGameOver(); return true;
         }
         if (typeof enemies !== 'undefined' && enemies.filter(e => e && e.hp > 0).length === 0) {
-            this.logMessage("All enemies eliminated! YOU WIN!", 'log-player-event log-positive'); // <<< Added class
+            this.logMessage("All enemies eliminated! YOU WIN!", LOG_CLASS_PLAYER_GOOD); // Use constant
             this.setGameOver(); return true;
         }
         return false;
@@ -106,7 +106,7 @@ const Game = {
         if (JSON.stringify(this.safeZone) !== oldZoneJSON){
             shrunk = true;
             const zone = this.safeZone; // Use local var for log clarity
-            this.logMessage(`Storm shrinks! Safe Zone: R[${zone.minRow}-${zone.maxRow}], C[${zone.minCol}-${zone.maxCol}]`, 'log-system');
+            this.logMessage(`Storm shrinks! Safe Zone: R[${zone.minRow}-${zone.maxRow}], C[${zone.minCol}-${zone.maxCol}]`, LOG_CLASS_SYSTEM); // Use constant
             console.log("After Shrink:", JSON.stringify(this.safeZone)); // Keep console log for debug
         } else {
             // console.log("Shrink calculated but resulted in no change."); // Optional log
@@ -124,7 +124,7 @@ const Game = {
         if (typeof player !== 'undefined' && player.hp > 0) {
              if (player.row < zone.minRow || player.row > zone.maxRow || player.col < zone.minCol || player.col > zone.maxCol) {
                   const damage = STORM_DAMAGE;
-                  this.logMessage(`Player at (${player.row},${player.col}) takes ${damage} storm damage!`, 'log-player-event log-negative'); // <<< Added class
+                  this.logMessage(`Player at (${player.row},${player.col}) takes ${damage} storm damage!`, LOG_CLASS_PLAYER_BAD); // Use constant
                   player.hp -= damage; stateChanged = true;
                   if (this.checkEndConditions()) { gameEnded = true; }
              }
@@ -136,9 +136,9 @@ const Game = {
                 if (!enemy || enemy.hp <= 0) return false;
                 if (enemy.row < zone.minRow || enemy.row > zone.maxRow || enemy.col < zone.minCol || enemy.col > zone.maxCol) {
                      const damage = STORM_DAMAGE;
-                     this.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) takes ${damage} storm damage!`, 'log-enemy-event'); // <<< Added class
+                     this.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) takes ${damage} storm damage!`, LOG_CLASS_ENEMY_EVENT); // Use constant
                      enemy.hp -= damage; stateChanged = true;
-                     if (enemy.hp <= 0) { this.logMessage(`Enemy ${enemy.id} eliminated by storm!`, 'log-enemy-event'); enemiesKilledByStorm++; return false; } // <<< Added class
+                     if (enemy.hp <= 0) { this.logMessage(`Enemy ${enemy.id} eliminated by storm!`, LOG_CLASS_ENEMY_EVENT); enemiesKilledByStorm++; return false; } // Use constant
                 }
                 return true;
             });
@@ -154,7 +154,7 @@ const Game = {
         if (this.isGameOver()) return;
         this.currentTurn = 'ai';
         // console.log("Switching to AI turn"); // Quieter log
-        if (typeof executeAiTurns === 'function') { setTimeout(executeAiTurns, 100); }
+        if (typeof executeAiTurns === 'function') { setTimeout(executeAiTurns, AI_TURN_DELAY); } // Use constant
         else { console.error("executeAiTurns function not found!"); this.currentTurn = 'player'; }
     },
 

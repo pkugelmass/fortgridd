@@ -149,7 +149,7 @@ function resetGame() {
         // Use constants for grid size if needed, though likely set already
         Game.safeZone = { minRow: 0, maxRow: (GRID_HEIGHT || 25) - 1, minCol: 0, maxCol: (GRID_WIDTH || 25) - 1 };
         Game.gameLog = []; // Clear log array first
-        Game.logMessage("Game Reset.", 'log-system'); // Use logMessage
+        Game.logMessage("Game Reset.", LOG_CLASS_SYSTEM); // Use logMessage with constant
     } else { console.error("RESET ERROR: Game object missing!"); return; } // Cannot proceed
 
     // 2. Regenerate Map (uses config constants implicitly via createMapData)
@@ -194,7 +194,7 @@ function resetGame() {
                 const enemyStartingAmmo = Math.floor(Math.random() * (ammoMax - ammoMin + 1)) + ammoMin;
 
                 const newEnemy = {
-                    id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: '#ff0000',
+                    id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: ENEMY_DEFAULT_COLOR, // Use constant
                     hp: enemyMaxHp, maxHp: enemyMaxHp,
                     detectionRange: enemyDetectionRange,
                     resources: { ammo: enemyStartingAmmo }
@@ -284,7 +284,7 @@ function initializeGame() {
                 const enemyStartingAmmo = Math.floor(Math.random() * (ammoMax - ammoMin + 1)) + ammoMin;
 
                 const newEnemy = {
-                    id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: '#ff0000',
+                    id: `enemy_${i}`, row: enemyStartPos.row, col: enemyStartPos.col, color: ENEMY_DEFAULT_COLOR, // Use constant
                     hp: enemyMaxHp, maxHp: enemyMaxHp,
                     detectionRange: enemyDetectionRange,
                     resources: { ammo: enemyStartingAmmo }
@@ -362,7 +362,7 @@ if (!window.initListenersAttached) {
 
     console.log("INIT: Initialization sequence complete.");
     // Final status logs & Log Game Started
-    if (typeof Game !== 'undefined') { Game.logMessage("Game Started.", 'log-system'); console.log(`Initial Turn: ${Game.getCurrentTurn()}`); }
+    if (typeof Game !== 'undefined') { Game.logMessage("Game Started.", LOG_CLASS_SYSTEM); console.log(`Initial Turn: ${Game.getCurrentTurn()}`); } // Use constant
     else { console.log("Game object not defined."); }
     if(typeof player !== 'undefined' && player.row !== null) { console.log(`Player starting at: ${player.row}, ${player.col}`); console.log(`Initial resources:`, player.resources); }
     if(typeof enemies !== 'undefined') console.log(`Placed ${enemies.length} enemies.`);

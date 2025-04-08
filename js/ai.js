@@ -51,8 +51,8 @@ function executeAiTurns() {
         let actedThisTurn = false;
         const directions = [ { dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
         const zone = Game.getSafeZone(); // Get safe zone boundaries
-        const enemyEvent = 'log-enemy-event'; // CSS class for general enemy logs
-        const playerBad = 'log-player-event log-negative'; // CSS class when player is negatively affected
+        const enemyEvent = LOG_CLASS_ENEMY_EVENT; // CSS class for general enemy logs (from config.js)
+        const playerBad = LOG_CLASS_PLAYER_BAD; // CSS class when player is negatively affected (from config.js)
 
         // --- 1. Check if Outside Safe Zone (Storm Avoidance Logic) ---
         const isOutside = enemy.row < zone.minRow || enemy.row > zone.maxRow || enemy.col < zone.minCol || enemy.col > zone.maxCol;
@@ -155,11 +155,11 @@ function executeAiTurns() {
              if (typeof enemies !== 'undefined') { for (const otherEnemy of enemies) { if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0 || otherEnemy.row === null) continue; const dist = Math.abs(otherEnemy.row - enemy.row) + Math.abs(otherEnemy.col - enemy.col); if (dist < minDistance) { minDistance = dist; closestUnit = otherEnemy; } } }
 
              // Check if target is within enemy's detection range
-             const enemyDetectionRange = enemy.detectionRange || 8; // Use specific or fallback
+             const enemyDetectionRange = enemy.detectionRange || AI_RANGE_MAX; // Use specific or fallback from config.js
              if (closestUnit && minDistance <= enemyDetectionRange) {
                 // Apply HP-based behavior
-                const hpPercent = enemy.hp / (enemy.maxHp || 1);
-                let pursueTarget = (hpPercent > 0.3); // Pursue if HP > 30%
+                const hpPercent = enemy.hp / (enemy.maxHp || 1); // Ensure maxHp exists or default to avoid NaN
+                let pursueTarget = (hpPercent > AI_PURSUE_HP_THRESHOLD); // Pursue if HP > threshold (from config.js)
 
                 if (pursueTarget) {
                     // Find all valid adjacent moves first
