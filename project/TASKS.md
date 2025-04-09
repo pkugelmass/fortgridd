@@ -56,7 +56,7 @@
 
 4.  **Unit Testing:** (Started: 2025-04-08)
     *   [x] Create `tests/ai.test.js`. (Completed: 2025-04-08)
-    *   [ ] Fix failing tests for `handleExploringState` by adjusting test setup. (Next Step)
+    *   [x] Fix failing tests for `handleExploringState` by adjusting test setup. (Completed: 2025-04-08)
     *   [ ] Add tests for initial AI state and properties.
     *   [x] Add tests for state transitions based on various conditions (Started with Exploring state). (Started: 2025-04-08)
     *   [ ] Add tests for resource pickup functionality.

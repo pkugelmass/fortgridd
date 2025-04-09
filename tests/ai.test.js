@@ -47,6 +47,18 @@ QUnit.module('AI FSM', function(hooks) {
         window.LOG_CLASS_ENEMY_EVENT = 'log-enemy-event';
         // Add other constants used by handleExploringState and its helpers
         window.PLAYER_MAX_HP = 15; // Example value
+
+        // --- Mock AI Helper Functions ---
+        // Default mocks (can be overridden in specific tests)
+        window.findNearestVisibleEnemy = function(unit) { return null; };
+        window.findNearbyResource = function(unit, range, type) { return null; };
+        window.getSafeZoneCenter = function() { return { row: Math.floor(GRID_HEIGHT / 2), col: Math.floor(GRID_WIDTH / 2) }; }; // Simple center
+        window.moveTowards = function(unit, targetRow, targetCol, reason) { return false; }; // Default: move fails
+        window.moveRandomly = function(unit) { return false; }; // Default: move fails
+        // Mock traceLine if needed by findNearestVisibleEnemy (assuming it's a dependency)
+        window.traceLine = function(startRow, startCol, endRow, endCol) { return true; }; // Default: assume clear LOS
+        // Mock isCellOccupied if needed by movement helpers
+        window.isCellOccupied = function(row, col, excludeUnitId = null) { return false; }; // Default: assume cell is free
     });
 
     // --- handleExploringState Tests ---
@@ -55,7 +67,14 @@ QUnit.module('AI FSM', function(hooks) {
         // Arrange
         const enemy = { id: 'E1', row: 1, col: 1, hp: 10, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, resources: { ammo: 1, medkits: 0 } };
         window.enemies.push(enemy);
-        window.player.row = 1; window.player.col = 2; // Place player adjacent
+        window.player.row = 1; window.player.col = 2; // Player position (used by mock)
+
+        // Mock specific helper behavior for this test
+        window.findNearestVisibleEnemy = function(unit) {
+            // Simple mock: return player if within range (ignoring actual LOS for this unit test)
+            const dist = Math.abs(unit.row - window.player.row) + Math.abs(unit.col - window.player.col);
+            return dist <= unit.detectionRange ? window.player : null;
+        };
 
         // Act
         handleExploringState(enemy);
@@ -69,7 +88,13 @@ QUnit.module('AI FSM', function(hooks) {
         // Arrange
         const enemy = { id: 'E1', row: 1, col: 1, hp: 3, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, resources: { ammo: 1, medkits: 0 } }; // Low HP (3/15 = 20% < 25% threshold)
         window.enemies.push(enemy);
-        window.player.row = 1; window.player.col = 2; // Place player adjacent
+        window.player.row = 1; window.player.col = 2; // Player position (used by mock)
+
+        // Mock specific helper behavior for this test
+        window.findNearestVisibleEnemy = function(unit) {
+            const dist = Math.abs(unit.row - window.player.row) + Math.abs(unit.col - window.player.col);
+            return dist <= unit.detectionRange ? window.player : null;
+        };
 
         // Act
         handleExploringState(enemy);
@@ -83,7 +108,17 @@ QUnit.module('AI FSM', function(hooks) {
         // Arrange
         const enemy = { id: 'E1', row: 2, col: 2, hp: 6, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, resources: { ammo: 1, medkits: 0 } }; // Needs medkit (6/15 = 40% < 50% threshold)
         window.enemies.push(enemy);
-        window.mapData[1][2] = TILE_MEDKIT; // Place medkit nearby
+        const medkitCoords = { row: 1, col: 2 };
+        window.mapData[medkitCoords.row][medkitCoords.col] = TILE_MEDKIT; // Place medkit nearby
+
+        // Mock specific helper behavior for this test
+        window.findNearestVisibleEnemy = function(unit) { return null; }; // Ensure no enemy is found
+        window.findNearbyResource = function(unit, range, type) {
+            if (type === TILE_MEDKIT && Math.abs(unit.row - medkitCoords.row) + Math.abs(unit.col - medkitCoords.col) <= range) {
+                return medkitCoords;
+            }
+            return null;
+        };
 
         // Act
         handleExploringState(enemy);
@@ -97,7 +132,17 @@ QUnit.module('AI FSM', function(hooks) {
         // Arrange
         const enemy = { id: 'E1', row: 2, col: 2, hp: 15, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, resources: { ammo: 0, medkits: 0 } }; // Needs ammo
         window.enemies.push(enemy);
-        window.mapData[3][2] = TILE_AMMO; // Place ammo nearby
+        const ammoCoords = { row: 3, col: 2 };
+        window.mapData[ammoCoords.row][ammoCoords.col] = TILE_AMMO; // Place ammo nearby
+
+        // Mock specific helper behavior for this test
+        window.findNearestVisibleEnemy = function(unit) { return null; }; // Ensure no enemy is found
+        window.findNearbyResource = function(unit, range, type) {
+            if (type === TILE_AMMO && Math.abs(unit.row - ammoCoords.row) + Math.abs(unit.col - ammoCoords.col) <= range) {
+                return ammoCoords;
+            }
+            return null;
+        };
 
         // Act
         handleExploringState(enemy);
@@ -111,7 +156,21 @@ QUnit.module('AI FSM', function(hooks) {
         // Arrange
         const enemy = { id: 'E1', row: 2, col: 2, hp: 15, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, resources: { ammo: 1, medkits: 0 } }; // Doesn't critically need resources
         window.enemies.push(enemy);
-        window.mapData[1][1] = TILE_AMMO; // Place ammo within proactive scan range
+        const ammoCoords = { row: 1, col: 1 };
+        window.mapData[ammoCoords.row][ammoCoords.col] = TILE_AMMO; // Place ammo within proactive scan range
+
+        // Mock specific helper behavior for this test
+        window.findNearestVisibleEnemy = function(unit) { return null; }; // Ensure no enemy is found
+        window.findNearbyResource = function(unit, range, type) {
+            // Only find if range matches proactive scan range
+            if (range === AI_PROACTIVE_SCAN_RANGE && type === TILE_AMMO && Math.abs(unit.row - ammoCoords.row) + Math.abs(unit.col - ammoCoords.col) <= range) {
+                return ammoCoords;
+            }
+             if (range === AI_PROACTIVE_SCAN_RANGE && type === TILE_MEDKIT) { // Check for medkits too in proactive scan
+                 return null; // Assume no medkit found for this test
+             }
+            return null;
+        };
 
         // Act
         handleExploringState(enemy);
@@ -125,26 +184,53 @@ QUnit.module('AI FSM', function(hooks) {
         // Arrange
         const enemy = { id: 'E1', row: 2, col: 2, hp: 15, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, resources: { ammo: 1, medkits: 0 } };
         window.enemies.push(enemy);
-        // Ensure player is out of range or hidden
+        // Ensure player is out of range or hidden (mock handles this)
         window.player.row = 4; window.player.col = 4;
-        // Ensure no resources are nearby
-        // Map is mostly empty land around (2,2)
+        // Ensure no resources are nearby (mock handles this)
 
         const originalRow = enemy.row;
         const originalCol = enemy.col;
+        let moveAttempted = false;
+
+        // Mock specific helper behavior for this test
+        window.findNearestVisibleEnemy = function(unit) { return null; };
+        window.findNearbyResource = function(unit, range, type) { return null; };
+        // Mock movement to succeed (either towards center or random)
+        window.moveTowards = function(unit, targetRow, targetCol, reason) {
+            moveAttempted = true;
+            unit.row += 1; // Simulate a move
+            return true;
+        };
+         window.moveRandomly = function(unit) {
+            moveAttempted = true;
+            unit.col += 1; // Simulate a move
+            return true;
+        };
+         // Mock Game.logMessage to check for "waits" message if needed
+         const originalLog = Game.logMessage;
+         let waitMessageLogged = false;
+         Game.logMessage = function(message, cssClass) {
+             if (message.includes("waits")) { waitMessageLogged = true; }
+             originalLog(message, cssClass); // Call original mock too
+         };
+
 
         // Act
         handleExploringState(enemy);
 
         // Assert
         assert.strictEqual(enemy.state, AI_STATE_EXPLORING, 'Enemy should remain in EXPLORING state');
-        assert.ok(enemy.row !== originalRow || enemy.col !== originalCol, 'Enemy should have moved from original position (or waited if stuck)');
-        // Note: Testing the exact move (center vs random vs wait) is tricky due to randomness.
-        // This test primarily ensures *some* default action (likely a move) happens.
+        assert.ok(moveAttempted, "A move function (moveTowards or moveRandomly) should have been attempted");
+        assert.ok(enemy.row !== originalRow || enemy.col !== originalCol, 'Enemy should have moved from original position');
+        assert.notOk(waitMessageLogged, "Wait message should not be logged if a move was successful");
+
+        // Restore original log mock
+        Game.logMessage = originalLog;
     });
 
      QUnit.test('handleExploringState: Default action - Waits when blocked', function(assert) {
         // Arrange
+         // Map setup is less critical now as mocks control movement success
          window.mapData = [ // Map where enemy is blocked
             [1, 1, 1],
             [1, 0, 1],
@@ -153,10 +239,28 @@ QUnit.module('AI FSM', function(hooks) {
         window.GRID_WIDTH = 3; window.GRID_HEIGHT = 3;
         const enemy = { id: 'E1', row: 1, col: 1, hp: 15, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, resources: { ammo: 1, medkits: 0 } };
         window.enemies.push(enemy);
-        window.player.row = 0; window.player.col = 0; // Player out of the way
+        window.player.row = 0; window.player.col = 0; // Player out of the way (mock handles visibility)
 
         const originalRow = enemy.row;
         const originalCol = enemy.col;
+
+        // Mock specific helper behavior for this test
+        window.findNearestVisibleEnemy = function(unit) { return null; };
+        window.findNearbyResource = function(unit, range, type) { return null; };
+        // Mock movement functions to *fail*
+        window.moveTowards = function(unit, targetRow, targetCol, reason) { return false; };
+        window.moveRandomly = function(unit) { return false; };
+
+        // Mock Game.logMessage to capture wait message
+        const originalLog = Game.logMessage;
+        let waitBlockedMessageLogged = false;
+        Game.logMessage = function(message, cssClass) {
+            if (message.includes("waits (no moves)")) {
+                waitBlockedMessageLogged = true;
+            }
+            // originalLog(message, cssClass); // Optional: keep logging if desired
+        };
+
 
         // Act
         handleExploringState(enemy);
@@ -165,7 +269,10 @@ QUnit.module('AI FSM', function(hooks) {
         assert.strictEqual(enemy.state, AI_STATE_EXPLORING, 'Enemy should remain in EXPLORING state');
         assert.strictEqual(enemy.row, originalRow, 'Enemy row should not change when blocked');
         assert.strictEqual(enemy.col, originalCol, 'Enemy col should not change when blocked');
-        // We might need a way to assert that Game.logMessage was called with "waits (no moves)"
+        assert.ok(waitBlockedMessageLogged, 'Game.logMessage should have been called with "waits (no moves)"');
+
+         // Restore original log mock
+         Game.logMessage = originalLog;
     });
 
 
