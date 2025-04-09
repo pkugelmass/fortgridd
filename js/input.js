@@ -148,10 +148,13 @@ function handleKeyDown(event) {
                 if (targetTileType === TILE_LAND || targetTileType === TILE_MEDKIT || targetTileType === TILE_AMMO) {
                     const oldRow = player.row; const oldCol = player.col; // Store for logging if needed
                     player.row = targetRow; player.col = targetCol; // Move player
-                    let resourceCollected = false; let resourceType = ""; let resourceLoc = `(${targetRow},${targetCol})`;
+                    let resourceCollected = false; // Initialize flag HERE
+                    let resourceType = "";
+                    let resourceLoc = `(${targetRow},${targetCol})`;
                     // Check for resource collection
-                    if (targetTileType === TILE_MEDKIT) { if (player.resources) { player.resources.medkits++; resourceType = "Medkit"; } mapData[player.row][player.col] = TILE_LAND; collectedResource = true; }
-                    else if (targetTileType === TILE_AMMO) { if (player.resources) { player.resources.ammo++; resourceType = "Ammo"; } mapData[player.row][player.col] = TILE_LAND; collectedResource = true; }
+                    // REMOVED duplicate declaration: let resourceCollected = false;
+                    if (targetTileType === TILE_MEDKIT) { if (player.resources) { player.resources.medkits++; resourceType = "Medkit"; } mapData[player.row][player.col] = TILE_LAND; resourceCollected = true; }
+                    else if (targetTileType === TILE_AMMO) { if (player.resources) { player.resources.ammo++; resourceType = "Ammo"; } mapData[player.row][player.col] = TILE_LAND; resourceCollected = true; }
 
                     if (resourceCollected) { Game.logMessage(`Player moves to ${resourceLoc} & collects ${resourceType}.`, LOG_CLASS_PLAYER_NEUTRAL); } // Log collection
                     // else { Game.logMessage(`Player moves to (${targetRow},${targetCol}).`, LOG_CLASS_PLAYER_NEUTRAL); } // Optional move log

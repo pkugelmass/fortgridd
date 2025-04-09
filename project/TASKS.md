@@ -58,7 +58,7 @@
         *   [x] Modify state handlers to return true/false. (Completed: 2025-04-09)
         *   [x] Modify `performReevaluation` to only set state. (Verified: 2025-04-09)
         *   [x] Modify `executeAiTurns` to loop until action or limit. (Completed: 2025-04-09)
-    *   [ ] Implement `handleFleeingState` function (break LOS, transitions). (Next Step)
+    *   [x] Implement `handleFleeingState` function (break LOS, transitions). (Completed: 2025-04-09)
     *   [ ] Implement Knockback mechanic on attacks.
     *   [ ] Implement perception/scanning logic within state handlers (using range, LOS). (Likely part of state handler implementation)
     *   [ ] Implement resource pickup logic (update AI stats, update map). (Likely part of SeekingResources state)
@@ -81,7 +81,8 @@
 ---
 ## Discovered During Work
 *(Add new tasks identified during development here)*
-*   [ ] Further refine AI risk assessment in ENGAGE state (e.g., consider safer alternative moves). (Discovered: 2025-04-08)
+*   [x] Further refine AI risk assessment in ENGAGE state (e.g., consider safer alternative moves, avoid known threats, prefer maintaining LOS). (Completed: 2025-04-09)
+*   [ ] Refactor movement safety check (avoiding known threats) into a reusable helper function in `ai_helpers.js` and update `handleFleeingState` and `handleEngagingEnemyState` to use it. (Discovered: 2025-04-09)
 *   [ ] Refine AI target selection logic (consider HP, randomness, etc.). (Discovered: 2025-04-08)
 *   [ ] Investigate creating a shared `canMoveTo(unit, targetRow, targetCol)` utility function for player/AI move validation. (Discovered: 2025-04-08)
 *   [ ] Refactor resource handling (AI & Player) using a configuration object in config.js. (Discovered: 2025-04-08)

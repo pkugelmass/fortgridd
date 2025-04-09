@@ -206,11 +206,17 @@ function findNearbyResource(enemy, range, resourceTileType) {
     // Simple square scan around the enemy
     for (let r = Math.max(0, enemy.row - range); r <= Math.min(GRID_HEIGHT - 1, enemy.row + range); r++) {
         for (let c = Math.max(0, enemy.col - range); c <= Math.min(GRID_WIDTH - 1, enemy.col + range); c++) {
-            const dist = Math.abs(r - enemy.row) + Math.abs(c - enemy.col);
+            const dist = Math.abs(r - enemy.row) + Math.abs(c - enemy.col); // Manhattan distance for range check simplicity
             if (dist <= range && dist < minDistance) {
                 if (mapData && mapData[r] && mapData[r][c] === resourceTileType) {
-                    minDistance = dist;
-                    nearestResource = { row: r, col: c };
+                    // Found a resource tile within range, now check LOS
+                    const resourceCoords = { row: r, col: c };
+                    // Use Euclidean distance for LOS check range, matching hasClearLineOfSight
+                    const losRange = Math.sqrt(Math.pow(r - enemy.row, 2) + Math.pow(c - enemy.col, 2));
+                    if (hasClearLineOfSight(enemy, resourceCoords, range)) { // Use 'range' as max distance for LOS check too
+                        minDistance = dist; // Store Manhattan distance for comparison
+                        nearestResource = resourceCoords;
+                    }
                 }
             }
         }
@@ -284,10 +290,9 @@ function moveTowards(enemy, targetRow, targetCol, logReason) {
         return true;
     }
 
-    // 4. Fallback: No closer or sideways move possible, try random move
-    // Game.logMessage(`Enemy ${enemy.id} blocked towards ${logReason}, attempting random move.`, LOG_CLASS_DEBUG); // Debug log
-    // Note: moveRandomly already logs its own success/failure message
-    return moveRandomly(enemy); // Return true if random move succeeded, false otherwise
+    // 4. Fallback: No closer or sideways move possible. Indicate failure to move towards target.
+    // Game.logMessage(`Enemy ${enemy.id} blocked towards ${logReason}, cannot move closer/sideways.`, LOG_CLASS_DEBUG); // Debug log
+    return false; // Indicate no move towards the target was made
 }
 
 /**
@@ -324,14 +329,18 @@ function performReevaluation(enemy) {
         if (hpPercent < AI_FLEE_HEALTH_THRESHOLD) {
             enemy.state = AI_STATE_FLEEING;
             enemy.targetEnemy = nearestEnemy;
+            enemy.targetResourceCoords = null; // Clear resource target when fleeing
             Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Sees ${nearestEnemy.id || 'Player'} and flees!`, LOG_CLASS_ENEMY_EVENT);
         } else {
             enemy.state = AI_STATE_ENGAGING_ENEMY;
             enemy.targetEnemy = nearestEnemy;
+            enemy.targetResourceCoords = null; // Clear resource target when engaging
             Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Sees ${nearestEnemy.id || 'Player'} and engages!`, LOG_CLASS_ENEMY_EVENT);
         }
         return; // State changed
     }
+    // Clear enemy target if no threat found (might have been set previously)
+    enemy.targetEnemy = null;
 
     // (b) Check Critical Needs
     const needsMedkit = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP) < AI_SEEK_HEALTH_THRESHOLD;
@@ -373,5 +382,7 @@ function performReevaluation(enemy) {
     // (d) Default to Exploring
     Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Found no threats or other resources, switching to Exploring.`, LOG_CLASS_ENEMY_EVENT);
     enemy.state = AI_STATE_EXPLORING;
+    enemy.targetResourceCoords = null; // Clear resource target when exploring
+    enemy.targetEnemy = null; // Ensure enemy target is also clear
     // No return needed, state changed
 }

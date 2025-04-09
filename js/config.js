@@ -57,7 +57,7 @@ const AI_EXPLORE_MOVE_RANDOM_CHANCE = 0.3;     // Chance to move randomly
 const AI_EXPLORE_WAIT_CHANCE = 0.1;            // Chance to wait strategically (Must sum to 1 with others)
 
 // AI Engaging State Behavior
-const AI_ENGAGE_RISK_AVERSION_CHANCE = 0.3; // Example: 30% chance to hesitate if moving into target's LOS/range
+const AI_ENGAGE_RISK_AVERSION_CHANCE = 0.2; // Example: 30% chance to hesitate if moving into target's LOS/range
 
 // Combat
 const PLAYER_ATTACK_DAMAGE = 2;     // Melee damage dealt by player

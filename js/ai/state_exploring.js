@@ -93,8 +93,9 @@ function handleExploringState(enemy) {
         const center = getSafeZoneCenter();
         moveSuccessful = moveTowards(enemy, center.row, center.col, "center");
         if (!moveSuccessful) {
-            // If moving towards center failed, try random move as fallback
-            moveSuccessful = moveRandomly(enemy);
+            // If moving towards center failed, just wait instead of moving randomly
+            Game.logMessage(`Enemy ${enemy.id} waits (blocked from center).`, LOG_CLASS_ENEMY_EVENT);
+            moveSuccessful = true; // Treat waiting as a successful action for the turn
         }
     } else if (rand < AI_EXPLORE_MOVE_AGGRESSION_CHANCE + AI_EXPLORE_MOVE_RANDOM_CHANCE) {
         // Try Move randomly

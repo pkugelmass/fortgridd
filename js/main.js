@@ -155,7 +155,38 @@ function createAndPlaceEnemy(enemyIndex, occupiedCoords) {
         return null;
     }
 
-    const enemyStartPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
+    let enemyStartPos = null;
+    let placementAttempts = 0;
+    const maxPlacementAttempts = 50; // Limit attempts to find an accessible spot
+
+    while (!enemyStartPos && placementAttempts < maxPlacementAttempts) {
+        placementAttempts++;
+        const potentialPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
+
+        if (potentialPos) {
+            // Check if the potential position has valid moves
+            const dummyEnemy = { row: potentialPos.row, col: potentialPos.col, id: `test_${enemyIndex}` }; // Need ID for getValidMoves check
+            if (typeof getValidMoves === 'function') {
+                const validMoves = getValidMoves(dummyEnemy);
+                if (validMoves.length > 0) {
+                    enemyStartPos = potentialPos; // Found an accessible spot
+                    // console.log(`DEBUG: Found accessible spawn for enemy ${enemyIndex} at (${enemyStartPos.row},${enemyStartPos.col}) after ${placementAttempts} attempts.`);
+                } else {
+                    // console.log(`DEBUG: Spawn pos (${potentialPos.row},${potentialPos.col}) rejected, no valid moves.`);
+                    // Add this inaccessible spot to occupiedCoords temporarily for the *next* findStartPosition attempt
+                    // to avoid repeatedly picking the same bad spot within this loop.
+                    // Note: This temporary addition doesn't persist outside this function call.
+                    occupiedCoords.push({ row: potentialPos.row, col: potentialPos.col });
+                }
+            } else {
+                console.error("createAndPlaceEnemy: getValidMoves function not found! Cannot check spawn accessibility.");
+                enemyStartPos = potentialPos; // Fallback: Place anyway if check fails
+            }
+        } else {
+            // findStartPosition failed, break the loop early
+            break;
+        }
+    } // End while loop for finding accessible position
 
     if (enemyStartPos) {
         // Use constants from config.js for variation ranges (with fallbacks)

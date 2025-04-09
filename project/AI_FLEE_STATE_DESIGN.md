@@ -17,45 +17,55 @@ This document outlines the proposed logic for the `handleFleeingState(enemy)` fu
             *   Call `performReevaluation(enemy)` to determine the next best state (likely `EXPLORING` if no other threats/needs).
             *   Return (end turn).
     *   **Check 2: Threat Still Visible?**
-        *   Use `checkLineOfSight(enemy, threat, enemy.detectionRange)` to see if the fleeing AI can still perceive the threat.
-        *   If `checkLineOfSight` returns `false`:
+        *   Use `hasClearLineOfSight(enemy, threat, enemy.detectionRange)` (using the Bresenham algorithm helper) to see if the fleeing AI can still perceive the threat.
+        *   If `hasClearLineOfSight` returns `false`:
             *   The AI has successfully evaded for now.
             *   Clear `enemy.targetEnemy = null`.
             *   Call `performReevaluation(enemy)`.
             *   Return.
 
-2.  **Evaluate Potential Moves:**
+2.  **Evaluate Potential Moves & Handle Being Cornered:**
     *   Get all valid adjacent moves: `possibleMoves = getValidMoves(enemy)`.
-    *   If `possibleMoves.length === 0`:
-        *   Log that the enemy is cornered and cannot flee.
-        *   *(Optional: Transition to ENGAGING_ENEMY as a last resort? For now, just wait.)*
-        *   Log "Enemy X is cornered and waits!".
-        *   Return.
+    *   **If `possibleMoves.length === 0` (Cornered):**
+        *   **Check Attack Capability:** Determine if the AI can attack `enemy.targetEnemy` from its current position.
+            *   Calculate distance (`dist`).
+            *   Check Ranged: `dist <= RANGED_ATTACK_RANGE`, `enemy.resources.ammo > 0`, and `hasClearCardinalLineOfSight(enemy, enemy.targetEnemy, RANGED_ATTACK_RANGE)`?
+            *   Check Melee: `dist === 1`?
+        *   **If Attack Possible:**
+            *   Perform the highest priority attack (Ranged > Melee).
+            *   Log the desperate attack.
+            *   Handle target defeat (if `target.hp <= 0`, clear target, `performReevaluation`, return `false`).
+            *   If target survives, return `true` (attack action complete).
+        *   **If Attack Not Possible:**
+            *   Log "Enemy X is cornered and waits!".
+            *   Return `true` (wait action complete).
+    *   *(If not cornered, proceed to step 3)*
 
-3.  **Prioritize Moves that Break LOS:**
+3.  **Prioritize Moves that Break LOS (If Moves Possible):**
     *   Create an empty list: `losBreakingMoves = []`.
     *   For each `move` in `possibleMoves`:
-        *   Check if the threat would have LOS to the `move` position:
-            `threatHasLOS = checkLineOfSight(threat, {row: move.row, col: move.col}, threat.detectionRange)`
+        *   Check if the threat would have LOS to the `move` position using the correct helper:
+            `threatHasLOS = hasClearLineOfSight(enemy.targetEnemy, move, enemy.targetEnemy.detectionRange)`
         *   If `threatHasLOS` is `false`:
             *   Add `move` to `losBreakingMoves`.
     *   **If LOS-breaking moves exist:**
-        *   Select the best LOS-breaking move (e.g., the one furthest from the `threat`, or just the first one found). Let this be `chosenMove`.
+        *   Select the best LOS-breaking move (e.g., the one maximizing Manhattan distance from the `threat`). Let this be `chosenMove`.
         *   Execute the move: `enemy.row = chosenMove.row`, `enemy.col = chosenMove.col`.
         *   Log the move (e.g., "Enemy X flees towards cover at (r,c) to break LOS from Threat Y.").
-        *   Return.
+        *   Return `true` (action taken).
 
-4.  **Fallback: Move Directly Away (If LOS Cannot Be Broken):**
+4.  **Fallback: Move Directly Away Safely (If LOS Cannot Be Broken):**
     *   If `losBreakingMoves` is empty:
-        *   Find the move in `possibleMoves` that maximizes the Manhattan distance from the `threat`. Let this be `chosenMove`.
-        *   *(Need a helper like `moveAwayFrom(enemy, threat.row, threat.col)` or implement distance calculation here)*.
-        *   If a best move away is found:
+        *   Find all moves in `possibleMoves` that maximize the Manhattan distance from the `threat`. Store these potential best moves.
+        *   **Filter for Safety:** Create a new list `safeAwayMoves`. Iterate through the potential best moves. For each `move`, check if it lands adjacent to any *other* enemy (excluding self and the current `threat`). If the move is not adjacent to another enemy, add it to `safeAwayMoves`.
+        *   **If `safeAwayMoves` exist:**
+            *   Select the best move from `safeAwayMoves` (if multiple are equally far and safe, pick one randomly or the first). Let this be `chosenMove`.
             *   Execute the move: `enemy.row = chosenMove.row`, `enemy.col = chosenMove.col`.
             *   Log the move (e.g., "Enemy X flees away from Threat Y to (r,c).").
-            *   Return.
-        *   Else (e.g., all moves are equidistant or blocked in a way `getValidMoves` didn't catch - should be rare):
-            *   Log "Enemy X is blocked while fleeing and waits."
-            *   Return.
+            *   Return `true` (action taken).
+        *   **Else (no safe moves away found):**
+            *   Log "Enemy X is blocked/unsafe while fleeing and waits."
+            *   Return `true` (wait action complete).
 
 **Helper Function Considerations:**
 *   Might need a `moveAwayFrom(unit, targetRow, targetCol)` helper, similar to `moveTowards` but maximizing distance. Alternatively, the logic can be implemented directly within this state handler.

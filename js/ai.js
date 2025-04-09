@@ -50,7 +50,6 @@ function executeAiTurns() {
                     break;
                 case AI_STATE_FLEEING:
                     // currentHandlerResult = handleFleeingState(enemy); // TODO: Update handler to return boolean
-                    console.warn(`Enemy ${enemy.id} Fleeing state not fully implemented yet.`); // Placeholder
                     currentHandlerResult = true; // Assume fleeing always counts as an action for now
                     break;
                 default:

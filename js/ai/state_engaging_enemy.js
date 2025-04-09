@@ -78,99 +78,149 @@ function handleEngagingEnemyState(enemy) {
     }
 
     // --- 5. Movement Logic (If No Attack Occurred) ---
+    // Pre-condition: Target valid, visible, AI healthy, AI has ammo (for ranged), but no attack was possible
 
-    // Check 6: Out of Ammo? (If we got here, we couldn't attack)
-    // Note: Even if out of ammo, AI might still move towards target for melee.
-    // The actual attack checks handle ammo requirements.
-    // No action needed here if out of ammo, proceed to movement consideration.
-    // if (enemy.resources.ammo <= 0) {
-    //     console.log(`Enemy ${enemy.id} is out of ammo.`);
-    //     performReevaluation(enemy); // BUG: This prevents moving for melee when out of ammo.
-    //     return;
-    // }
-
-    // Check 7: Consider Moving Towards Target
-    // A. Identify Potential Move (Simplified: get best move from moveTowards logic)
-    //    We need to find the best move without actually executing it yet for risk assessment.
-    //    Let's adapt moveTowards logic slightly or create a helper.
-    //    For now, let's find the best move candidate directly.
-
+    // A. Get Valid Moves
     const possibleMoves = getValidMoves(enemy);
-    let bestMove = null;
-    let minDistanceToTarget = dist; // Current distance
+    if (possibleMoves.length === 0) {
+        Game.logMessage(`Enemy ${enemy.id} is blocked while engaging ${target.id || 'Player'} and waits.`, LOG_CLASS_ENEMY_EVENT);
+        return true; // Wait action
+    }
 
-    if (possibleMoves.length > 0) {
-        let closerMoves = [];
-        let sidewaysMoves = [];
+    // B. Identify Best Moves Towards Target
+    let closerMoves = [];
+    let sidewaysMoves = [];
+    const currentDist = Math.abs(target.row - enemy.row) + Math.abs(target.col - enemy.col);
 
-        for (const move of possibleMoves) {
-            const newDist = Math.abs(target.row - move.row) + Math.abs(target.col - move.col);
-            if (newDist < minDistanceToTarget) {
-                closerMoves.push({ move: move, distance: newDist });
-            } else if (newDist === minDistanceToTarget) {
-                sidewaysMoves.push(move);
-            }
-        }
-
-        if (closerMoves.length > 0) {
-            closerMoves.sort((a, b) => a.distance - b.distance);
-            bestMove = closerMoves[0].move;
-        } else if (sidewaysMoves.length > 0) {
-            bestMove = sidewaysMoves[Math.floor(Math.random() * sidewaysMoves.length)];
+    for (const move of possibleMoves) {
+        const newDist = Math.abs(target.row - move.row) + Math.abs(target.col - move.col);
+        if (newDist < currentDist) {
+            closerMoves.push(move);
+        } else if (newDist === currentDist) {
+            sidewaysMoves.push(move);
         }
     }
-    // console.log(`DEBUG ${enemy.id}: Potential bestMove identified: ${bestMove ? `(${bestMove.row},${bestMove.col})` : 'None'}`); // Removed debug log
+    // Combine potential candidates, prioritizing closer moves
+    let potentialCandidates = [...closerMoves, ...sidewaysMoves];
 
-    // If a potential move towards the target exists...
-    if (bestMove) {
-        const intendedMove = bestMove; // The square we intend to move to
+    // C. Filter for Safety (Avoid *Known* OTHER Enemies)
+    let knownOtherThreats = [];
+    // Identify all other potential threats the current enemy can see
+    const allVisibleThreats = [player, ...enemies].filter(potentialThreat =>
+        potentialThreat &&                                  // Exists
+        potentialThreat.hp > 0 &&                           // Alive
+        potentialThreat !== enemy &&                        // Not self
+        potentialThreat !== target &&                       // Not the primary target
+        hasClearLineOfSight(enemy, potentialThreat, enemy.detectionRange || AI_RANGE_MAX) // Visible
+    );
 
-        // B. Risk Assessment
-        let isRisky = false;
-        // Check if target is capable of attacking (has ammo - assuming player/AI need ammo for ranged)
-        // Note: This assumes the target is another AI or the player, which should have a 'resources' property.
-        // Need robust check if target could be something else without ammo.
-        const canTargetAttack = target.resources && target.resources.ammo > 0;
-        let targetHasLOS = false; // Default to false
-        if (canTargetAttack) {
-            // Check if target has LOS to the *intended destination* within *its* attack range
-            targetHasLOS = hasClearLineOfSight(target, intendedMove, RANGED_ATTACK_RANGE);
-            if (targetHasLOS) {
-                isRisky = true;
+    let safeCandidateMoves = [];
+    for (const move of potentialCandidates) {
+        let isSafe = true;
+        // Check if this move lands adjacent to any VISIBLE OTHER threat
+        for (const otherThreat of allVisibleThreats) {
+            const adjacent = Math.abs(move.row - otherThreat.row) <= 1 && Math.abs(move.col - otherThreat.col) <= 1;
+            if (adjacent) {
+                isSafe = false;
+                // console.log(`DEBUG: Move (${move.row},${move.col}) rejected, adjacent to other threat ${otherThreat.id || 'Player'}`); // Optional Debug
+                break; // No need to check other threats for this move
             }
         }
-        // console.log(`DEBUG ${enemy.id}: Risk Assessment for move to (${intendedMove.row},${intendedMove.col}): canTargetAttack=${canTargetAttack}, targetHasLOS=${targetHasLOS}, isRisky=${isRisky}`); // Removed debug log
-
-
-        // C. Risk Aversion (Probabilistic Hesitation)
-        if (isRisky) {
-            const rand = Math.random();
-            if (rand < AI_ENGAGE_RISK_AVERSION_CHANCE) {
-                // console.log(`DEBUG ${enemy.id}: Hesitating due to risk (chance: ${AI_ENGAGE_RISK_AVERSION_CHANCE}, roll: ${rand.toFixed(2)})`); // Removed debug log
-                Game.logMessage(`Enemy ${enemy.id} hesitates due to risk at (${intendedMove.row}, ${intendedMove.col}).`, LOG_CLASS_ENEMY_EVENT);
-                return true; // Action complete (waited/hesitated)
-            } else {
-                 // console.log(`DEBUG ${enemy.id}: Taking risky move (chance: ${AI_ENGAGE_RISK_AVERSION_CHANCE}, roll: ${rand.toFixed(2)})`); // Removed debug log
-            }
+        if (isSafe) {
+            safeCandidateMoves.push(move);
         }
+    }
 
-        // D. Execute Move (If not too risky or risk accepted)
-        // console.log(`DEBUG ${enemy.id}: Executing move to (${intendedMove.row},${intendedMove.col})`); // Removed debug log
-        // Log message includes the STARTING position before the move
-        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards target ${target.id || 'Player'} to (${intendedMove.row},${intendedMove.col}).`, LOG_CLASS_ENEMY_EVENT);
-        enemy.row = intendedMove.row;
-        enemy.col = intendedMove.col;
-        return true; // Action complete (moved)
+    // If no safe moves are found among the candidates, the AI might have to wait or take a non-optimal move (currently falls through to wait)
+    if (safeCandidateMoves.length === 0) {
+         // If the original candidates weren't empty, but filtering made it empty, log specific reason
+         if (potentialCandidates.length > 0) {
+              Game.logMessage(`Enemy ${enemy.id} avoids moving closer to ${target.id || 'Player'} due to nearby known threats.`, LOG_CLASS_ENEMY_EVENT);
+         } else {
+              // This case should be rare if possibleMoves was > 0, means no closer/sideways moves existed initially
+              Game.logMessage(`Enemy ${enemy.id} cannot find a suitable move towards ${target.id || 'Player'} and waits.`, LOG_CLASS_ENEMY_EVENT);
+         }
+         return true; // Wait action
+    }
 
+    // D. Filter for LOS Maintenance (Prefer Keeping Sight of Primary Target)
+    let losMaintainingMoves = [];
+    for (const move of safeCandidateMoves) {
+        // Simulate enemy position at the move location
+        const tempEnemyPos = { row: move.row, col: move.col };
+        // Check if LOS to the *primary target* would be maintained from that position
+        if (hasClearLineOfSight(tempEnemyPos, target, enemy.detectionRange || AI_RANGE_MAX)) {
+            losMaintainingMoves.push(move);
+        }
+    }
+
+    let finalCandidates = [];
+    if (losMaintainingMoves.length > 0) {
+        finalCandidates = losMaintainingMoves;
     } else {
-        // No move closer or sideways found, proceed to fallback wait
-        // console.log(`DEBUG ${enemy.id}: Cannot find move towards target ${target.id || 'Player'}. Proceeding to fallback wait.`); // Removed debug log
+        // Fallback to safe moves even if they break LOS
+        finalCandidates = safeCandidateMoves;
     }
 
+    // E. Select Final Candidate Move
+    let chosenMove = null;
+    if (finalCandidates.length > 0) {
+        // Re-prioritize closer moves among the final candidates
+        let finalCloserMoves = [];
+        let finalSidewaysMoves = [];
+        for (const move of finalCandidates) {
+             const newDist = Math.abs(target.row - move.row) + Math.abs(target.col - move.col);
+             if (newDist < currentDist) {
+                 finalCloserMoves.push(move);
+             } else if (newDist === currentDist) {
+                 finalSidewaysMoves.push(move);
+             }
+        }
+
+        if (finalCloserMoves.length > 0) {
+            // Pick randomly among the best closer moves
+            chosenMove = finalCloserMoves[Math.floor(Math.random() * finalCloserMoves.length)];
+        } else if (finalSidewaysMoves.length > 0) {
+            // Pick randomly among the sideways moves
+            chosenMove = finalSidewaysMoves[Math.floor(Math.random() * finalSidewaysMoves.length)];
+        }
+        // If somehow chosenMove is still null here, it means finalCandidates only contained moves further away, which shouldn't happen based on B.
+        // If it does, the AI will fall through to waiting.
+    }
+
+    // F. Risk Assessment (On Chosen Move)
+    let isRisky = false;
+    if (chosenMove) {
+        // Check if the primary target can attack the chosen move destination
+        const canTargetAttack = target.resources && target.resources.ammo > 0; // Assumes target needs ammo
+        let targetHasLOSToMove = false;
+        if (canTargetAttack) {
+            // Use accurate LOS check for risk assessment
+            targetHasLOSToMove = hasClearLineOfSight(target, chosenMove, RANGED_ATTACK_RANGE);
+        }
+        isRisky = canTargetAttack && targetHasLOSToMove;
+    }
+
+    // G. Risk Aversion (Probabilistic Hesitation)
+    if (chosenMove && isRisky) {
+        const rand = Math.random();
+        // Use the globally defined constant (assuming it exists in config.js or similar)
+        if (rand < (typeof AI_ENGAGE_RISK_AVERSION_CHANCE !== 'undefined' ? AI_ENGAGE_RISK_AVERSION_CHANCE : 0.3)) {
+            Game.logMessage(`Enemy ${enemy.id} hesitates moving to (${chosenMove.row}, ${chosenMove.col}) due to risk from ${target.id || 'Player'}.`, LOG_CLASS_ENEMY_EVENT);
+            return true; // Wait action (hesitated)
+        }
+    }
+
+    // H. Execute Move
+    if (chosenMove && (!isRisky || (isRisky /* && risk accepted - implicitly handled by not returning in G */))) {
+        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards target ${target.id || 'Player'} to (${chosenMove.row},${chosenMove.col}).`, LOG_CLASS_ENEMY_EVENT);
+        enemy.row = chosenMove.row;
+        enemy.col = chosenMove.col;
+        return true; // Move action complete
+    }
 
     // --- 6. Default/Wait (Fallback) ---
-    // If no action taken (e.g., couldn't find a move towards target)
-    // console.log(`DEBUG ${enemy.id}: Reached fallback wait.`); // Removed debug log
+    // Fallback if no move was chosen (e.g., no safe moves, or hesitated)
     Game.logMessage(`Enemy ${enemy.id} waits (engaging ${target.id || 'Player'}).`, LOG_CLASS_ENEMY_EVENT);
-    return true; // Action complete (waited)
+    return true; // Wait action complete
 }
