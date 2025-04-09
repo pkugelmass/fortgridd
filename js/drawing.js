@@ -69,8 +69,26 @@ function drawHealthBar(ctx, centerX, bottomY, width, height, currentHp, maxHp) {
 function drawPlayer(ctx, cellSize) {
     if (typeof player === 'undefined' || player.row === null || player.col === null || typeof player.hp === 'undefined' || player.hp <= 0) return;
     const centerX = player.col * cellSize + cellSize / 2; const centerY = player.row * cellSize + cellSize / 2; const radius = (cellSize / 2) * PLAYER_RADIUS_RATIO;
+
+    // Apply shadow
+    ctx.shadowColor = UNIT_SHADOW_COLOR;
+    ctx.shadowBlur = UNIT_SHADOW_BLUR;
+    ctx.shadowOffsetX = UNIT_SHADOW_OFFSET_X;
+    ctx.shadowOffsetY = UNIT_SHADOW_OFFSET_Y;
+
+    // Draw player circle
     ctx.fillStyle = player.color; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = PLAYER_OUTLINE_COLOR; ctx.lineWidth = PLAYER_OUTLINE_WIDTH; ctx.stroke(); // Outline
+
+    // Reset shadow before drawing outline and health bar
+    ctx.shadowColor = 'transparent'; // Or set all shadow props to 0/null
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+
+    // Draw outline
+    ctx.strokeStyle = PLAYER_OUTLINE_COLOR; ctx.lineWidth = PLAYER_OUTLINE_WIDTH; ctx.stroke();
+
+    // Draw health bar
     const barWidth = cellSize * PLAYER_HEALTH_BAR_WIDTH_RATIO; const barHeight = HEALTH_BAR_HEIGHT; const barBottomY = centerY + radius + barHeight + PLAYER_HEALTH_BAR_OFFSET;
     drawHealthBar(ctx, centerX, barBottomY, barWidth, barHeight, player.hp, player.maxHp || 10); // Keep default maxHp fallback for now
 }
@@ -83,9 +101,49 @@ function drawEnemies(ctx, cellSize) {
     for (const enemy of enemies) {
         if (!enemy || enemy.row === null || enemy.col === null || typeof enemy.hp === 'undefined' || enemy.hp <= 0) continue;
         const centerX = enemy.col * cellSize + cellSize / 2; const centerY = enemy.row * cellSize + cellSize / 2; const radiusMultiplier = enemy.radiusMultiplier || 1.0; const radius = baseRadius * radiusMultiplier;
+
+        // Apply shadow
+        ctx.shadowColor = UNIT_SHADOW_COLOR;
+        ctx.shadowBlur = UNIT_SHADOW_BLUR;
+        ctx.shadowOffsetX = UNIT_SHADOW_OFFSET_X;
+        ctx.shadowOffsetY = UNIT_SHADOW_OFFSET_Y;
+
+        // Draw enemy circle
         ctx.fillStyle = enemy.color || ENEMY_DEFAULT_COLOR; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
+
+        // Reset shadow before drawing health bar and ID
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        // Draw health bar
         const barBottomY = centerY + radius + barHeight + barYOffset; const maxHp = enemy.maxHp || 5; // Keep default maxHp fallback for now
         drawHealthBar(ctx, centerX, barBottomY, barWidth, barHeight, enemy.hp, maxHp);
+
+        // Draw Centered Enemy ID Label with Outline
+        if (typeof enemy.id !== 'undefined') {
+            const fontSize = radius * ENEMY_ID_FONT_SIZE_RATIO_OF_RADIUS;
+            // Ensure minimum font size for readability if radius is very small
+            const finalFontSize = Math.max(fontSize, MIN_CELL_SIZE * 0.5); // Example minimum based on cell size
+            ctx.font = `${ENEMY_ID_FONT_WEIGHT} ${finalFontSize}px ${DEFAULT_FONT_FAMILY}`;
+            ctx.font = `${ENEMY_ID_FONT_WEIGHT} ${finalFontSize}px ${DEFAULT_FONT_FAMILY}`;
+            ctx.textAlign = 'center'; // Ensure centered alignment
+            ctx.textBaseline = 'middle'; // Ensure vertical centering
+
+            // Extract number from ID (assuming format "prefix_number")
+            const idParts = String(enemy.id).split('_'); // Corrected separator to underscore
+            const idNumber = idParts.length > 1 ? idParts[idParts.length - 1] : enemy.id; // Use last part or full ID if no underscore
+
+            // Draw outline for the text
+            ctx.strokeStyle = ENEMY_ID_TEXT_OUTLINE_COLOR;
+            ctx.lineWidth = ENEMY_ID_TEXT_OUTLINE_WIDTH;
+            ctx.strokeText(idNumber, centerX, centerY);
+
+            // Draw the main text fill
+            ctx.fillStyle = ENEMY_ID_FONT_COLOR;
+            ctx.fillText(idNumber, centerX, centerY);
+        }
     }
 }
 

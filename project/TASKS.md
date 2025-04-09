@@ -52,8 +52,8 @@
     *   [x] Update AI state logs (`Game.logMessage`) to include enemy coordinates. (Completed: 2025-04-08)
     *   [x] Fix `getValidMoves` to allow movement onto resource tiles (TILE_MEDKIT, TILE_AMMO). (Completed: 2025-04-08 - Discovered during playtest)
     *   [x] Fix visual delay on resource pickup by ensuring `redrawCanvas` runs every AI turn end. (Completed: 2025-04-08 - Discovered during playtest)
-    *   [ ] Draw enemy ID labels on canvas in `drawEnemies`. (Next Step - Discovered: 2025-04-08)
-    *   [ ] Implement `handleEngagingEnemyState` function (move/attack target, transitions).
+    *   [x] Draw enemy ID labels on canvas in `drawEnemies`. (Completed: 2025-04-08)
+    *   [ ] Implement `handleEngagingEnemyState` function (move/attack target, transitions). (Next Step)
     *   [ ] Implement `handleFleeingState` function (move away from threat, transitions).
     *   [ ] Implement perception/scanning logic within state handlers (using range, LOS). (Likely part of state handler implementation)
     *   [ ] Implement resource pickup logic (update AI stats, update map). (Likely part of SeekingResources state)
