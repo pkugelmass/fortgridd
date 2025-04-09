@@ -21,7 +21,7 @@ FortGridd is envisioned as a turn-based tactical survival game very much inspire
 * I'm working on a corporate laptop so don't have node.js installed.
 * Check `TASKS.md` for the next task. If a task isn’t listed, add it with a brief description and today's date.
 * **Before starting any single line item** in `TASKS.md` (including sub-tasks): Explain your plan for that item and ask for my agreement to proceed.
-* **After completing any single line item**: Mark it as complete in `TASKS.md`, then stop and check in with me before identifying the next item.
+* **After completing the implementation for any single line item**: Stop and check in with me for validation. Once validated, mark it as complete in `TASKS.md` before identifying the next item.
 * Add new sub-tasks or TODOs discovered during development to `TASKS.md` under a “Discovered During Work” section.
 * Use consistent naming conventions, file structure, and architecture patterns.
 * Never assume missing context. Ask questions if uncertain.

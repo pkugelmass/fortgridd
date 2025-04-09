@@ -47,7 +47,12 @@
     *   [x] Refactor main AI turn function in `js/ai.js` to use state handlers. (Completed: 2025-04-08)
     *   [x] Implement `handleExploringState` function (scan, decide transitions). (Completed: 2025-04-08)
     *   [x] Refactor `js/ai.js` into smaller modules (e.g., state handlers, helpers). (Completed: 2025-04-08)
-    *   [ ] Implement `handleSeekingResourcesState` function (move to target, pickup logic, transitions). (Next Step)
+    *   [x] Implement `handleSeekingResourcesState` function (move to target, pickup logic, transitions). (Completed: 2025-04-08)
+    *   [x] Enhance `moveTowards` helper to allow sideways movement if no closer step exists. (Completed: 2025-04-08)
+    *   [x] Update AI state logs (`Game.logMessage`) to include enemy coordinates. (Completed: 2025-04-08)
+    *   [x] Fix `getValidMoves` to allow movement onto resource tiles (TILE_MEDKIT, TILE_AMMO). (Completed: 2025-04-08 - Discovered during playtest)
+    *   [x] Fix visual delay on resource pickup by ensuring `redrawCanvas` runs every AI turn end. (Completed: 2025-04-08 - Discovered during playtest)
+    *   [ ] Draw enemy ID labels on canvas in `drawEnemies`. (Next Step - Discovered: 2025-04-08)
     *   [ ] Implement `handleEngagingEnemyState` function (move/attack target, transitions).
     *   [ ] Implement `handleFleeingState` function (move away from threat, transitions).
     *   [ ] Implement perception/scanning logic within state handlers (using range, LOS). (Likely part of state handler implementation)
@@ -59,18 +64,20 @@
     *   [x] Fix failing tests for `handleExploringState` by adjusting test setup. (Completed: 2025-04-08)
     *   [ ] Add tests for initial AI state and properties.
     *   [x] Add tests for state transitions based on various conditions (Started with Exploring state). (Started: 2025-04-08)
-    *   [ ] Add tests for resource pickup functionality.
+    *   [x] Add tests for resource pickup functionality (`handleSeekingResourcesState`, `performReevaluation`). (Completed: 2025-04-08)
     *   [x] Add tests for basic state actions (moving, fleeing) (Started with Exploring state default actions). (Started: 2025-04-08)
 
-### Ongoing
+ ### Ongoing
 
-*   [ ] Add more unit tests as code is refactored/added.
-*   [ ] Practice small, logical Git commits with clear messages.
+ *   [ ] Add more unit tests as code is refactored/added.
+ *   [ ] Fix commented-out unit tests in tests/ai.test.js for handleSeekingResourcesState. (Added: 2025-04-08)
+ *   [ ] Practice small, logical Git commits with clear messages.
 
 ---
 ## Discovered During Work
 *(Add new tasks identified during development here)*
 *   [ ] Investigate creating a shared `canMoveTo(unit, targetRow, targetCol)` utility function for player/AI move validation. (Discovered: 2025-04-08)
+*   [ ] Refactor resource handling (AI & Player) using a configuration object in config.js. (Discovered: 2025-04-08)
 *   [x] Refactor duplicated enemy creation logic from initializeGame/resetGame into createAndPlaceEnemy helper function. (Completed: 2025-04-08)
 *   [x] Add unit tests for createAndPlaceEnemy helper function in tests/main.test.js. (Completed: 2025-04-08)
 

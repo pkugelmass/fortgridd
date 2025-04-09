@@ -154,8 +154,13 @@ const Game = {
         if (this.isGameOver()) return;
         this.currentTurn = 'ai';
         // console.log("Switching to AI turn"); // Quieter log
-        if (typeof executeAiTurns === 'function') { setTimeout(executeAiTurns, AI_TURN_DELAY); } // Use constant
-        else { console.error("executeAiTurns function not found!"); this.currentTurn = 'player'; }
+        // REMOVED setTimeout to make AI turn synchronous and fix visual update delays
+        if (typeof executeAiTurns === 'function') {
+            executeAiTurns(); // Call directly
+        } else {
+            console.error("executeAiTurns function not found!");
+            this.currentTurn = 'player'; // Switch back if AI can't run
+        }
     },
 
     /** Ends AI turn, increments turn counter, runs checks, switches to Player */
@@ -170,13 +175,16 @@ const Game = {
 
         this.currentTurn = 'player';
         // console.log("AI Turns complete. Player turn."); // Quieter log
-        if (didShrink || damageApplied) { // Redraw if visual state changed
-            if (typeof redrawCanvas === 'function') { redrawCanvas(); }
-            else { console.error("redrawCanvas not found when ending AI turn!"); }
-        } else { // Otherwise just update UI text which includes turn indicator
-            if (typeof drawUI === 'function' && typeof ctx !== 'undefined') { drawUI(ctx); } // Check ctx too
-            else { console.warn("drawUI or ctx not found when ending AI turn, UI text might not update."); }
+
+        // Always redraw the canvas at the end of the AI turn to reflect any state changes
+        // (e.g., map updates from pickups, storm shrink, damage effects)
+        if (typeof redrawCanvas === 'function') {
+            redrawCanvas();
+        } else {
+            console.error("redrawCanvas not found when ending AI turn!");
         }
+        // The old conditional logic is removed:
+        // if (didShrink || damageApplied) { ... } else { drawUI(ctx); }
     },
 };
 

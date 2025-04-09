@@ -38,24 +38,28 @@ function getValidMoves(unit) {
         const targetCol = unit.col + dir.dc;
 
         if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
-            if (typeof mapData !== 'undefined' && mapData[targetRow] && mapData[targetRow][targetCol] === TILE_LAND) {
-                let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol);
-                let occupiedByOtherEnemy = false;
-                if (enemies && enemies.length > 0) {
+            // Allow movement onto LAND, MEDKIT, or AMMO tiles
+            if (typeof mapData !== 'undefined' && mapData[targetRow]) {
+                const tileType = mapData[targetRow][targetCol];
+                if (tileType === TILE_LAND || tileType === TILE_MEDKIT || tileType === TILE_AMMO) {
+                    let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol);
+                    let occupiedByOtherEnemy = false;
+                    if (enemies && enemies.length > 0) {
                     for (const otherEnemy of enemies) {
                         if (!otherEnemy || (unit.id && otherEnemy.id === unit.id) || otherEnemy.hp <= 0) continue; // Skip self or dead
                         if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) {
                             occupiedByOtherEnemy = true;
                             break;
                         }
+                        }
                     }
-                }
-                if (!occupiedByPlayer && !occupiedByOtherEnemy) {
-                    possibleMoves.push({ row: targetRow, col: targetCol });
-                }
+                    if (!occupiedByPlayer && !occupiedByOtherEnemy) {
+                        possibleMoves.push({ row: targetRow, col: targetCol });
+                    }
+                } // End check for valid tile types
             } else if (typeof mapData === 'undefined' || !mapData[targetRow]) {
                  console.error("getValidMoves: mapData error at row", targetRow);
-            }
+            } // End check for valid map data row
         }
     }
     return possibleMoves;
@@ -143,33 +147,59 @@ function getSafeZoneCenter() {
  * @param {object} enemy - The enemy object to move.
  * @param {number} targetRow - The target row.
  * @param {number} targetCol - The target column.
- * @param {string} logReason - A short string describing why the enemy is moving (e.g., "safety", "center").
- * @returns {boolean} - True if the enemy moved, false otherwise.
+ * @param {string} logReason - A short string describing why the enemy is moving (e.g., "safety", "center", "resource").
+ * @returns {boolean} - True if the enemy moved (or attempted a random fallback move), false if truly blocked.
  */
 function moveTowards(enemy, targetRow, targetCol, logReason) {
     const possibleMoves = getValidMoves(enemy);
-    if (possibleMoves.length === 0) return false; // No valid moves
+    if (possibleMoves.length === 0) {
+        // Game.logMessage(`Enemy ${enemy.id} cannot move towards ${logReason} (no valid moves).`, LOG_CLASS_ENEMY_EVENT); // Optional: Log why it's stuck
+        return false; // No valid moves at all
+    }
 
-    let bestMove = null;
-    let minDistance = Math.abs(targetRow - enemy.row) + Math.abs(targetCol - enemy.col);
+    const currentDistance = Math.abs(targetRow - enemy.row) + Math.abs(targetCol - enemy.col);
+    let closerMoves = [];
+    let sidewaysMoves = [];
 
+    // Categorize valid moves
     for (const move of possibleMoves) {
         const newDist = Math.abs(targetRow - move.row) + Math.abs(targetCol - move.col);
-        if (newDist < minDistance) {
-            minDistance = newDist;
-            bestMove = move;
+        if (newDist < currentDistance) {
+            closerMoves.push({ move: move, distance: newDist });
+        } else if (newDist === currentDistance) {
+            sidewaysMoves.push(move);
         }
     }
 
-    // If no move gets closer, pick a random valid move (might happen if target is unreachable)
-    // Or if already adjacent? For now, just move if a closer step exists.
-    if (bestMove) {
-        Game.logMessage(`Enemy ${enemy.id} moves towards ${logReason} to (${bestMove.row},${bestMove.col}).`, LOG_CLASS_ENEMY_EVENT);
-        enemy.row = bestMove.row;
-        enemy.col = bestMove.col;
+    let chosenMove = null;
+
+    // 1. Prioritize closer moves
+    if (closerMoves.length > 0) {
+        // Find the best among closer moves (minimum distance)
+        closerMoves.sort((a, b) => a.distance - b.distance);
+        chosenMove = closerMoves[0].move;
+        // Game.logMessage(`Enemy ${enemy.id} choosing closer move towards ${logReason}.`, LOG_CLASS_DEBUG); // Debug log
+    }
+    // 2. If no closer moves, consider sideways moves
+    else if (sidewaysMoves.length > 0) {
+        // Pick a random sideways move to avoid bias/loops
+        chosenMove = sidewaysMoves[Math.floor(Math.random() * sidewaysMoves.length)];
+        // Game.logMessage(`Enemy ${enemy.id} choosing sideways move towards ${logReason}.`, LOG_CLASS_DEBUG); // Debug log
+    }
+
+    // 3. Execute chosen move (closer or sideways)
+    if (chosenMove) {
+        // Log message includes the STARTING position before the move
+        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards ${logReason} to (${chosenMove.row},${chosenMove.col}).`, LOG_CLASS_ENEMY_EVENT);
+        enemy.row = chosenMove.row;
+        enemy.col = chosenMove.col;
         return true;
     }
-    return false; // No move found that gets closer
+
+    // 4. Fallback: No closer or sideways move possible, try random move
+    // Game.logMessage(`Enemy ${enemy.id} blocked towards ${logReason}, attempting random move.`, LOG_CLASS_DEBUG); // Debug log
+    // Note: moveRandomly already logs its own success/failure message
+    return moveRandomly(enemy); // Return true if random move succeeded, false otherwise
 }
 
 /**
@@ -181,10 +211,13 @@ function moveRandomly(enemy) {
     const possibleMoves = getValidMoves(enemy);
     if (possibleMoves.length > 0) {
         const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-        Game.logMessage(`Enemy ${enemy.id} moves randomly to (${chosenMove.row},${chosenMove.col}).`, LOG_CLASS_ENEMY_EVENT);
+        // Log message includes the STARTING position before the move
+        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves randomly to (${chosenMove.row},${chosenMove.col}).`, LOG_CLASS_ENEMY_EVENT);
         enemy.row = chosenMove.row;
         enemy.col = chosenMove.col;
         return true;
     }
+    // Log failure to move randomly only if it was attempted as a fallback (e.g., from moveTowards)
+    // Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) cannot move randomly (no valid moves).`, LOG_CLASS_ENEMY_EVENT);
     return false; // No valid moves
 }
