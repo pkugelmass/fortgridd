@@ -1,0 +1,66 @@
+# AI Fleeing State (`handleFleeingState`) Design
+
+This document outlines the proposed logic for the `handleFleeingState(enemy)` function in `js/ai/state_fleeing.js`. The primary goal is to break line of sight (LOS) with the threat (`enemy.targetEnemy`), falling back to maximizing distance if LOS cannot be broken immediately.
+
+**Assumptions:**
+*   The function receives the `enemy` object, which has a `targetEnemy` property indicating the threat.
+*   It can access global state/objects like `player`, `enemies`, `mapData`, `Config`, and `Game`.
+*   Helper functions `checkLineOfSight`, `performReevaluation`, and `getValidMoves` exist in `js/ai/ai_helpers.js`.
+
+**Logic Flow (Priority Order):**
+
+1.  **Target Validation:**
+    *   Get the threat: `threat = enemy.targetEnemy`.
+    *   **Check 1: Threat Invalid?**
+        *   If `threat` is null, undefined, or `threat.hp <= 0`:
+            *   Clear the enemy's target: `enemy.targetEnemy = null`.
+            *   Call `performReevaluation(enemy)` to determine the next best state (likely `EXPLORING` if no other threats/needs).
+            *   Return (end turn).
+    *   **Check 2: Threat Still Visible?**
+        *   Use `checkLineOfSight(enemy, threat, enemy.detectionRange)` to see if the fleeing AI can still perceive the threat.
+        *   If `checkLineOfSight` returns `false`:
+            *   The AI has successfully evaded for now.
+            *   Clear `enemy.targetEnemy = null`.
+            *   Call `performReevaluation(enemy)`.
+            *   Return.
+
+2.  **Evaluate Potential Moves:**
+    *   Get all valid adjacent moves: `possibleMoves = getValidMoves(enemy)`.
+    *   If `possibleMoves.length === 0`:
+        *   Log that the enemy is cornered and cannot flee.
+        *   *(Optional: Transition to ENGAGING_ENEMY as a last resort? For now, just wait.)*
+        *   Log "Enemy X is cornered and waits!".
+        *   Return.
+
+3.  **Prioritize Moves that Break LOS:**
+    *   Create an empty list: `losBreakingMoves = []`.
+    *   For each `move` in `possibleMoves`:
+        *   Check if the threat would have LOS to the `move` position:
+            `threatHasLOS = checkLineOfSight(threat, {row: move.row, col: move.col}, threat.detectionRange)`
+        *   If `threatHasLOS` is `false`:
+            *   Add `move` to `losBreakingMoves`.
+    *   **If LOS-breaking moves exist:**
+        *   Select the best LOS-breaking move (e.g., the one furthest from the `threat`, or just the first one found). Let this be `chosenMove`.
+        *   Execute the move: `enemy.row = chosenMove.row`, `enemy.col = chosenMove.col`.
+        *   Log the move (e.g., "Enemy X flees towards cover at (r,c) to break LOS from Threat Y.").
+        *   Return.
+
+4.  **Fallback: Move Directly Away (If LOS Cannot Be Broken):**
+    *   If `losBreakingMoves` is empty:
+        *   Find the move in `possibleMoves` that maximizes the Manhattan distance from the `threat`. Let this be `chosenMove`.
+        *   *(Need a helper like `moveAwayFrom(enemy, threat.row, threat.col)` or implement distance calculation here)*.
+        *   If a best move away is found:
+            *   Execute the move: `enemy.row = chosenMove.row`, `enemy.col = chosenMove.col`.
+            *   Log the move (e.g., "Enemy X flees away from Threat Y to (r,c).").
+            *   Return.
+        *   Else (e.g., all moves are equidistant or blocked in a way `getValidMoves` didn't catch - should be rare):
+            *   Log "Enemy X is blocked while fleeing and waits."
+            *   Return.
+
+**Helper Function Considerations:**
+*   Might need a `moveAwayFrom(unit, targetRow, targetCol)` helper, similar to `moveTowards` but maximizing distance. Alternatively, the logic can be implemented directly within this state handler.
+
+**Future Enhancements:**
+*   Consider fleeing towards known medkits if health is critical.
+*   More sophisticated cover evaluation (not just breaking LOS).
+*   Transitioning to `ENGAGING_ENEMY` if cornered.

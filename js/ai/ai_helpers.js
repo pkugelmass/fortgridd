@@ -5,12 +5,12 @@ console.log("ai_helpers.js loaded");
  * Checks if an attacker has a clear cardinal (non-diagonal) line of sight to a target.
  * @param {object} attacker - The enemy object shooting ({row, col}).
  * @param {object} target - The target object ({row, col}).
- * @param {number} maxRange - The maximum range to check (from config.js).
- * @returns {boolean} - True if line of sight is clear, false otherwise.
+ * @param {number} maxRange - The maximum range to check (Manhattan distance).
+ * @returns {boolean} - True if cardinal line of sight is clear, false otherwise.
  */
-function canShootTarget(attacker, target, maxRange) {
+function hasClearCardinalLineOfSight(attacker, target, maxRange) {
     if (!attacker || !target || attacker.row === null || attacker.col === null || target.row === null || target.col === null || typeof mapData === 'undefined' || typeof TILE_WALL === 'undefined' || typeof TILE_TREE === 'undefined' || typeof GRID_HEIGHT === 'undefined' || typeof GRID_WIDTH === 'undefined') {
-        console.error("canShootTarget: Missing critical data or invalid unit positions."); return false;
+        console.error("hasClearCardinalLineOfSight: Missing critical data or invalid unit positions."); return false;
     }
     const dr = target.row - attacker.row; const dc = target.col - attacker.col; const dist = Math.abs(dr) + Math.abs(dc);
     if (dist === 0 || dist > maxRange) { return false; } if (dr !== 0 && dc !== 0) { return false; } // Not cardinal
@@ -23,6 +23,86 @@ function canShootTarget(attacker, target, maxRange) {
     }
     return true; // LoS is clear
 }
+
+
+/**
+ * Checks if unitA has a clear line of sight to unitB using Bresenham's algorithm.
+ * Checks for blocking tiles (WALL, TREE) along the line.
+ * @param {object} unitA - The starting unit ({row, col}).
+ * @param {object} unitB - The target unit ({row, col}).
+ * @param {number} maxRange - The maximum range (Euclidean distance) to check.
+ * @returns {boolean} - True if line of sight is clear and within range, false otherwise.
+ */
+function hasClearLineOfSight(unitA, unitB, maxRange) {
+    if (!unitA || !unitB || unitA.row === null || unitA.col === null || unitB.row === null || unitB.col === null || typeof mapData === 'undefined' || typeof TILE_WALL === 'undefined' || typeof TILE_TREE === 'undefined' || typeof GRID_HEIGHT === 'undefined' || typeof GRID_WIDTH === 'undefined') {
+        console.error("hasClearLineOfSight: Missing critical data or invalid unit positions.");
+        return false;
+    }
+
+    let x0 = unitA.col;
+    let y0 = unitA.row;
+    const x1 = unitB.col;
+    const y1 = unitB.row;
+
+    // Check distance first using Euclidean distance (more accurate for diagonals)
+    const dxDist = x1 - x0;
+    const dyDist = y1 - y0;
+    const distance = Math.sqrt(dxDist * dxDist + dyDist * dyDist);
+
+    if (distance === 0 || distance > maxRange) {
+        // console.log(`LOS Check Fail: Dist ${distance.toFixed(2)} > maxRange ${maxRange}`); // Debug
+        return false;
+    }
+
+    const dx = Math.abs(x1 - x0);
+    const dy = -Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx + dy; // error value e_xy
+
+    while (true) {
+        // Check the current cell (x0, y0) for obstacles, *except* for the starting cell itself.
+        if (x0 !== unitA.col || y0 !== unitA.row) {
+             // Check boundaries
+            if (y0 < 0 || y0 >= GRID_HEIGHT || x0 < 0 || x0 >= GRID_WIDTH) {
+                 console.error("hasClearLineOfSight: Bresenham went out of bounds."); // Should ideally not happen if distance check is correct
+                 return false; // Out of bounds is blocked
+            }
+            // Check for blocking tiles
+            if (mapData && mapData[y0]) {
+                const tileType = mapData[y0][x0];
+                if (tileType === TILE_WALL || tileType === TILE_TREE) {
+                    // console.log(`LOS Check Fail: Obstacle ${tileType} at (${y0},${x0})`); // Debug
+                    return false; // Blocked by obstacle
+                }
+            } else {
+                 console.error(`hasClearLineOfSight: mapData error at row ${y0}`);
+                 return false; // Missing map data is considered blocked
+            }
+        }
+
+        // Check if we reached the target
+        if (x0 === x1 && y0 === y1) {
+            break; // Reached target, line is clear so far
+        }
+
+        // Bresenham's algorithm step
+        const e2 = 2 * err;
+        if (e2 >= dy) { // e_xy+e_x > 0
+            err += dy;
+            x0 += sx;
+        }
+        if (e2 <= dx) { // e_xy+e_y < 0
+            err += dx;
+            y0 += sy;
+        }
+    }
+
+    // If the loop completed, we reached the target without hitting obstacles
+    // console.log(`LOS Check Success: Clear path to (${y1},${x1})`); // Debug
+    return true;
+}
+
 
 /**
  * Finds valid adjacent land cells for a unit to move into.
@@ -78,11 +158,15 @@ function findNearestVisibleEnemy(enemy) {
 
     // Check player first
     if (typeof player !== 'undefined' && player.hp > 0 && player.row !== null) {
-        const dist = Math.abs(player.row - enemy.row) + Math.abs(player.col - enemy.col);
-        if (dist <= detectionRange && dist < minDistance) {
-            // Basic LOS check - can be improved later if needed
-            if (canShootTarget(enemy, player, detectionRange)) { // Using canShootTarget for LOS for now
-                 minDistance = dist;
+        // Use Euclidean distance for range check with hasClearLineOfSight
+        const dxDist = player.col - enemy.col;
+        const dyDist = player.row - enemy.row;
+        const distance = Math.sqrt(dxDist * dxDist + dyDist * dyDist);
+
+        if (distance <= detectionRange && distance < minDistance) {
+            // Use new LOS check
+            if (hasClearLineOfSight(enemy, player, detectionRange)) {
+                 minDistance = distance; // Store Euclidean distance
                  nearestEnemy = player;
             }
         }
@@ -92,10 +176,14 @@ function findNearestVisibleEnemy(enemy) {
     if (typeof enemies !== 'undefined') {
         for (const otherEnemy of enemies) {
             if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0 || otherEnemy.row === null) continue;
-            const dist = Math.abs(otherEnemy.row - enemy.row) + Math.abs(otherEnemy.col - enemy.col);
-            if (dist <= detectionRange && dist < minDistance) {
-                 if (canShootTarget(enemy, otherEnemy, detectionRange)) { // Using canShootTarget for LOS for now
-                    minDistance = dist;
+            // Use Euclidean distance for range check
+            const dxDist = otherEnemy.col - enemy.col;
+            const dyDist = otherEnemy.row - enemy.row;
+            const distance = Math.sqrt(dxDist * dxDist + dyDist * dyDist);
+
+            if (distance <= detectionRange && distance < minDistance) {
+                 if (hasClearLineOfSight(enemy, otherEnemy, detectionRange)) {
+                    minDistance = distance; // Store Euclidean distance
                     nearestEnemy = otherEnemy;
                  }
             }
@@ -220,4 +308,70 @@ function moveRandomly(enemy) {
     // Log failure to move randomly only if it was attempted as a fallback (e.g., from moveTowards)
     // Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) cannot move randomly (no valid moves).`, LOG_CLASS_ENEMY_EVENT);
     return false; // No valid moves
+}
+
+/**
+ * Helper function to re-evaluate the situation when a target is invalid or gone.
+ * Priority: Threats -> Critical Needs -> Proactive Needs -> Default Explore.
+ * Modifies the enemy's state and potentially target directly.
+ * @param {object} enemy - The enemy object.
+ */
+function performReevaluation(enemy) {
+    // (a) Check Threats
+    const nearestEnemy = findNearestVisibleEnemy(enemy);
+    if (nearestEnemy) {
+        const hpPercent = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP);
+        if (hpPercent < AI_FLEE_HEALTH_THRESHOLD) {
+            enemy.state = AI_STATE_FLEEING;
+            enemy.targetEnemy = nearestEnemy;
+            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Sees ${nearestEnemy.id || 'Player'} and flees!`, LOG_CLASS_ENEMY_EVENT);
+        } else {
+            enemy.state = AI_STATE_ENGAGING_ENEMY;
+            enemy.targetEnemy = nearestEnemy;
+            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Sees ${nearestEnemy.id || 'Player'} and engages!`, LOG_CLASS_ENEMY_EVENT);
+        }
+        return; // State changed
+    }
+
+    // (b) Check Critical Needs
+    const needsMedkit = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP) < AI_SEEK_HEALTH_THRESHOLD;
+    const needsAmmo = enemy.resources.ammo <= 0;
+
+    if (needsMedkit) {
+        const nearbyMedkit = findNearbyResource(enemy, enemy.detectionRange, TILE_MEDKIT);
+        if (nearbyMedkit) {
+            enemy.targetResourceCoords = nearbyMedkit;
+            enemy.state = AI_STATE_SEEKING_RESOURCES; // Stay (or re-enter) seeking
+            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Critically needs Medkit, found another nearby at (${nearbyMedkit.row},${nearbyMedkit.col}).`, LOG_CLASS_ENEMY_EVENT);
+            return; // Target updated, state confirmed
+        }
+    }
+    if (needsAmmo) { // Check ammo only if medkit wasn't critically needed or found
+        const nearbyAmmo = findNearbyResource(enemy, enemy.detectionRange, TILE_AMMO);
+        if (nearbyAmmo) {
+            enemy.targetResourceCoords = nearbyAmmo;
+            enemy.state = AI_STATE_SEEKING_RESOURCES; // Stay (or re-enter) seeking
+            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Critically needs Ammo, found some nearby at (${nearbyAmmo.row},${nearbyAmmo.col}).`, LOG_CLASS_ENEMY_EVENT);
+            return; // Target updated, state confirmed
+        }
+    }
+
+    // (c) Check Proactive Needs
+    let nearbyResource = findNearbyResource(enemy, AI_PROACTIVE_SCAN_RANGE, TILE_MEDKIT);
+    let resourceName = 'Medkit';
+    if (!nearbyResource) {
+        nearbyResource = findNearbyResource(enemy, AI_PROACTIVE_SCAN_RANGE, TILE_AMMO);
+        resourceName = 'Ammo';
+    }
+    if (nearbyResource) {
+        enemy.targetResourceCoords = nearbyResource;
+        enemy.state = AI_STATE_SEEKING_RESOURCES; // Stay (or re-enter) seeking
+        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Proactively seeks ${resourceName} nearby at (${nearbyResource.row},${nearbyResource.col}).`, LOG_CLASS_ENEMY_EVENT);
+        return; // Target updated, state confirmed
+    }
+
+    // (d) Default to Exploring
+    Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Found no threats or other resources, switching to Exploring.`, LOG_CLASS_ENEMY_EVENT);
+    enemy.state = AI_STATE_EXPLORING;
+    // No return needed, state changed
 }

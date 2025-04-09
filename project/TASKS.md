@@ -53,8 +53,13 @@
     *   [x] Fix `getValidMoves` to allow movement onto resource tiles (TILE_MEDKIT, TILE_AMMO). (Completed: 2025-04-08 - Discovered during playtest)
     *   [x] Fix visual delay on resource pickup by ensuring `redrawCanvas` runs every AI turn end. (Completed: 2025-04-08 - Discovered during playtest)
     *   [x] Draw enemy ID labels on canvas in `drawEnemies`. (Completed: 2025-04-08)
-    *   [ ] Implement `handleEngagingEnemyState` function (move/attack target, transitions). (Next Step)
-    *   [ ] Implement `handleFleeingState` function (move away from threat, transitions).
+    *   [x] Implement `handleEngagingEnemyState` function (move/attack target, transitions). (Completed: 2025-04-08)
+    *   [ ] Refactor AI turn logic for immediate action after re-evaluation. (Next Step)
+        *   [ ] Modify state handlers to return true/false.
+        *   [ ] Modify `performReevaluation` to only set state.
+        *   [ ] Modify `executeAiTurns` to loop until action or limit.
+    *   [ ] Implement `handleFleeingState` function (break LOS, transitions).
+    *   [ ] Implement Knockback mechanic on attacks.
     *   [ ] Implement perception/scanning logic within state handlers (using range, LOS). (Likely part of state handler implementation)
     *   [ ] Implement resource pickup logic (update AI stats, update map). (Likely part of SeekingResources state)
 
@@ -76,6 +81,8 @@
 ---
 ## Discovered During Work
 *(Add new tasks identified during development here)*
+*   [ ] Further refine AI risk assessment in ENGAGE state (e.g., consider safer alternative moves). (Discovered: 2025-04-08)
+*   [ ] Refine AI target selection logic (consider HP, randomness, etc.). (Discovered: 2025-04-08)
 *   [ ] Investigate creating a shared `canMoveTo(unit, targetRow, targetCol)` utility function for player/AI move validation. (Discovered: 2025-04-08)
 *   [ ] Refactor resource handling (AI & Player) using a configuration object in config.js. (Discovered: 2025-04-08)
 *   [x] Refactor duplicated enemy creation logic from initializeGame/resetGame into createAndPlaceEnemy helper function. (Completed: 2025-04-08)
