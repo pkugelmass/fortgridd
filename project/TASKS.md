@@ -46,8 +46,8 @@
 3.  **Implement FSM Logic:** (Started: 2025-04-08)
     *   [x] Refactor main AI turn function in `js/ai.js` to use state handlers. (Completed: 2025-04-08)
     *   [x] Implement `handleExploringState` function (scan, decide transitions). (Completed: 2025-04-08)
-    *   [ ] Refactor `js/ai.js` into smaller modules (e.g., state handlers, helpers). (Next Step, Added: 2025-04-08)
-    *   [ ] Implement `handleSeekingResourcesState` function (move to target, pickup logic, transitions).
+    *   [x] Refactor `js/ai.js` into smaller modules (e.g., state handlers, helpers). (Completed: 2025-04-08)
+    *   [ ] Implement `handleSeekingResourcesState` function (move to target, pickup logic, transitions). (Next Step)
     *   [ ] Implement `handleEngagingEnemyState` function (move/attack target, transitions).
     *   [ ] Implement `handleFleeingState` function (move away from threat, transitions).
     *   [ ] Implement perception/scanning logic within state handlers (using range, LOS). (Likely part of state handler implementation)
