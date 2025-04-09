@@ -35,169 +35,47 @@ function canShootTarget(attacker, target, maxRange) {
 
 /**
  * Executes turns for all AI enemies. Logs actions with CSS classes.
- * Priority: 1. Move to safety. 2. Attack adjacent. 3. Shoot player.
- * 4. Move towards target. 5. Random move. Calls Game.checkEndConditions().
+ * Executes turns for all AI enemies based on their current state.
+ * Calls the appropriate state handler function for each enemy.
  */
 function executeAiTurns() {
-    if (typeof Game === 'undefined' || Game.isGameOver() || Game.getCurrentTurn() !== 'ai' || typeof enemies === 'undefined') { if (typeof Game !== 'undefined' && !Game.isGameOver() && Game.getCurrentTurn() === 'ai') { Game.endAiTurn(); } return; }
+    if (typeof Game === 'undefined' || Game.isGameOver() || Game.getCurrentTurn() !== 'ai' || typeof enemies === 'undefined') {
+        if (typeof Game !== 'undefined' && !Game.isGameOver() && Game.getCurrentTurn() === 'ai') {
+            Game.endAiTurn(); // Ensure turn ends even if AI logic is skipped
+        }
+        return;
+    }
 
-    let redrawNeeded = false;
     const currentEnemiesTurnOrder = [...enemies]; // Iterate over a snapshot
 
     for (let i = 0; i < currentEnemiesTurnOrder.length; i++) {
         const enemy = enemies.find(e => e.id === currentEnemiesTurnOrder[i].id); // Find current enemy in main array
         if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue; // Skip if invalid/dead
 
-        let actedThisTurn = false;
-        const directions = [ { dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
-        const zone = Game.getSafeZone(); // Get safe zone boundaries
-        const enemyEvent = LOG_CLASS_ENEMY_EVENT; // CSS class for general enemy logs (from config.js)
-        const playerBad = LOG_CLASS_PLAYER_BAD; // CSS class when player is negatively affected (from config.js)
-
-        // --- 1. Check if Outside Safe Zone (Storm Avoidance Logic) ---
-        const isOutside = enemy.row < zone.minRow || enemy.row > zone.maxRow || enemy.col < zone.minCol || enemy.col > zone.maxCol;
-        if (isOutside) {
-            const possibleMoves = []; // Find all valid adjacent moves first
-            for (const dir of directions) {
-                 const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc;
-                 if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
-                    if (typeof mapData !== 'undefined') { const targetTileType = mapData[targetRow][targetCol];
-                         if (targetTileType === TILE_LAND) { // Can only move onto land
-                            let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol);
-                            let occupiedByOtherEnemy = false;
-                            if (enemies && enemies.length > 0) { for (let j = 0; j < enemies.length; j++) { const otherEnemy = enemies[j]; if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0) continue; if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) { occupiedByOtherEnemy = true; break; } } }
-                            if (!occupiedByPlayer && !occupiedByOtherEnemy) { possibleMoves.push({ row: targetRow, col: targetCol }); } }
-                    } else { console.error("mapData not defined for AI safety move check!");} }
-            }
-
-            if (possibleMoves.length > 0) {
-                const helpfulMoves = []; // Find moves that get closer to the safe zone boundaries
-                for (const move of possibleMoves) {
-                    let isHelpful = false;
-                    if (enemy.row < zone.minRow && move.row > enemy.row) isHelpful = true; else if (enemy.row > zone.maxRow && move.row < enemy.row) isHelpful = true; else if (enemy.col < zone.minCol && move.col > enemy.col) isHelpful = true; else if (enemy.col > zone.maxCol && move.col < enemy.col) isHelpful = true; else if ((enemy.row >= zone.minRow && enemy.row <= zone.maxRow) && ((enemy.col < zone.minCol && move.col > enemy.col) || (enemy.col > zone.maxCol && move.col < enemy.col))) isHelpful = true; else if ((enemy.col >= zone.minCol && enemy.col <= zone.maxCol) && ((enemy.row < zone.minRow && move.row > enemy.row) || (enemy.row > zone.maxRow && move.row < enemy.row))) isHelpful = true;
-                    if (isHelpful) { helpfulMoves.push(move); }
-                }
-
-                let chosenMove = null;
-                if (helpfulMoves.length > 0) { chosenMove = helpfulMoves[Math.floor(Math.random() * helpfulMoves.length)]; }
-                else { chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)]; }
-
-                Game.logMessage(`Enemy ${enemy.id || i} moves towards safety to (${chosenMove.row},${chosenMove.col}).`, enemyEvent); // Log Move
-                enemy.row = chosenMove.row; enemy.col = chosenMove.col; actedThisTurn = true; redrawNeeded = true;
-            } else {
-                 Game.logMessage(`Enemy ${enemy.id || i} waits (stuck in storm).`, enemyEvent); // Log Wait
-                 actedThisTurn = true; // No move possible, still counts as acting
-            }
-        } // End if(isOutside)
-
-        // --- 2. Melee Attack Adjacent Unit (Player OR Enemy) ---
-        if (!actedThisTurn) {
-             let adjacentTarget = null; let targetList = [];
-             // Find adjacent targets (player or other living enemies)
-             if (typeof player !== 'undefined' && player.hp > 0 && player.row !== null) { for (const dir of directions) { if (enemy.row + dir.dr === player.row && enemy.col + dir.dc === player.col) { targetList.push(player); break; } } }
-             if (typeof enemies !== 'undefined') { for (const otherEnemy of enemies) { if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0 || otherEnemy.row === null) continue; for (const dir of directions) { if (enemy.row + dir.dr === otherEnemy.row && enemy.col + dir.dc === otherEnemy.col) { targetList.push(otherEnemy); break; } } } }
-
-             if (targetList.length > 0) {
-                adjacentTarget = targetList[0]; // Attack first found target
-                const isTargetPlayer = (adjacentTarget === player);
-                const targetId = isTargetPlayer ? 'Player' : (adjacentTarget.id || '??');
-                const damage = AI_ATTACK_DAMAGE; // From config.js
-
-                // Log attack with appropriate class based on target
-                Game.logMessage(`Enemy ${enemy.id || i} attacks ${targetId} at (${adjacentTarget.row},${adjacentTarget.col}) for ${damage} damage.`, isTargetPlayer ? playerBad : enemyEvent);
-                adjacentTarget.hp -= damage;
-                actedThisTurn = true; redrawNeeded = true;
-
-                if (adjacentTarget.hp <= 0) { // Check if target died
-                    // Defeat message logged by checkEndConditions (which covers player defeat & win condition)
-                    if (!isTargetPlayer) {
-                         enemies = enemies.filter(e => e.id !== adjacentTarget.id); // Remove enemy from main array
-                         Game.logMessage(`Enemy ${adjacentTarget.id} defeated by Enemy ${enemy.id}!`, enemyEvent); // Log AIvAI kill specifically
-                    }
-                }
-                 // Check end conditions AFTER potential target removal & checkEndConditions logs win/loss
-                 if (Game.checkEndConditions()) return; // Stop if game ended
-            }
+        // --- FSM Logic ---
+        // Call the handler function corresponding to the enemy's current state
+        switch (enemy.state) {
+            case AI_STATE_EXPLORING:
+                handleExploringState(enemy);
+                break;
+            case AI_STATE_SEEKING_RESOURCES:
+                handleSeekingResourcesState(enemy);
+                break;
+            case AI_STATE_ENGAGING_ENEMY:
+                handleEngagingEnemyState(enemy);
+                break;
+            case AI_STATE_FLEEING:
+                handleFleeingState(enemy);
+                break;
+            default:
+                console.warn(`Enemy ${enemy.id} has unknown state: ${enemy.state}`);
+                // Optionally default to exploring or just log
+                handleExploringState(enemy); // Default to exploring for now
+                break;
         }
 
-        // If game ended due to melee attack, stop processing AI for this turn
-        if (Game.isGameOver()) return;
-
-        // --- 3. Ranged Attack Player ---
-        // Only run if AI didn't flee storm OR melee attack
-        if (!actedThisTurn &&
-            typeof player !== 'undefined' && player.hp > 0 && player.row !== null && // Player valid target
-            enemy.resources && enemy.resources.ammo > 0 && // AI has ammo
-            typeof RANGED_ATTACK_RANGE !== 'undefined' && typeof AI_ATTACK_DAMAGE !== 'undefined') // Config ready
-        {
-            const distToPlayer = Math.abs(player.row - enemy.row) + Math.abs(player.col - enemy.col);
-
-            // Check Range and Line of Sight using helper function
-            if (distToPlayer <= RANGED_ATTACK_RANGE && canShootTarget(enemy, player, RANGED_ATTACK_RANGE)) {
-                 enemy.resources.ammo--; // Consume ammo
-                 const damage = AI_ATTACK_DAMAGE; // Use general AI damage for now
-                 player.hp -= damage;
-                 Game.logMessage(`Enemy ${enemy.id || i} shoots Player for ${damage} damage! (Ammo: ${enemy.resources.ammo})`, playerBad); // Log Shot with player class
-                 actedThisTurn = true; redrawNeeded = true;
-
-                 // Check end conditions AFTER player takes damage
-                 if (Game.checkEndConditions()) return; // Stop if game ended
-            }
-        } // End Ranged Attack check
-
-
-        // --- 4. Move Towards Nearest Unit (influenced by HP state) ---
-        // Only run if AI didn't flee, melee attack, OR shoot
-        if (!actedThisTurn && typeof player !== 'undefined' && player.hp > 0 && player.row !== null) {
-             let closestUnit = null; let minDistance = Infinity;
-             // Find closest valid target (player or other living enemy)
-             let playerDist = Math.abs(player.row - enemy.row) + Math.abs(player.col - enemy.col); if (player.hp > 0 && playerDist < minDistance) { minDistance = playerDist; closestUnit = player; }
-             if (typeof enemies !== 'undefined') { for (const otherEnemy of enemies) { if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0 || otherEnemy.row === null) continue; const dist = Math.abs(otherEnemy.row - enemy.row) + Math.abs(otherEnemy.col - enemy.col); if (dist < minDistance) { minDistance = dist; closestUnit = otherEnemy; } } }
-
-             // Check if target is within enemy's detection range
-             const enemyDetectionRange = enemy.detectionRange || AI_RANGE_MAX; // Use specific or fallback from config.js
-             if (closestUnit && minDistance <= enemyDetectionRange) {
-                // Apply HP-based behavior
-                const hpPercent = enemy.hp / (enemy.maxHp || 1); // Ensure maxHp exists or default to avoid NaN
-                let pursueTarget = (hpPercent > AI_PURSUE_HP_THRESHOLD); // Pursue if HP > threshold (from config.js)
-
-                if (pursueTarget) {
-                    // Find all valid adjacent moves first
-                    const possibleMoves = [];
-                    for (const dir of directions) { const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc; if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) { if (typeof mapData !== 'undefined') { const targetTileType = mapData[targetRow][targetCol]; if (targetTileType === TILE_LAND) { let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol); let occupiedByOtherEnemy = false; if (enemies && enemies.length > 0) { for (let j = 0; j < enemies.length; j++) { const otherEnemyCheck = enemies[j]; if (!otherEnemyCheck || otherEnemyCheck.id === enemy.id || otherEnemyCheck.hp <= 0) continue; if (otherEnemyCheck.row === targetRow && otherEnemyCheck.col === targetCol) { occupiedByOtherEnemy = true; break; } } } if (!occupiedByPlayer && !occupiedByOtherEnemy) { possibleMoves.push({ row: targetRow, col: targetCol }); } } } else { console.error("mapData error");} } }
-
-                    // Evaluate possible moves to find one that gets closer to the closestUnit
-                    if (possibleMoves.length > 0) {
-                        let bestMove = null; let minTargetDistance = minDistance;
-                        for (const move of possibleMoves) { const newDist = Math.abs(closestUnit.row - move.row) + Math.abs(closestUnit.col - move.col); if (newDist < minTargetDistance) { minTargetDistance = newDist; bestMove = move; } }
-                        // Execute move towards closest unit if found
-                        if (bestMove) {
-                             const targetId = (closestUnit === player) ? 'Player' : closestUnit.id;
-                             Game.logMessage(`Enemy ${enemy.id || i} moves towards ${targetId} at (${bestMove.row},${bestMove.col}).`, enemyEvent); // <<< LOG
-                             enemy.row = bestMove.row; enemy.col = bestMove.col; actedThisTurn = true; redrawNeeded = true;
-                         } // else no closer move found, fall through to random move below
-                    } // else no possible moves at all
-                } else { Game.logMessage(`Enemy ${enemy.id || i} is cautious (low HP), moves randomly instead.`, enemyEvent); } // <<< LOG Caution
-             } // End if closest unit found within range
-        } // End target seeking block
-
-
-        // --- 5. Random Movement Logic (Fallback) ---
-        // Only if AI took no other action
-        if (!actedThisTurn) {
-             const possibleMoves = []; // Find valid moves again
-             for (const dir of directions) { const targetRow = enemy.row + dir.dr; const targetCol = enemy.col + dir.dc; if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) { if (typeof mapData !== 'undefined') { const targetTileType = mapData[targetRow][targetCol]; if (targetTileType === TILE_LAND) { let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol); let occupiedByOtherEnemy = false; if (enemies && enemies.length > 0) { for (let j = 0; j < enemies.length; j++) { const otherEnemy = enemies[j]; if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0) continue; if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) { occupiedByOtherEnemy = true; break; } } } if (!occupiedByPlayer && !occupiedByOtherEnemy) { possibleMoves.push({ row: targetRow, col: targetCol }); } } } else { console.error("mapData error");} } }
-             if (possibleMoves.length > 0) {
-                 const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-                 Game.logMessage(`Enemy ${enemy.id || i} moves randomly to (${chosenMove.row},${chosenMove.col}).`, enemyEvent); // <<< LOG
-                 enemy.row = chosenMove.row; enemy.col = chosenMove.col;
-                 redrawNeeded = true;
-                 actedThisTurn = true; // Mark as acted
-             } else {
-                 Game.logMessage(`Enemy ${enemy.id || i} waits (no moves).`, enemyEvent); // <<< LOG
-                 actedThisTurn = true; // Counts as acting if stuck
-            }
-        } // End random movement block
+        // Check end conditions after each enemy acts (important if an enemy action ends the game)
+        if (Game.checkEndConditions()) return;
 
     } // End loop through enemies
 
@@ -208,3 +86,323 @@ function executeAiTurns() {
     // If game ended, final redraw already handled by setGameOver or checks above
 
 } // End executeAiTurns
+
+// --- AI State Handlers ---
+
+/**
+ * Finds valid adjacent land cells for a unit to move into.
+ * @param {object} unit - The unit (player or enemy) with {row, col}.
+ * @returns {Array<object>} - An array of {row, col} objects for valid moves.
+ */
+function getValidMoves(unit) {
+    const possibleMoves = [];
+    const directions = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
+
+    for (const dir of directions) {
+        const targetRow = unit.row + dir.dr;
+        const targetCol = unit.col + dir.dc;
+
+        if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
+            if (typeof mapData !== 'undefined' && mapData[targetRow] && mapData[targetRow][targetCol] === TILE_LAND) {
+                let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol);
+                let occupiedByOtherEnemy = false;
+                if (enemies && enemies.length > 0) {
+                    for (const otherEnemy of enemies) {
+                        if (!otherEnemy || (unit.id && otherEnemy.id === unit.id) || otherEnemy.hp <= 0) continue; // Skip self or dead
+                        if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) {
+                            occupiedByOtherEnemy = true;
+                            break;
+                        }
+                    }
+                }
+                if (!occupiedByPlayer && !occupiedByOtherEnemy) {
+                    possibleMoves.push({ row: targetRow, col: targetCol });
+                }
+            } else if (typeof mapData === 'undefined' || !mapData[targetRow]) {
+                 console.error("getValidMoves: mapData error at row", targetRow);
+            }
+        }
+    }
+    return possibleMoves;
+}
+
+/**
+ * Finds the nearest visible enemy (player or other AI) within detection range.
+ * Uses simple distance and basic LOS check (canShootTarget).
+ * @param {object} enemy - The searching enemy object.
+ * @returns {object|null} - The nearest visible enemy object or null if none found.
+ */
+function findNearestVisibleEnemy(enemy) {
+    let nearestEnemy = null;
+    let minDistance = Infinity;
+    const detectionRange = enemy.detectionRange || AI_RANGE_MAX; // Use specific or fallback
+
+    // Check player first
+    if (typeof player !== 'undefined' && player.hp > 0 && player.row !== null) {
+        const dist = Math.abs(player.row - enemy.row) + Math.abs(player.col - enemy.col);
+        if (dist <= detectionRange && dist < minDistance) {
+            // Basic LOS check - can be improved later if needed
+            if (canShootTarget(enemy, player, detectionRange)) { // Using canShootTarget for LOS for now
+                 minDistance = dist;
+                 nearestEnemy = player;
+            }
+        }
+    }
+
+    // Check other enemies
+    if (typeof enemies !== 'undefined') {
+        for (const otherEnemy of enemies) {
+            if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.hp <= 0 || otherEnemy.row === null) continue;
+            const dist = Math.abs(otherEnemy.row - enemy.row) + Math.abs(otherEnemy.col - enemy.col);
+            if (dist <= detectionRange && dist < minDistance) {
+                 if (canShootTarget(enemy, otherEnemy, detectionRange)) { // Using canShootTarget for LOS for now
+                    minDistance = dist;
+                    nearestEnemy = otherEnemy;
+                 }
+            }
+        }
+    }
+    return nearestEnemy;
+}
+
+/**
+ * Finds the nearest specified resource tile within a given range.
+ * @param {object} enemy - The searching enemy object.
+ * @param {number} range - The maximum search distance (Manhattan distance).
+ * @param {number} resourceTileType - The TILE_* constant for the resource.
+ * @returns {object|null} - The coordinates {row, col} of the nearest resource, or null.
+ */
+function findNearbyResource(enemy, range, resourceTileType) {
+    let nearestResource = null;
+    let minDistance = Infinity;
+
+    // Simple square scan around the enemy
+    for (let r = Math.max(0, enemy.row - range); r <= Math.min(GRID_HEIGHT - 1, enemy.row + range); r++) {
+        for (let c = Math.max(0, enemy.col - range); c <= Math.min(GRID_WIDTH - 1, enemy.col + range); c++) {
+            const dist = Math.abs(r - enemy.row) + Math.abs(c - enemy.col);
+            if (dist <= range && dist < minDistance) {
+                if (mapData && mapData[r] && mapData[r][c] === resourceTileType) {
+                    minDistance = dist;
+                    nearestResource = { row: r, col: c };
+                }
+            }
+        }
+    }
+    return nearestResource;
+}
+
+/**
+ * Calculates the approximate center of the current safe zone.
+ * @returns {object} - Coordinates {row, col} of the center.
+ */
+function getSafeZoneCenter() {
+    const zone = Game.getSafeZone();
+    return {
+        row: Math.floor((zone.minRow + zone.maxRow) / 2),
+        col: Math.floor((zone.minCol + zone.maxCol) / 2)
+    };
+}
+
+/**
+ * Moves the enemy one step towards the target coordinates.
+ * @param {object} enemy - The enemy object to move.
+ * @param {number} targetRow - The target row.
+ * @param {number} targetCol - The target column.
+ * @param {string} logReason - A short string describing why the enemy is moving (e.g., "safety", "center").
+ * @returns {boolean} - True if the enemy moved, false otherwise.
+ */
+function moveTowards(enemy, targetRow, targetCol, logReason) {
+    const possibleMoves = getValidMoves(enemy);
+    if (possibleMoves.length === 0) return false; // No valid moves
+
+    let bestMove = null;
+    let minDistance = Math.abs(targetRow - enemy.row) + Math.abs(targetCol - enemy.col);
+
+    for (const move of possibleMoves) {
+        const newDist = Math.abs(targetRow - move.row) + Math.abs(targetCol - move.col);
+        if (newDist < minDistance) {
+            minDistance = newDist;
+            bestMove = move;
+        }
+    }
+
+    // If no move gets closer, pick a random valid move (might happen if target is unreachable)
+    // Or if already adjacent? For now, just move if a closer step exists.
+    if (bestMove) {
+        Game.logMessage(`Enemy ${enemy.id} moves towards ${logReason} to (${bestMove.row},${bestMove.col}).`, LOG_CLASS_ENEMY_EVENT);
+        enemy.row = bestMove.row;
+        enemy.col = bestMove.col;
+        return true;
+    }
+    return false; // No move found that gets closer
+}
+
+/**
+ * Moves the enemy to a random valid adjacent cell.
+ * @param {object} enemy - The enemy object to move.
+ * @returns {boolean} - True if the enemy moved, false otherwise.
+ */
+function moveRandomly(enemy) {
+    const possibleMoves = getValidMoves(enemy);
+    if (possibleMoves.length > 0) {
+        const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+        Game.logMessage(`Enemy ${enemy.id} moves randomly to (${chosenMove.row},${chosenMove.col}).`, LOG_CLASS_ENEMY_EVENT);
+        enemy.row = chosenMove.row;
+        enemy.col = chosenMove.col;
+        return true;
+    }
+    return false; // No valid moves
+}
+
+
+/**
+ * Handles AI logic when in the EXPLORING state.
+ * Priority: Threats -> Critical Needs -> Storm Safety -> Proactive Needs -> Default Move/Wait.
+ * @param {object} enemy - The enemy object.
+ */
+function handleExploringState(enemy) {
+    let acted = false; // Track if an action/transition occurred this turn
+
+    // 1. Threat Assessment
+    const nearestEnemy = findNearestVisibleEnemy(enemy);
+    if (nearestEnemy) {
+        const hpPercent = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP); // Use player max HP as fallback if AI maxHp not set
+        if (hpPercent < AI_FLEE_HEALTH_THRESHOLD) {
+            enemy.state = AI_STATE_FLEEING;
+            enemy.targetEnemy = nearestEnemy; // Remember who to flee from
+            Game.logMessage(`Enemy ${enemy.id} sees ${nearestEnemy.id || 'Player'} and decides to flee (low HP)!`, LOG_CLASS_ENEMY_EVENT);
+            acted = true;
+        } else {
+            enemy.state = AI_STATE_ENGAGING_ENEMY;
+            enemy.targetEnemy = nearestEnemy;
+            Game.logMessage(`Enemy ${enemy.id} sees ${nearestEnemy.id || 'Player'} and decides to engage!`, LOG_CLASS_ENEMY_EVENT);
+            acted = true;
+        }
+    }
+
+    // 2. Critical Resource Check (Only if no threat detected)
+    if (!acted) {
+        const needsMedkit = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP) < AI_SEEK_HEALTH_THRESHOLD;
+        const needsAmmo = enemy.resources.ammo <= 0; // Assuming resources.ammo exists
+
+        if (needsMedkit || needsAmmo) {
+            const resourceType = needsMedkit ? TILE_MEDKIT : TILE_AMMO;
+            const resourceRange = enemy.detectionRange || AI_RANGE_MAX; // Use detection range for critical needs
+            const nearbyResource = findNearbyResource(enemy, resourceRange, resourceType);
+
+            if (nearbyResource) {
+                enemy.state = AI_STATE_SEEKING_RESOURCES;
+                enemy.targetResourceCoords = nearbyResource;
+                const resourceName = resourceType === TILE_MEDKIT ? 'Medkit' : 'Ammo';
+                Game.logMessage(`Enemy ${enemy.id} needs ${resourceName} and spots one nearby.`, LOG_CLASS_ENEMY_EVENT);
+                acted = true;
+            }
+        }
+    }
+
+    // 3. Default Action (Only if no threat or critical need transition)
+    if (!acted) {
+        const zone = Game.getSafeZone();
+        const isOutside = enemy.row < zone.minRow || enemy.row > zone.maxRow || enemy.col < zone.minCol || enemy.col > zone.maxCol;
+
+        // 3a. Storm Safety
+        if (isOutside) {
+            const center = getSafeZoneCenter();
+            if (moveTowards(enemy, center.row, center.col, "safety")) {
+                acted = true;
+            } else {
+                 // If couldn't move towards safety, try random move to maybe get unstuck
+                 if (moveRandomly(enemy)) {
+                     acted = true;
+                 } else {
+                     Game.logMessage(`Enemy ${enemy.id} waits (stuck in storm).`, LOG_CLASS_ENEMY_EVENT);
+                     acted = true; // Counts as acting if stuck
+                 }
+            }
+        }
+
+        // 3b. Proactive Resource Scan (Only if safe from storm)
+        if (!acted) {
+            // Check for either medkits or ammo proactively
+            let nearbyResource = findNearbyResource(enemy, AI_PROACTIVE_SCAN_RANGE, TILE_MEDKIT);
+            let resourceName = 'Medkit';
+            if (!nearbyResource) {
+                nearbyResource = findNearbyResource(enemy, AI_PROACTIVE_SCAN_RANGE, TILE_AMMO);
+                resourceName = 'Ammo';
+            }
+
+            if (nearbyResource) {
+                enemy.state = AI_STATE_SEEKING_RESOURCES;
+                enemy.targetResourceCoords = nearbyResource;
+                Game.logMessage(`Enemy ${enemy.id} spots ${resourceName} nearby and moves to secure it.`, LOG_CLASS_ENEMY_EVENT);
+                acted = true;
+            }
+        }
+
+        // 3c. Probabilistic Movement/Wait (Only if safe & no proactive resource target)
+        if (!acted) {
+            const rand = Math.random();
+            let moveSuccessful = false;
+
+            if (rand < AI_EXPLORE_MOVE_AGGRESSION_CHANCE) {
+                // Try Move towards center
+                const center = getSafeZoneCenter();
+                moveSuccessful = moveTowards(enemy, center.row, center.col, "center");
+                if (!moveSuccessful) {
+                    // If moving towards center failed, try random move as fallback
+                    moveSuccessful = moveRandomly(enemy);
+                    // Optional: Log fallback differently?
+                    // if (moveSuccessful) { Game.logMessage(`Enemy ${enemy.id} moves randomly (fallback after center).`, LOG_CLASS_ENEMY_EVENT); }
+                }
+            } else if (rand < AI_EXPLORE_MOVE_AGGRESSION_CHANCE + AI_EXPLORE_MOVE_RANDOM_CHANCE) {
+                // Try Move randomly
+                moveSuccessful = moveRandomly(enemy);
+                // No fallback needed if random move was the primary choice and failed
+            } else {
+                // Wait action chosen explicitly
+                Game.logMessage(`Enemy ${enemy.id} waits.`, LOG_CLASS_ENEMY_EVENT);
+                moveSuccessful = true; // Consider waiting as a "successful" action for this turn
+            }
+
+            // If no move was successful (and wait wasn't chosen), log waiting due to being blocked
+            if (!moveSuccessful) {
+                 Game.logMessage(`Enemy ${enemy.id} waits (no moves).`, LOG_CLASS_ENEMY_EVENT);
+            }
+            // In all cases within this block (3c), the enemy has taken its turn action (move or wait).
+            acted = true; // Ensure acted is true if this block was reached.
+        }
+    }
+    // If no action was taken (e.g., state transition happened), that's fine.
+    // The executeAiTurns loop handles calling the next state's handler if needed.
+}
+
+
+/**
+ * Handles AI logic when in the SEEKING_RESOURCES state.
+ * Placeholder: Logs the state.
+ * @param {object} enemy - The enemy object.
+ */
+function handleSeekingResourcesState(enemy) {
+    // TODO: Implement movement towards targetResourceCoords, pickup logic, transitions
+    Game.logMessage(`Enemy ${enemy.id} is SEEKING RESOURCES.`, LOG_CLASS_ENEMY_EVENT);
+}
+
+/**
+ * Handles AI logic when in the ENGAGING_ENEMY state.
+ * Placeholder: Logs the state.
+ * @param {object} enemy - The enemy object.
+ */
+function handleEngagingEnemyState(enemy) {
+    // TODO: Implement movement/attack towards targetEnemy, transitions
+    Game.logMessage(`Enemy ${enemy.id} is ENGAGING ENEMY.`, LOG_CLASS_ENEMY_EVENT);
+}
+
+/**
+ * Handles AI logic when in the FLEEING state.
+ * Placeholder: Logs the state.
+ * @param {object} enemy - The enemy object.
+ */
+function handleFleeingState(enemy) {
+    // TODO: Implement movement away from threat, transitions
+    Game.logMessage(`Enemy ${enemy.id} is FLEEING.`, LOG_CLASS_ENEMY_EVENT);
+}

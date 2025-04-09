@@ -46,11 +46,15 @@ At time of writing, we have a working v1 on the main branch and we are just star
         * Enable the AI to pick up and use resources (starting with the existing resources - medkits and ammo)
         * Develop the model for enemies to change states and make decisions
         * Tune AI parameters - constants in `config.js` (health thresholds, detection ranges, move chances, cooldowns) based on gameplay testing to achieve desired difficulty and behavior.
+        * **Advanced Positional Evaluation:** Implement logic for AI to assess the tactical advantage of its current position (cover, centrality) to inform movement/waiting decisions. (Future Idea)
         * Consider different enemy types with unique stats, weapons, or behaviors (e.g., dedicated melee, snipers, support units).
+        * **Initial AI Balance Pass:** After core FSM implementation, tune AI parameters (`config.js`) via gameplay testing. (Balancing Step)
         * Consider what UI improvements may be necessary to help the user understand what's going on and help me/us debug and balance the game going forward.
 
     3. Enhance combat (could be done in parallel with what's above)
         * Find ways to make combat more strategically interesting instead of two characters meeting and the one with more hit points wins
+        * **Resource Harvesting:** Introduce mechanics for players/AI to gather resources by interacting with map elements (e.g., destroying trees/walls). (Future Idea)
+        * **Resource Economy Balance:** If/when harvesting is added, tune spawn rates, yields, AI usage, etc. (Balancing Step)
         * Consider more interactive map elements (e.g., destructible cover, doors, traps); Different terrain types affecting movement or visibility; Larger or multi-level maps.
 
     4. Enhance player progression/abilities
@@ -65,3 +69,8 @@ At time of writing, we have a working v1 on the main branch and we are just star
         * Sound effects and background music?
         * Clearer visual indicators for AI state, targeting, LOS.
         * Camera effect - only see a smaller part of a larger map
+
+    6. **Gameplay Balancing & Tuning:** (Ongoing / Iterative)
+        * Conduct balance passes after major feature implementations (AI FSM, Resource Harvesting, New Abilities, etc.).
+        * Adjust constants in `config.js` based on playtesting feedback to achieve desired difficulty and fun factor.
+        * Ensure resource availability and AI capabilities remain fair and engaging throughout the game.

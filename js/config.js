@@ -61,6 +61,12 @@ const AI_FLEE_HEALTH_THRESHOLD = 0.25; // Example: Flee if health < 25%
 const AI_AMMO_PICKUP_AMOUNT = 1; // Example: Amount of ammo AI gains from pickup
 const AI_START_MEDKITS = 0;      // Example: Starting medkits for AI
 
+// --- AI Exploring State Behavior ---
+const AI_PROACTIVE_SCAN_RANGE = 3; // Example: Range for scanning non-critical resources
+const AI_EXPLORE_MOVE_AGGRESSION_CHANCE = 0.6; // Chance to move towards safe zone center
+const AI_EXPLORE_MOVE_RANDOM_CHANCE = 0.3;     // Chance to move randomly
+const AI_EXPLORE_WAIT_CHANCE = 0.1;            // Chance to wait strategically (Must sum to 1 with others)
+
 // Combat
 const PLAYER_ATTACK_DAMAGE = 2;     // Melee damage dealt by player
 const RANGED_ATTACK_RANGE = 5;      // Max range for player/AI ranged attacks

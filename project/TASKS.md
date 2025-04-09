@@ -43,21 +43,24 @@
     *   [x] Add `targetEnemy` property to AI objects in `js/ai.js`. (Completed in createAndPlaceEnemy 2025-04-08)
     *   [x] Add `targetResourceCoords` property to AI objects in `js/ai.js`. (Completed in createAndPlaceEnemy 2025-04-08)
 
-3.  **Implement FSM Logic:** (Completed: 2025-04-08)
-    *   [ ] Refactor main AI turn function in `js/ai.js` to use state handlers.
-    *   [ ] Implement `handleExploringState` function (scan, decide transitions).
+3.  **Implement FSM Logic:** (Started: 2025-04-08)
+    *   [x] Refactor main AI turn function in `js/ai.js` to use state handlers. (Completed: 2025-04-08)
+    *   [x] Implement `handleExploringState` function (scan, decide transitions). (Completed: 2025-04-08)
+    *   [ ] Refactor `js/ai.js` into smaller modules (e.g., state handlers, helpers). (Next Step, Added: 2025-04-08)
     *   [ ] Implement `handleSeekingResourcesState` function (move to target, pickup logic, transitions).
     *   [ ] Implement `handleEngagingEnemyState` function (move/attack target, transitions).
     *   [ ] Implement `handleFleeingState` function (move away from threat, transitions).
-    *   [ ] Implement perception/scanning logic within state handlers (using range, LOS).
-    *   [ ] Implement resource pickup logic (update AI stats, update map).
+    *   [ ] Implement perception/scanning logic within state handlers (using range, LOS). (Likely part of state handler implementation)
+    *   [ ] Implement resource pickup logic (update AI stats, update map). (Likely part of SeekingResources state)
 
-4.  **Unit Testing:** (Completed: 2025-04-08)
-    *   [ ] Create `tests/ai.test.js`.
+
+4.  **Unit Testing:** (Started: 2025-04-08)
+    *   [x] Create `tests/ai.test.js`. (Completed: 2025-04-08)
+    *   [ ] Fix failing tests for `handleExploringState` by adjusting test setup. (Next Step)
     *   [ ] Add tests for initial AI state and properties.
-    *   [ ] Add tests for state transitions based on various conditions.
+    *   [x] Add tests for state transitions based on various conditions (Started with Exploring state). (Started: 2025-04-08)
     *   [ ] Add tests for resource pickup functionality.
-    *   [ ] Add tests for basic state actions (moving, fleeing).
+    *   [x] Add tests for basic state actions (moving, fleeing) (Started with Exploring state default actions). (Started: 2025-04-08)
 
 ### Ongoing
 
