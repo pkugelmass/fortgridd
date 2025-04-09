@@ -5,6 +5,7 @@ console.log("state_engaging_enemy.js loaded");
  * Prioritizes target validation, LOS check, self-preservation (fleeing),
  * attacking (ranged then melee), and then moving towards the target with risk assessment.
  * @param {object} enemy - The enemy object in the ENGAGING_ENEMY state.
+ * @returns {boolean} - True if an action was taken (attack, move, wait), false if re-evaluation is needed.
  */
 function handleEngagingEnemyState(enemy) {
     // --- 1. Target Validation (Existence & Health) ---
@@ -13,7 +14,7 @@ function handleEngagingEnemyState(enemy) {
         console.log(`Enemy ${enemy.id} target invalid or defeated.`);
         enemy.targetEnemy = null;
         performReevaluation(enemy); // Re-evaluate situation
-        return;
+        return false; // Needs re-evaluation
     }
 
     // --- 2. Line of Sight (LOS) Check ---
@@ -22,7 +23,7 @@ function handleEngagingEnemyState(enemy) {
         console.log(`Enemy ${enemy.id} lost sight of target ${target.id || 'Player'}.`);
         enemy.targetEnemy = null;
         performReevaluation(enemy); // Re-evaluate situation
-        return;
+        return false; // Needs re-evaluation
     }
 
     // --- 3. Health Check (Self-Preservation) ---
@@ -32,7 +33,7 @@ function handleEngagingEnemyState(enemy) {
         enemy.state = AI_STATE_FLEEING;
         // Target remains the same, so Fleeing state knows who to flee from
         Game.logMessage(`Enemy ${enemy.id} health low, fleeing!`, LOG_CLASS_ENEMY_EVENT);
-        return;
+        return false; // State changed, needs re-evaluation in the new state next loop
     }
 
     // --- 4. Attack Logic ---
@@ -54,8 +55,9 @@ function handleEngagingEnemyState(enemy) {
             Game.logMessage(`Enemy ${enemy.id} defeated ${targetId}!`, LOG_CLASS_ENEMY_EVENT); // Log defeat explicitly
             enemy.targetEnemy = null;
             performReevaluation(enemy); // Re-evaluate after kill
+            return false; // Needs re-evaluation (find new target/state)
         }
-        return; // Action complete
+        return true; // Action complete (attacked)
     }
 
     // Check 5: Melee Attack Possible?
@@ -70,8 +72,9 @@ function handleEngagingEnemyState(enemy) {
              Game.logMessage(`Enemy ${enemy.id} defeated ${targetId}!`, LOG_CLASS_ENEMY_EVENT); // Log defeat explicitly
             enemy.targetEnemy = null;
             performReevaluation(enemy); // Re-evaluate after kill
+            return false; // Needs re-evaluation (find new target/state)
         }
-        return; // Action complete
+        return true; // Action complete (attacked)
     }
 
     // --- 5. Movement Logic (If No Attack Occurred) ---
@@ -145,7 +148,7 @@ function handleEngagingEnemyState(enemy) {
             if (rand < AI_ENGAGE_RISK_AVERSION_CHANCE) {
                 // console.log(`DEBUG ${enemy.id}: Hesitating due to risk (chance: ${AI_ENGAGE_RISK_AVERSION_CHANCE}, roll: ${rand.toFixed(2)})`); // Removed debug log
                 Game.logMessage(`Enemy ${enemy.id} hesitates due to risk at (${intendedMove.row}, ${intendedMove.col}).`, LOG_CLASS_ENEMY_EVENT);
-                return; // Effectively waits
+                return true; // Action complete (waited/hesitated)
             } else {
                  // console.log(`DEBUG ${enemy.id}: Taking risky move (chance: ${AI_ENGAGE_RISK_AVERSION_CHANCE}, roll: ${rand.toFixed(2)})`); // Removed debug log
             }
@@ -157,7 +160,7 @@ function handleEngagingEnemyState(enemy) {
         Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards target ${target.id || 'Player'} to (${intendedMove.row},${intendedMove.col}).`, LOG_CLASS_ENEMY_EVENT);
         enemy.row = intendedMove.row;
         enemy.col = intendedMove.col;
-        return; // Action complete
+        return true; // Action complete (moved)
 
     } else {
         // No move closer or sideways found, proceed to fallback wait
@@ -166,8 +169,8 @@ function handleEngagingEnemyState(enemy) {
 
 
     // --- 6. Default/Wait (Fallback) ---
-    // If no action taken (e.g., couldn't find a move towards target, or hesitated)
+    // If no action taken (e.g., couldn't find a move towards target)
     // console.log(`DEBUG ${enemy.id}: Reached fallback wait.`); // Removed debug log
     Game.logMessage(`Enemy ${enemy.id} waits (engaging ${target.id || 'Player'}).`, LOG_CLASS_ENEMY_EVENT);
-    return;
+    return true; // Action complete (waited)
 }

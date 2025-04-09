@@ -54,11 +54,11 @@
     *   [x] Fix visual delay on resource pickup by ensuring `redrawCanvas` runs every AI turn end. (Completed: 2025-04-08 - Discovered during playtest)
     *   [x] Draw enemy ID labels on canvas in `drawEnemies`. (Completed: 2025-04-08)
     *   [x] Implement `handleEngagingEnemyState` function (move/attack target, transitions). (Completed: 2025-04-08)
-    *   [ ] Refactor AI turn logic for immediate action after re-evaluation. (Next Step)
-        *   [ ] Modify state handlers to return true/false.
-        *   [ ] Modify `performReevaluation` to only set state.
-        *   [ ] Modify `executeAiTurns` to loop until action or limit.
-    *   [ ] Implement `handleFleeingState` function (break LOS, transitions).
+    *   [x] Refactor AI turn logic for immediate action after re-evaluation. (Completed: 2025-04-09)
+        *   [x] Modify state handlers to return true/false. (Completed: 2025-04-09)
+        *   [x] Modify `performReevaluation` to only set state. (Verified: 2025-04-09)
+        *   [x] Modify `executeAiTurns` to loop until action or limit. (Completed: 2025-04-09)
+    *   [ ] Implement `handleFleeingState` function (break LOS, transitions). (Next Step)
     *   [ ] Implement Knockback mechanic on attacks.
     *   [ ] Implement perception/scanning logic within state handlers (using range, LOS). (Likely part of state handler implementation)
     *   [ ] Implement resource pickup logic (update AI stats, update map). (Likely part of SeekingResources state)

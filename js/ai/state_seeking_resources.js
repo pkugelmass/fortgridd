@@ -5,14 +5,14 @@ console.log("state_seeking_resources.js loaded");
  * Attempts to move towards the target resource. If the resource is gone upon arrival
  * or initially, re-evaluates the situation. If the AI reaches the resource, it picks it up.
  * @param {object} enemy - The enemy object.
+ * @returns {boolean} - True if an action was taken (move, pickup, wait), false if re-evaluation is needed.
  */
 function handleSeekingResourcesState(enemy) {
     // --- 1. Validate Target Resource Existence ---
     if (!enemy.targetResourceCoords) {
         console.warn(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) in SEEKING state without targetResourceCoords. Re-evaluating.`);
-        // --- Re-evaluation Logic ---
         performReevaluation(enemy);
-        return; // End turn after re-evaluation attempt
+        return false; // Needs re-evaluation
     }
 
     const targetRow = enemy.targetResourceCoords.row;
@@ -23,7 +23,7 @@ function handleSeekingResourcesState(enemy) {
         console.warn(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) target resource coords (${targetRow},${targetCol}) are invalid or mapData missing. Re-evaluating.`);
         enemy.targetResourceCoords = null;
         performReevaluation(enemy);
-        return; // End turn
+        return false; // Needs re-evaluation
     }
 
     const currentTile = mapData[targetRow][targetCol];
@@ -34,25 +34,29 @@ function handleSeekingResourcesState(enemy) {
         Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) finds target resource at (${targetRow},${targetCol}) is already gone. Re-evaluating...`, LOG_CLASS_ENEMY_EVENT);
         enemy.targetResourceCoords = null; // Clear the invalid target
         performReevaluation(enemy);
-        return; // End turn
+        return false; // Needs re-evaluation
     }
 
     // --- 3. Attempt Movement Towards Resource ---
-    // Only move if not already at the target
-    let moved = false;
+    let actionTaken = false;
     if (enemy.row !== targetRow || enemy.col !== targetCol) {
-        moved = moveTowards(enemy, targetRow, targetCol, "resource");
-        // moveTowards handles its own logging for success/failure/random fallback
+        // moveTowards returns true if it moved (or attempted random fallback), false if truly blocked
+        actionTaken = moveTowards(enemy, targetRow, targetCol, "resource");
+        // If moveTowards returned true, the action (move or wait due to block) is complete for this turn.
+        // If moveTowards returned false (truly blocked), we might consider it a 'wait' action.
+        if (!actionTaken) {
+             Game.logMessage(`Enemy ${enemy.id} waits (blocked from resource).`, LOG_CLASS_ENEMY_EVENT);
+             actionTaken = true; // Treat being blocked as a 'wait' action for turn completion.
+        }
     } else {
-        // Already at the target, no move needed this turn, proceed to pickup check
-        moved = true; // Consider "not needing to move" as success for this step
+        // Already at the target, proceed to pickup check. No move action needed.
+        // We don't set actionTaken=true yet, pickup is the action.
     }
 
-    // --- 4. Check if Arrived at Target (After Move Attempt) ---
-    // This check MUST happen after the move attempt
+    // --- 4. Check if Arrived at Target AND Pickup (Only if at target coords) ---
     if (enemy.row === targetRow && enemy.col === targetCol) {
-        // Verify resource still exists *after* moving (another AI might have grabbed it)
-        const tileAtArrival = mapData[enemy.row][enemy.col]; // Check the tile the enemy is NOW on
+        // Verify resource still exists *now*
+        const tileAtArrival = mapData[enemy.row][enemy.col];
         if (tileAtArrival === TILE_MEDKIT || tileAtArrival === TILE_AMMO) {
             // Pickup Logic
             let pickedUpItem = "Unknown Resource";
@@ -69,16 +73,20 @@ function handleSeekingResourcesState(enemy) {
 
             enemy.targetResourceCoords = null; // Clear target
             enemy.state = AI_STATE_EXPLORING; // Transition back to exploring
-            // End turn (pickup was the action)
+            actionTaken = true; // Pickup counts as the action
+            // Return true below
         } else {
-            // Resource disappeared between start of turn and arrival
+            // Resource disappeared between start of turn/move and arrival/pickup attempt
             Game.logMessage(`Enemy ${enemy.id} arrived at (${enemy.row},${enemy.col}) but resource was gone. Re-evaluating...`, LOG_CLASS_ENEMY_EVENT);
             enemy.targetResourceCoords = null;
             performReevaluation(enemy);
-            // End turn
+            return false; // Needs re-evaluation
         }
     }
-    // If moved towards target but didn't arrive, or was blocked, the turn ends here.
-    // moveTowards handled logging the move/block.
-    return;
+
+    // If we moved towards the target but didn't arrive, actionTaken is true (from moveTowards).
+    // If we were already at the target and picked it up, actionTaken is true.
+    // If we were already at the target but it was gone, we returned false above.
+    // If we tried to move but were blocked, actionTaken is true (treated as wait).
+    return actionTaken;
 }
