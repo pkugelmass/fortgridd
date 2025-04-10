@@ -90,7 +90,7 @@ function updateLogDisplay(gameState) {
  * Calculates optimal cell size, resizes canvas AND log container, and redraws.
  * Relies on global `canvas`, `ctx`, `GRID_WIDTH`, `GRID_HEIGHT`, `CANVAS_PADDING`, `MIN_CELL_SIZE`.
  * Also relies on global `redrawCanvas` function (currently in main.js).
- * Needs access to global `currentCellSize` (currently in main.js) - consider passing or managing differently.
+ * Needs access to global `currentCellSize` (now in drawing.js).
  * @param {GameState} gameState - The current game state object.
  */
 function resizeAndDraw(gameState) {
@@ -98,8 +98,16 @@ function resizeAndDraw(gameState) {
     const availableWidth = window.innerWidth - (CANVAS_PADDING * 2); const availableHeight = window.innerHeight - (CANVAS_PADDING * 2);
     const cellWidthBasedOnWindow = availableWidth / GRID_WIDTH; const cellHeightBasedOnWindow = availableHeight / GRID_HEIGHT;
     let newCellSize = Math.floor(Math.min(cellWidthBasedOnWindow, cellHeightBasedOnWindow));
-    // TODO: currentCellSize is still global in main.js - this needs fixing later
-    currentCellSize = Math.max(newCellSize, MIN_CELL_SIZE);
+    // Update the global currentCellSize in drawing.js
+    // Ensure drawing.js is loaded before ui.js in index.html
+    if (typeof currentCellSize !== 'undefined') {
+        currentCellSize = Math.max(newCellSize, MIN_CELL_SIZE);
+    } else {
+        Game.logMessage("resizeAndDraw ERROR: currentCellSize (from drawing.js) not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
+        // Fallback or handle error appropriately
+        return;
+    }
+
     if (currentCellSize <= 0 || !isFinite(currentCellSize) || GRID_WIDTH <= 0 || GRID_HEIGHT <= 0 || !isFinite(GRID_WIDTH) || !isFinite(GRID_HEIGHT)) { Game.logMessage(`Resize failed: Invalid dimensions.`, gameState, { level: 'ERROR', target: 'CONSOLE' }); currentCellSize = MIN_CELL_SIZE; if(GRID_WIDTH <= 0 || GRID_HEIGHT <= 0) return; }
 
     // Assumes global `canvas` exists
@@ -111,18 +119,26 @@ function resizeAndDraw(gameState) {
     }
 
     // Redraw canvas using the provided gameState
-    // Assumes global `redrawCanvas` exists
-    if (gameState && typeof redrawCanvas === 'function') {
-        redrawCanvas(gameState);
+    // Assumes global `redrawCanvas` exists (now in drawing.js) and `ctx` exists
+    if (gameState && typeof redrawCanvas === 'function' && typeof ctx !== 'undefined') {
+        redrawCanvas(ctx, gameState); // Pass ctx and gameState
+        // Also update status bar after redraw
+        if (typeof updateStatusBar === 'function') {
+            updateStatusBar(gameState);
+        }
     } else {
-        Game.logMessage("resizeAndDraw ERROR: gameState missing or redrawCanvas function not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
+        let errorMsg = "resizeAndDraw ERROR: ";
+        if (!gameState) errorMsg += "gameState missing. ";
+        if (typeof redrawCanvas !== 'function') errorMsg += "redrawCanvas function not defined. ";
+        if (typeof ctx === 'undefined') errorMsg += "ctx not defined. ";
+        Game.logMessage(errorMsg.trim(), gameState, { level: 'ERROR', target: 'CONSOLE' });
     }
 }
 
 // --- UI Initialization --- (Handles listener setup)
 /**
  * Sets up UI event listeners and performs initial draw.
- * Relies on global functions: handleKeyDown, processPlayerTurn, resetGame, resizeAndDraw, updateLogDisplay.
+ * Relies on global functions: handleKeyDown, processPlayerTurn, resetGame, resizeAndDraw, updateLogDisplay, redrawCanvas (via resizeAndDraw).
  * @param {GameState} gameState - The current game state object.
  */
 function initializeUI(gameState) {
@@ -147,12 +163,18 @@ function initializeUI(gameState) {
         } else { Game.logMessage("handleKeyDown or processPlayerTurn function not found!", gameState, { level: 'ERROR', target: 'CONSOLE' }); }
 
         // Restart Button Listener (pass gameState via closure)
-        // Assumes global resetGame exists
+        // Assumes Game.resetGame exists (moved from main.js)
         const restartBtn = document.getElementById('restartButton');
-        if (restartBtn && typeof resetGame === 'function') {
-            restartBtn.addEventListener('click', () => resetGame(gameState)); // Pass gameState
+        // Check for Game object and its resetGame method
+        if (restartBtn && typeof Game !== 'undefined' && typeof Game.resetGame === 'function') {
+            restartBtn.addEventListener('click', () => Game.resetGame(gameState)); // Call Game.resetGame
             Game.logMessage("UI INIT: Restart button listener attached.", gameState, { level: 'DEBUG', target: 'CONSOLE' });
-        } else { Game.logMessage("UI INIT ERROR: Restart button or resetGame function missing!", gameState, { level: 'ERROR', target: 'CONSOLE' }); }
+        } else {
+             let errorMsg = "UI INIT ERROR: ";
+             if (!restartBtn) errorMsg += "Restart button not found. ";
+             if (typeof Game === 'undefined' || typeof Game.resetGame !== 'function') errorMsg += "Game.resetGame function missing. ";
+             Game.logMessage(errorMsg.trim(), gameState, { level: 'ERROR', target: 'CONSOLE' });
+        }
 
         // Toggle Log Button Listener (Doesn't need gameState)
         const toggleLogBtn = document.getElementById('toggleLogButton');

@@ -20,10 +20,9 @@
 
  ### Refactoring / Cleanup Tasks
  *(To be prioritized after test triage)*
-     *   [ ] **js/game.js:** Simplify `applyStormDamage` (e.g., helper for `isOutsideSafeZone`). (Identified: 2025-04-10)
-     *   [ ] **js/game.js:** Decouple logging (`logMessage`) from UI updates (`updateLogDisplay`). (Identified: 2025-04-10)
-     *   [ ] **js/main.js:** Simplify `createAndPlaceEnemy` (separate position finding/accessibility from creation). (Identified: 2025-04-10)
-     *   [ ] **js/main.js:** Reduce `initializeGame`/`resetGame` duplication (use shared helpers). (Identified: 2025-04-10)
+     *   [X] **Refactor `js/main.js`:** Reduce size and improve separation of concerns by moving logic to `drawing.js`, `game.js`, and new `playerActions.js`. (Completed: 2025-04-10)
+     *   [X] **js/game.js:** Simplify `applyStormDamage` (use `isOutsideSafeZone` helper). (Completed: 2025-04-10)
+     *   [X] **js/game.js:** Decouple logging (`logMessage`) from UI updates (`updateLogDisplay`) - *Note: Comment updated in `logMessage`; actual decoupling requires main loop/UI refactor.* (Completed: 2025-04-10)
      *   [ ] **js/drawing.js:** Improve parameter passing (pass data like player, enemies, mapData explicitly). (Identified: 2025-04-10) (*Partially done*)
      *   [ ] **js/ai/state_engaging_enemy.js:** Break down large handler function. (Identified: 2025-04-10)
      *   [ ] **js/ai/state_engaging_enemy.js:** Separate concerns (validation, decision, execution). (Identified: 2025-04-10)

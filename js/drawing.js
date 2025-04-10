@@ -1,5 +1,70 @@
 // console.log("drawing.js loaded"); // Removed module loaded log
 
+let currentCellSize = 0; // Moved from main.js - Represents the calculated size for drawing
+
+// --- Drawing Orchestration --- (Moved from main.js)
+/**
+ * Main drawing function - orchestrates drawing layers.
+ * Assumes ctx is valid and currentCellSize is calculated and accessible.
+ * @param {CanvasRenderingContext2D} ctx - The canvas rendering context.
+ * @param {GameState} gameState - The current game state object.
+ */
+function redrawCanvas(ctx, gameState) {
+    // Removed check for ctx, assuming valid input
+    if (!gameState) {
+        // Log error if possible, maybe pass Game object or use console.error
+        console.error("redrawCanvas called without gameState!");
+        return;
+    }
+    // Use the module-scoped variable. resizeAndDraw should update this before calling redrawCanvas.
+    const cellSize = currentCellSize;
+    if (cellSize <= 0 || !isFinite(cellSize)) {
+        console.error(`redrawCanvas called with invalid currentCellSize: ${cellSize}!`);
+        // Attempt to log via Game if available
+        if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
+            Game.logMessage(`redrawCanvas ERROR: Invalid currentCellSize: ${cellSize}`, gameState, { level: 'ERROR', target: 'CONSOLE' });
+        }
+        return; // Avoid drawing with zero/negative size
+    }
+
+    // Assumes global canvas exists for width/height - needed for clearRect
+    if (typeof canvas === 'undefined') {
+        console.error("redrawCanvas ERROR: Global 'canvas' object not found!");
+        return;
+    }
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Pass gameState (or relevant parts) and cellSize to drawing functions
+    // Assuming GRID_WIDTH, GRID_HEIGHT are global/accessible from config
+    if (typeof drawMapCells === 'function') {
+        drawMapCells(ctx, gameState.mapData, gameState.safeZone, GRID_WIDTH, GRID_HEIGHT, cellSize);
+    } else if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
+        Game.logMessage("ERROR: drawMapCells not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
+    }
+    if (typeof drawGrid === 'function') {
+        drawGrid(ctx, GRID_WIDTH, GRID_HEIGHT, cellSize);
+    } else if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
+        Game.logMessage("ERROR: drawGrid not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
+    }
+    if (typeof drawEnemies === 'function') {
+        drawEnemies(ctx, gameState.enemies, cellSize);
+    } else if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
+        Game.logMessage("ERROR: drawEnemies not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
+    }
+    if (typeof drawPlayer === 'function') {
+        drawPlayer(ctx, gameState.player, cellSize);
+    } else if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
+        Game.logMessage("ERROR: drawPlayer not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
+    }
+    if (typeof drawUI === 'function') {
+        drawUI(ctx, gameState); // drawUI might need cellSize too? Check definition. (It doesn't currently)
+    } else if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
+        Game.logMessage("ERROR: drawUI not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
+    }
+    // Removed updateStatusBar(gameState); - Should be called by the initiator of the redraw
+}
+
+
 // --- Drawing Functions ---
 // Refactored to accept gameState or specific state properties as parameters.
 
