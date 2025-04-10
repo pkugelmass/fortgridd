@@ -53,7 +53,7 @@ At time of writing, we have a working v1 on the main branch and we are just star
 
     3. Enhance combat (could be done in parallel with what's above)
         * Find ways to make combat more strategically interesting instead of two characters meeting and the one with more hit points wins
-        * **Resource Harvesting:** Introduce mechanics for players/AI to gather resources by interacting with map elements (e.g., destroying trees/walls). (Future Idea)
+        * **Resource Harvesting:** Introduce mechanics for players/AI to gather resources by interacting with map elements (e.g., destroying trees/walls). (Future Idea - Could also serve as AI fallback behavior in stalemates).
         * **Resource Economy Balance:** If/when harvesting is added, tune spawn rates, yields, AI usage, etc. (Balancing Step)
         * Consider more interactive map elements (e.g., destructible cover, doors, traps); Different terrain types affecting movement or visibility; Larger or multi-level maps.
 
@@ -74,3 +74,26 @@ At time of writing, we have a working v1 on the main branch and we are just star
         * Conduct balance passes after major feature implementations (AI FSM, Resource Harvesting, New Abilities, etc.).
         * Adjust constants in `config.js` based on playtesting feedback to achieve desired difficulty and fun factor.
         * Ensure resource availability and AI capabilities remain fair and engaging throughout the game.
+
+
+## 5. Future Concepts & Themes (Brainstorming)
+
+While the immediate focus is on refining core mechanics (AI, combat, code quality), we've brainstormed some potential future directions to keep in mind:
+
+*   **High School Battle Royale Theme:**
+    *   **Concept:** Re-theme the game around high school archetypes (Jock, Nerd, Bully, Mean Girl, Emo Kid, etc.) competing in a Battle Royale scenario. The player could be the "Nerd" trying to survive.
+    *   **Tone:** This offers opportunities for humor, satire, and a more lighthearted feel compared to standard shooter tropes.
+    *   **AI/Combat:** Archetypes could inform distinct AI behaviors, stats, and abilities (e.g., Jock = aggressive melee, Nerd = ranged/tactical).
+    *   **Resources:** Items could be re-themed (e.g., textbooks, energy drinks, stolen lunch money).
+
+*   **Character Evolution Mechanic:**
+    *   **Concept:** Characters could potentially "evolve" into stronger versions of their archetype (e.g., Jock -> Quarterback, Nerd -> Valedictorian) based on certain triggers.
+    *   **Challenges:** Need to balance complexity vs. the game's pace. Complex evolution trees or location-based triggers might be too much for a quick browser game.
+    *   **Alternatives/Simplifications:**
+        *   **Temporary Buffs:** Reward kills/actions with temporary stat boosts or better item drops.
+        *   **Single-Step Evolution:** A single transformation triggered by a simple condition (X kills, specific rare item).
+        *   **Distinct Starting Abilities:** Give archetypes unique starting skills instead of in-match evolution.
+
+*   **Persistent "Sports League" (Far Future Idea):** A highly ambitious concept where characters/stats persist across multiple matches, framed as a competitive league. Likely beyond the current scope.
+
+These ideas are for future consideration and should not distract from the current roadmap priorities unless explicitly decided otherwise.

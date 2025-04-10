@@ -60,6 +60,7 @@
         *   [x] Modify `executeAiTurns` to loop until action or limit. (Completed: 2025-04-09)
     *   [x] Implement `handleFleeingState` function (break LOS, transitions). (Completed: 2025-04-09)
     *   [ ] Implement Knockback mechanic on attacks.
+    *   [ ] Implement AI Medkit Usage logic (decide when to use, apply healing). (Added: 2025-04-09)
     *   [ ] Implement perception/scanning logic within state handlers (using range, LOS). (Likely part of state handler implementation)
     *   [ ] Implement resource pickup logic (update AI stats, update map). (Likely part of SeekingResources state)
 
@@ -79,8 +80,20 @@
  *   [ ] Practice small, logical Git commits with clear messages.
 
 ---
+## Phase 3: UI/UX Enhancements (Future)
+
+*   [ ] Implement Sequential AI Turn Presentation: (Added: 2025-04-09)
+    *   Modify `executeAiTurns` to process AIs one by one asynchronously.
+    *   Highlight current AI.
+    *   Add configurable pauses (`setTimeout`) before/after AI action.
+    *   Ensure display updates correctly after each action.
+    *   **Crucially:** Disable player input during the entire AI sequence.
+    *   Consider making pause durations configurable (via `config.js` or user setting).
+
+---
 ## Discovered During Work
 *(Add new tasks identified during development here)*
+*   [ ] Review/Tune AI Ammo Seeking threshold and proactive logic. (Discovered: 2025-04-09)
 *   [x] Further refine AI risk assessment in ENGAGE state (e.g., consider safer alternative moves, avoid known threats, prefer maintaining LOS). (Completed: 2025-04-09)
 *   [ ] Refactor movement safety check (avoiding known threats) into a reusable helper function in `ai_helpers.js` and update `handleFleeingState` and `handleEngagingEnemyState` to use it. (Discovered: 2025-04-09)
 *   [ ] Refine AI target selection logic (consider HP, randomness, etc.). (Discovered: 2025-04-08)

@@ -26,14 +26,14 @@ const PLAYER_START_AMMO = 3;
 const PLAYER_START_MEDKITS = 0;
 
 // AI Stats & Variations
-const NUM_ENEMIES = 18;              // Example Count
+const NUM_ENEMIES = 30;              // Example Count
 const AI_ATTACK_DAMAGE = 2;
 const AI_HP_MIN = 12;                // Min starting HP for AI variation
 const AI_HP_MAX = 15;                // Max starting HP for AI variation
 const AI_RANGE_MIN = 5;             // Min detection range for AI variation
 const AI_RANGE_MAX = 8;            // Max detection range for AI variation
-const AI_AMMO_MIN = 1;              // Min starting ammo for AI variation
-const AI_AMMO_MAX = 2;              // Max starting ammo for AI variation
+const AI_AMMO_MIN = 0;              // Min starting ammo for AI variation
+const AI_AMMO_MAX = 0;              // Max starting ammo for AI variation
 const AI_PURSUE_HP_THRESHOLD = 0.3; // HP percentage above which AI will pursue targets
 
 // AI FSM States
