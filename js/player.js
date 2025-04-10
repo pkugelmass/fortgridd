@@ -1,4 +1,4 @@
-console.log("player.js loaded");
+// console.log("player.js loaded"); // Removed module loaded log
 
 // The global 'player' object definition has been removed.
 // Player state (position, hp, resources, etc.) is now managed within the

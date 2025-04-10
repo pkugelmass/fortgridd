@@ -1,4 +1,4 @@
-console.log("state_seeking_resources.js loaded");
+// console.log("state_seeking_resources.js loaded"); // Removed module loaded log
 
 /**
  * Handles AI logic when in the SEEKING_RESOURCES state, using gameState.
@@ -10,7 +10,7 @@ console.log("state_seeking_resources.js loaded");
 function handleSeekingResourcesState(enemy, gameState) {
     // Check dependencies
     if (!enemy || !gameState || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function' || typeof performReevaluation !== 'function' || typeof moveTowards !== 'function') {
-        console.error("handleSeekingResourcesState: Missing enemy, gameState, or required functions.");
+        Game.logMessage("handleSeekingResourcesState: Missing enemy, gameState, or required functions.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return false; // Cannot act without dependencies
     }
     const enemyId = enemy.id || 'Unknown Enemy';
@@ -18,7 +18,7 @@ function handleSeekingResourcesState(enemy, gameState) {
 
     // --- 1. Validate Target Resource Existence ---
     if (!enemy.targetResourceCoords) {
-        console.warn(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) in SEEKING state without targetResourceCoords. Re-evaluating.`);
+        Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) in SEEKING state without targetResourceCoords. Re-evaluating.`, gameState, { level: 'WARN', target: 'CONSOLE' });
         performReevaluation(enemy, gameState); // Pass gameState
         return false; // Needs re-evaluation
     }
@@ -29,7 +29,7 @@ function handleSeekingResourcesState(enemy, gameState) {
     // Check if target coordinates are valid map indices
     // Assume GRID_HEIGHT, GRID_WIDTH are globally available for now
     if (targetRow < 0 || targetRow >= GRID_HEIGHT || targetCol < 0 || targetCol >= GRID_WIDTH || !mapData[targetRow]) {
-        console.warn(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) target resource coords (${targetRow},${targetCol}) are invalid or mapData missing. Re-evaluating.`);
+        Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) target resource coords (${targetRow},${targetCol}) are invalid or mapData missing. Re-evaluating.`, gameState, { level: 'WARN', target: 'CONSOLE' });
         enemy.targetResourceCoords = null;
         performReevaluation(enemy, gameState); // Pass gameState
         return false; // Needs re-evaluation
@@ -43,7 +43,7 @@ function handleSeekingResourcesState(enemy, gameState) {
     // --- 2. Re-evaluation if Resource is Gone (Before Moving) ---
     if (!isResourceTile) {
         // Pass gameState to logMessage
-        Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) finds target resource at (${targetRow},${targetCol}) is already gone. Re-evaluating...`, gameState, LOG_CLASS_ENEMY_EVENT);
+        Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) finds target resource at (${targetRow},${targetCol}) is already gone. Re-evaluating...`, gameState, { level: 'DEBUG', target: 'CONSOLE' }); // Changed to DEBUG CONSOLE
         enemy.targetResourceCoords = null; // Clear the invalid target
         performReevaluation(enemy, gameState); // Pass gameState
         return false; // Needs re-evaluation
@@ -56,7 +56,7 @@ function handleSeekingResourcesState(enemy, gameState) {
         actionTaken = moveTowards(enemy, targetRow, targetCol, "resource", gameState);
         if (!actionTaken) {
              // If moveTowards returned false (blocked), treat as wait
-             Game.logMessage(`Enemy ${enemyId} waits (blocked from resource).`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+             Game.logMessage(`Enemy ${enemyId} waits (blocked from resource).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
              actionTaken = true;
         }
     } else {
@@ -71,7 +71,7 @@ function handleSeekingResourcesState(enemy, gameState) {
         // we should probably re-evaluate or attempt pickup again explicitly.
         // For now, assume arrival means pickup happened implicitly via moveTowards->updateUnitPosition->checkAndPickup.
         // Log arrival and transition.
-        Game.logMessage(`Enemy ${enemyId} arrived at resource location (${enemy.row},${enemy.col}). Transitioning to Exploring.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+        Game.logMessage(`Enemy ${enemyId} arrived at resource location (${enemy.row},${enemy.col}). Transitioning to Exploring.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         enemy.targetResourceCoords = null; // Clear target
         enemy.state = AI_STATE_EXPLORING; // Transition back
         actionTaken = true; // Reaching/being at destination counts as action

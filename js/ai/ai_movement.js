@@ -1,5 +1,5 @@
 // AI Movement Helpers (Validation, Execution, Knockback)
-console.log("ai_movement.js loaded");
+// console.log("ai_movement.js loaded"); // Removed module loaded log
 
 /**
  * Finds valid adjacent cells for a unit to move into based on gameState.
@@ -10,7 +10,7 @@ console.log("ai_movement.js loaded");
 function getValidMoves(unit, gameState) {
     const possibleMoves = [];
     if (!unit || !gameState || !gameState.mapData || !gameState.safeZone || !gameState.player || !gameState.enemies) {
-        console.error("getValidMoves: Missing unit or required gameState properties.");
+        Game.logMessage("getValidMoves: Missing unit or required gameState properties.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return possibleMoves; // Return empty array if critical data is missing
     }
 
@@ -46,7 +46,7 @@ function getValidMoves(unit, gameState) {
                         }
                     } // End check for valid tile types
                 } else {
-                     console.error("getValidMoves: mapData error at row", targetRow);
+                     Game.logMessage(`getValidMoves: mapData error at row ${targetRow}`, gameState, { level: 'ERROR', target: 'CONSOLE' });
                 } // End check for valid map data row
             } // End check for safe zone
         } // End check for map boundaries
@@ -67,7 +67,7 @@ function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
     // Pass gameState to getValidMoves
     const possibleMoves = getValidMoves(enemy, gameState);
     if (possibleMoves.length === 0) {
-        // Game.logMessage(`Enemy ${enemy.id} cannot move towards ${logReason} (no valid moves).`, gameState, LOG_CLASS_ENEMY_EVENT);
+        Game.logMessage(`Enemy ${enemy.id} cannot move towards ${logReason} (no valid moves).`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         return false;
     }
 
@@ -95,7 +95,7 @@ function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
 
     if (chosenMove) {
         // Pass gameState to logMessage
-        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards ${logReason} to (${chosenMove.row},${chosenMove.col}).`, gameState, LOG_CLASS_ENEMY_EVENT);
+        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards ${logReason} to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         // Pass gameState to updateUnitPosition (anticipating its refactor)
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true;
@@ -116,7 +116,7 @@ function moveRandomly(enemy, gameState) {
     if (possibleMoves.length > 0) {
         const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
         // Pass gameState to logMessage
-        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves randomly to (${chosenMove.row},${chosenMove.col}).`, gameState, LOG_CLASS_ENEMY_EVENT);
+        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves randomly to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         // Pass gameState to updateUnitPosition (anticipating its refactor)
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true;
@@ -135,7 +135,7 @@ function moveRandomly(enemy, gameState) {
  */
 function isMoveSafe(enemy, targetRow, targetCol, gameState) {
     if (!enemy || !gameState || !gameState.player || !gameState.enemies) {
-        console.error("isMoveSafe: Missing enemy or required gameState properties.");
+        Game.logMessage("isMoveSafe: Missing enemy or required gameState properties.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return false; // Cannot determine safety without full state
     }
     const primaryTarget = enemy.targetEnemy;
@@ -160,8 +160,7 @@ function isMoveSafe(enemy, targetRow, targetCol, gameState) {
             // Check adjacency
             const adjacent = Math.abs(targetRow - threat.row) <= 1 && Math.abs(targetCol - threat.col) <= 1;
             if (adjacent) {
-                // console.error(`[isMoveSafe] Adjacent and visible threat found: ${threat.id || 'Player'}. Returning false.`); // Keep console.error? Maybe warn instead.
-                // console.warn(`[isMoveSafe] Move to (${targetRow},${targetCol}) unsafe due to adjacent visible threat: ${threat.id || 'Player'} at (${threat.row},${threat.col})`); // Commented out debug log (2025-04-10)
+                Game.logMessage(`[isMoveSafe] Move to (${targetRow},${targetCol}) unsafe due to adjacent visible threat: ${threat.id || 'Player'} at (${threat.row},${threat.col})`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
                 return false; // Move is not safe
             }
         }

@@ -1,4 +1,4 @@
-console.log("map.js loaded");
+// console.log("map.js loaded"); // Removed module loaded log
 
 // --- Configuration for Map Generation ---
 // MOVED to config.js
@@ -55,6 +55,7 @@ function createMapData(config) {
         FEATURE_SPAWN_CHANCE_AMMO = 0.03, TILE_TREE = 2, TILE_MEDKIT = 3, TILE_AMMO = 4
     } = config || {}; // Use empty object if config is null/undefined
 
+    // Cannot log here easily without gameState, keep console.log for now or refactor to pass gameState
     console.log("Creating map data using Cellular Automata...");
     let currentMap = [];
 
@@ -91,6 +92,7 @@ function createMapData(config) {
     }
 
     // 3. Feature Placement
+    // Cannot log here easily without gameState, keep console.log for now or refactor to pass gameState
     console.log("Placing features...");
     // Calculate cumulative probabilities from config values
     const treeChance = FEATURE_SPAWN_CHANCE_TREE;
@@ -112,6 +114,7 @@ function createMapData(config) {
         }
     }
 
+    // Cannot log here easily without gameState, keep console.log for now or refactor to pass gameState
     console.log("Map data creation complete.");
     return currentMap;
 }

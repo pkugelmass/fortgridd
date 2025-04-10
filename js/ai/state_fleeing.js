@@ -1,4 +1,4 @@
-console.log("state_fleeing.js loaded");
+// console.log("state_fleeing.js loaded"); // Removed module loaded log
 
 /**
  * Handles AI logic when in the FLEEING state, using gameState.
@@ -10,7 +10,7 @@ console.log("state_fleeing.js loaded");
 function handleFleeingState(enemy, gameState) {
     // Check dependencies
     if (!enemy || !gameState || !gameState.player || !gameState.enemies || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function' || typeof performReevaluation !== 'function' || typeof hasClearLineOfSight !== 'function' || typeof hasClearCardinalLineOfSight !== 'function' || typeof getValidMoves !== 'function' || typeof isMoveSafe !== 'function' || typeof updateUnitPosition !== 'function') {
-        console.error("handleFleeingState: Missing enemy, gameState, or required functions.");
+        Game.logMessage("handleFleeingState: Missing enemy, gameState, or required functions.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return false; // Cannot act without dependencies
     }
     const enemyId = enemy.id || 'Unknown Enemy';
@@ -19,7 +19,7 @@ function handleFleeingState(enemy, gameState) {
     // --- 1. Target Validation ---
     const threatObject = enemy.targetEnemy; // This should be the actual object (player or an enemy from gameState.enemies)
     if (!threatObject || threatObject.hp <= 0) {
-        // Game.logMessage(`Enemy ${enemyId} fleeing target invalid/gone. Re-evaluating.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+        Game.logMessage(`Enemy ${enemyId} fleeing target invalid/gone. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         enemy.targetEnemy = null;
         performReevaluation(enemy, gameState); // Pass gameState
         return false; // Needs re-evaluation
@@ -29,7 +29,7 @@ function handleFleeingState(enemy, gameState) {
     // --- 2. Threat Visibility Check ---
     // Assume AI_RANGE_MAX is global for now
     if (!hasClearLineOfSight(enemy, threatObject, enemy.detectionRange || AI_RANGE_MAX, gameState)) { // Pass gameState
-        // Game.logMessage(`Enemy ${enemyId} broke LOS with ${threatId}. Re-evaluating.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+        Game.logMessage(`Enemy ${enemyId} broke LOS with ${threatId}. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         enemy.targetEnemy = null; // Successfully evaded
         performReevaluation(enemy, gameState); // Pass gameState
         return false; // Needs re-evaluation
@@ -66,12 +66,12 @@ function handleFleeingState(enemy, gameState) {
             } else {
                 logMsg += `melees ${threatId} for ${damage} damage.`;
             }
-            Game.logMessage(logMsg, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+            Game.logMessage(logMsg, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
 
             // Knockback is not applied when cornered? Or should it be? Let's assume not for now.
 
             if (threatObject.hp <= 0) {
-                // Game.logMessage(`Enemy ${enemyId} defeated ${threatId} while cornered!`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+                Game.logMessage(`Enemy ${enemyId} defeated ${threatId} while cornered! Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
                 enemy.targetEnemy = null;
                 performReevaluation(enemy, gameState); // Pass gameState
                 return false; // Needs re-evaluation after kill
@@ -79,7 +79,7 @@ function handleFleeingState(enemy, gameState) {
             return true; // Attack action complete
         } else {
             // Cannot attack, truly cornered
-            Game.logMessage(`Enemy ${enemyId} is cornered and waits!`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+            Game.logMessage(`Enemy ${enemyId} is cornered and waits!`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
             return true; // Wait action complete
         }
     }
@@ -105,7 +105,7 @@ function handleFleeingState(enemy, gameState) {
             }
         }
         if (bestMove) { // Ensure a best move was actually found
-            Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) flees towards cover at (${bestMove.row},${bestMove.col}) to break LOS from ${threatId}.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+            Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) flees towards cover at (${bestMove.row},${bestMove.col}) to break LOS from ${threatId}.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
             // Pass gameState to updateUnitPosition (anticipating refactor)
             updateUnitPosition(enemy, bestMove.row, bestMove.col, gameState);
             return true; // Action taken
@@ -136,13 +136,13 @@ function handleFleeingState(enemy, gameState) {
 
     if (safeAwayMoves.length > 0) {
         const chosenMove = safeAwayMoves[Math.floor(Math.random() * safeAwayMoves.length)];
-        Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) flees away from ${threatId} to safe spot (${chosenMove.row},${chosenMove.col}).`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+        Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) flees away from ${threatId} to safe spot (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         // Pass gameState to updateUnitPosition (anticipating refactor)
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true; // Action taken
     } else {
         // No safe moves away found, must wait
-        Game.logMessage(`Enemy ${enemyId} is blocked/unsafe while fleeing and waits.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+        Game.logMessage(`Enemy ${enemyId} is blocked/unsafe while fleeing and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         return true; // Wait action complete
     }
 }

@@ -1,5 +1,3 @@
-console.log("utils.js loaded");
-
 /**
  * Checks for a resource at the given coordinates and handles pickup if found, using gameState.
  * Updates the unit's resources, modifies gameState.mapData, and logs the event via Game.logMessage.
@@ -12,14 +10,14 @@ console.log("utils.js loaded");
 function checkAndPickupResourceAt(unit, row, col, gameState) {
     // Validate inputs, including gameState and its properties
     if (!unit || !unit.resources || !gameState || !gameState.mapData || !gameState.player || !gameState.mapData[row] || typeof Game === 'undefined' || typeof Game.logMessage !== 'function') {
-        console.error(`checkAndPickupResourceAt: Invalid unit, gameState, or coordinates (${row},${col}).`);
+        Game.logMessage(`checkAndPickupResourceAt: Invalid unit, gameState, or coordinates (${row},${col}).`, gameState, { level: 'ERROR', target: 'CONSOLE' });
         return false;
     }
     // Get grid dimensions from mapData for bounds checking
     const gridHeight = gameState.mapData.length;
     const gridWidth = gameState.mapData[0] ? gameState.mapData[0].length : 0;
     if (row < 0 || row >= gridHeight || col < 0 || col >= gridWidth) {
-         console.error(`checkAndPickupResourceAt: Coordinates (${row},${col}) out of bounds.`);
+         Game.logMessage(`checkAndPickupResourceAt: Coordinates (${row},${col}) out of bounds.`, gameState, { level: 'ERROR', target: 'CONSOLE' });
          return false;
     }
 
@@ -51,7 +49,7 @@ function checkAndPickupResourceAt(unit, row, col, gameState) {
         Game.logMessage(
             `${unitId} collects ${resourceType} at (${row},${col}).`,
             gameState,
-            isPlayerUnit ? LOG_CLASS_PLAYER_GOOD : LOG_CLASS_ENEMY_EVENT
+            { level: 'PLAYER', target: 'PLAYER', className: isPlayerUnit ? LOG_CLASS_PLAYER_GOOD : LOG_CLASS_ENEMY_EVENT }
         );
     }
 
@@ -69,14 +67,14 @@ function checkAndPickupResourceAt(unit, row, col, gameState) {
 function updateUnitPosition(unit, newRow, newCol, gameState) {
     // Validate inputs, including gameState and mapData
     if (!unit || newRow === null || newCol === null || !gameState || !gameState.mapData) {
-         console.error(`updateUnitPosition: Invalid unit, destination, or gameState.`);
+         Game.logMessage(`updateUnitPosition: Invalid unit, destination, or gameState.`, gameState, { level: 'ERROR', target: 'CONSOLE' });
          return;
     }
     // Get grid dimensions from mapData for bounds checking
     const gridHeight = gameState.mapData.length;
     const gridWidth = gameState.mapData[0] ? gameState.mapData[0].length : 0;
     if (newRow < 0 || newRow >= gridHeight || newCol < 0 || newCol >= gridWidth) {
-         console.error(`updateUnitPosition: Invalid destination (${newRow},${newCol}) out of bounds.`);
+         Game.logMessage(`updateUnitPosition: Invalid destination (${newRow},${newCol}) out of bounds.`, gameState, { level: 'ERROR', target: 'CONSOLE' });
          return;
     }
 
@@ -125,7 +123,7 @@ function findStartPosition(mapData, gridWidth, gridHeight, walkableTileType, occ
         }
         attempts++;
     }
-    console.error("Could not find a valid *unoccupied* starting position after max attempts!");
+    Game.logMessage("Could not find a valid *unoccupied* starting position after max attempts!", gameState, { level: 'ERROR', target: 'CONSOLE' });
     return null; // Return null if no suitable position is found
 }
 
@@ -136,10 +134,10 @@ function findStartPosition(mapData, gridWidth, gridHeight, walkableTileType, occ
  * @param {object} target - The unit being hit ({row, col}).
  * @returns {object|null} - Coordinates {row, col} of the tile the target would be pushed to, or null if input is invalid.
  */
-function calculateKnockbackDestination(attacker, target) {
+function calculateKnockbackDestination(attacker, target, gameState) { // Added gameState for logging context
     // Moved from ai_movement.js
     if (!attacker || !target || attacker.row === null || attacker.col === null || target.row === null || target.col === null) {
-        console.error("calculateKnockbackDestination: Invalid attacker or target position.");
+        Game.logMessage("calculateKnockbackDestination: Invalid attacker or target position.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return null;
     }
     const dr = target.row - attacker.row;
@@ -147,7 +145,7 @@ function calculateKnockbackDestination(attacker, target) {
     let pushDr = Math.sign(dr);
     let pushDc = Math.sign(dc);
     if (pushDr === 0 && pushDc === 0) {
-         console.warn("calculateKnockbackDestination: Attacker and target at same position? Defaulting push direction.");
+         Game.logMessage("calculateKnockbackDestination: Attacker and target at same position? Defaulting push direction.", gameState, { level: 'WARN', target: 'CONSOLE' });
          pushDr = 1; // Default push down
     }
     const destinationRow = target.row + pushDr;
@@ -165,13 +163,13 @@ function calculateKnockbackDestination(attacker, target) {
  */
 function applyKnockback(attacker, target, gameState) {
     if (!attacker || !target || !gameState || !gameState.mapData || !gameState.player || !gameState.enemies) {
-        console.error("applyKnockback: Missing attacker, target, or required gameState properties.");
+        Game.logMessage("applyKnockback: Missing attacker, target, or required gameState properties.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return { success: false, dest: null, reason: 'internal_error' };
     }
     const { mapData, player, enemies } = gameState;
     // Assume GRID_HEIGHT, GRID_WIDTH, TILE_WALL, TILE_TREE are global for now
 
-    const knockbackDest = calculateKnockbackDestination(attacker, target);
+    const knockbackDest = calculateKnockbackDestination(attacker, target, gameState); // Pass gameState
     if (!knockbackDest) {
         return { success: false, dest: null, reason: 'calc_error' };
     }

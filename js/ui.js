@@ -1,5 +1,5 @@
 // UI Module: Handles DOM updates, event listeners, and drawing orchestration related to UI.
-console.log("ui.js loaded");
+// console.log("ui.js loaded"); // Removed module loaded log
 
 // --- Status Bar Update Function --- (Moved from main.js)
 /**
@@ -9,7 +9,7 @@ console.log("ui.js loaded");
 function updateStatusBar(gameState) {
     // Check if crucial objects/functions exist first
     if (!gameState || typeof Game === 'undefined' || !gameState.player || typeof Game.getTurnNumber !== 'function' || typeof Game.isGameOver !== 'function') {
-        console.warn("updateStatusBar skipped: gameState, Game object, player, or required functions missing.");
+        Game.logMessage("updateStatusBar skipped: gameState, Game object, player, or required functions missing.", gameState, { level: 'WARN', target: 'CONSOLE' });
         return;
     }
 
@@ -31,12 +31,12 @@ function updateStatusBar(gameState) {
 
         // Update HP (from gameState.player)
         if (hpEl) { hpEl.textContent = `${gameState.player.hp ?? '--'} / ${gameState.player.maxHp || '--'}`; }
-        else { console.warn("updateStatusBar: hpValue element missing."); }
+        else { Game.logMessage("updateStatusBar: hpValue element missing.", gameState, { level: 'WARN', target: 'CONSOLE' }); }
 
         // Update Enemies Left (from gameState.enemies)
         if (enemiesEl && gameState.enemies) { enemiesEl.textContent = gameState.enemies.filter(e => e && e.hp > 0).length; }
         else if (enemiesEl) { enemiesEl.textContent = '--'; }
-        else { console.warn("updateStatusBar: enemiesValue element missing."); }
+        else { Game.logMessage("updateStatusBar: enemiesValue element missing.", gameState, { level: 'WARN', target: 'CONSOLE' }); }
 
         // --- Update Shrink Countdown ---
         if (shrinkEl) {
@@ -50,21 +50,21 @@ function updateStatusBar(gameState) {
                         const turnsLeft = SHRINK_INTERVAL - turnsSinceLastShrink;
                         shrinkEl.textContent = turnsLeft;
                     } else {
-                         console.warn(`updateStatusBar: Invalid currentTurn number from gameState: ${currentTurn}`);
+                         Game.logMessage(`updateStatusBar: Invalid currentTurn number from gameState: ${currentTurn}`, gameState, { level: 'WARN', target: 'CONSOLE' });
                          shrinkEl.textContent = "?";
                     }
                 }
             } else {
                  shrinkEl.textContent = "N/A";
-                 console.warn("updateStatusBar: SHRINK_INTERVAL missing or invalid.");
+                 Game.logMessage("updateStatusBar: SHRINK_INTERVAL missing or invalid.", gameState, { level: 'WARN', target: 'CONSOLE' });
             }
         } else {
-             console.warn("updateStatusBar: Element with ID 'shrinkValue' not found.");
+             Game.logMessage("updateStatusBar: Element with ID 'shrinkValue' not found.", gameState, { level: 'WARN', target: 'CONSOLE' });
         }
         // --- End Update Shrink Countdown ---
 
     } catch (error) {
-        console.error("Error updating status bar:", error);
+        Game.logMessage(`Error updating status bar: ${error}`, gameState, { level: 'ERROR', target: 'CONSOLE' });
     }
 }
 
@@ -82,7 +82,7 @@ function updateLogDisplay(gameState) {
              `<p class="${entry.cssClass || ''}">${entry.message}</p>`
         ).join('');
         logContainer.scrollTop = logContainer.scrollHeight;
-    } catch (error) { console.error("Error updating log display:", error); }
+    } catch (error) { Game.logMessage(`Error updating log display: ${error}`, gameState, { level: 'ERROR', target: 'CONSOLE' }); }
 }
 
 // --- Resize Logic --- (Moved from main.js)
@@ -94,13 +94,13 @@ function updateLogDisplay(gameState) {
  * @param {GameState} gameState - The current game state object.
  */
 function resizeAndDraw(gameState) {
-    // console.log("Resizing canvas...");
+    // Game.logMessage("Resizing canvas...", gameState, { level: 'DEBUG', target: 'CONSOLE' });
     const availableWidth = window.innerWidth - (CANVAS_PADDING * 2); const availableHeight = window.innerHeight - (CANVAS_PADDING * 2);
     const cellWidthBasedOnWindow = availableWidth / GRID_WIDTH; const cellHeightBasedOnWindow = availableHeight / GRID_HEIGHT;
     let newCellSize = Math.floor(Math.min(cellWidthBasedOnWindow, cellHeightBasedOnWindow));
     // TODO: currentCellSize is still global in main.js - this needs fixing later
     currentCellSize = Math.max(newCellSize, MIN_CELL_SIZE);
-    if (currentCellSize <= 0 || !isFinite(currentCellSize) || GRID_WIDTH <= 0 || GRID_HEIGHT <= 0 || !isFinite(GRID_WIDTH) || !isFinite(GRID_HEIGHT)) { console.error(`Resize failed: Invalid dimensions.`); currentCellSize = MIN_CELL_SIZE; if(GRID_WIDTH <= 0 || GRID_HEIGHT <= 0) return; }
+    if (currentCellSize <= 0 || !isFinite(currentCellSize) || GRID_WIDTH <= 0 || GRID_HEIGHT <= 0 || !isFinite(GRID_WIDTH) || !isFinite(GRID_HEIGHT)) { Game.logMessage(`Resize failed: Invalid dimensions.`, gameState, { level: 'ERROR', target: 'CONSOLE' }); currentCellSize = MIN_CELL_SIZE; if(GRID_WIDTH <= 0 || GRID_HEIGHT <= 0) return; }
 
     // Assumes global `canvas` exists
     canvas.width = GRID_WIDTH * currentCellSize; canvas.height = GRID_HEIGHT * currentCellSize;
@@ -115,7 +115,7 @@ function resizeAndDraw(gameState) {
     if (gameState && typeof redrawCanvas === 'function') {
         redrawCanvas(gameState);
     } else {
-        console.error("resizeAndDraw ERROR: gameState missing or redrawCanvas function not defined!");
+        Game.logMessage("resizeAndDraw ERROR: gameState missing or redrawCanvas function not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
     }
 }
 
@@ -128,11 +128,11 @@ function resizeAndDraw(gameState) {
 function initializeUI(gameState) {
     // Attach Listeners (Only ONCE)
     if (!window.initListenersAttached) {
-        console.log("UI INIT: Attaching listeners...");
+        Game.logMessage("UI INIT: Attaching listeners...", gameState, { level: 'INFO', target: 'CONSOLE' });
         // Resize Listener (pass gameState via closure)
         // Assumes global resizeAndDraw exists
         window.addEventListener('resize', () => resizeAndDraw(gameState));
-        console.log("UI INIT: Resize listener attached.");
+        Game.logMessage("UI INIT: Resize listener attached.", gameState, { level: 'DEBUG', target: 'CONSOLE' });
 
         // Input Listener (Calls handleKeyDown then processPlayerTurn)
         // Assumes global handleKeyDown and processPlayerTurn exist
@@ -143,44 +143,44 @@ function initializeUI(gameState) {
                     processPlayerTurn(actionIntent, gameState); // Process the intent
                 }
             });
-            console.log("UI INIT: Input handler attached (calls processPlayerTurn).");
-        } else { console.error("handleKeyDown or processPlayerTurn function not found!"); }
+            Game.logMessage("UI INIT: Input handler attached (calls processPlayerTurn).", gameState, { level: 'DEBUG', target: 'CONSOLE' });
+        } else { Game.logMessage("handleKeyDown or processPlayerTurn function not found!", gameState, { level: 'ERROR', target: 'CONSOLE' }); }
 
         // Restart Button Listener (pass gameState via closure)
         // Assumes global resetGame exists
         const restartBtn = document.getElementById('restartButton');
         if (restartBtn && typeof resetGame === 'function') {
             restartBtn.addEventListener('click', () => resetGame(gameState)); // Pass gameState
-            console.log("UI INIT: Restart button listener attached.");
-        } else { console.error("UI INIT ERROR: Restart button or resetGame function missing!"); }
+            Game.logMessage("UI INIT: Restart button listener attached.", gameState, { level: 'DEBUG', target: 'CONSOLE' });
+        } else { Game.logMessage("UI INIT ERROR: Restart button or resetGame function missing!", gameState, { level: 'ERROR', target: 'CONSOLE' }); }
 
         // Toggle Log Button Listener (Doesn't need gameState)
         const toggleLogBtn = document.getElementById('toggleLogButton');
         const logContainer = document.getElementById('logContainer');
-        console.log("UI INIT: Toggle Log Button Found:", toggleLogBtn);
-        console.log("UI INIT: Log Container Found:", logContainer);
+        Game.logMessage(`UI INIT: Toggle Log Button Found: ${!!toggleLogBtn}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+        Game.logMessage(`UI INIT: Log Container Found: ${!!logContainer}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         if (toggleLogBtn && logContainer) {
             toggleLogBtn.addEventListener('click', () => {
-                console.log('--- Toggle Log Button CLICKED! ---');
+                Game.logMessage('--- Toggle Log Button CLICKED! ---', gameState, { level: 'DEBUG', target: 'CONSOLE' });
                 logContainer.classList.toggle('hidden');
-                console.log(`Handler: Log visibility toggled. Currently hidden: ${logContainer.classList.contains('hidden')}`);
+                Game.logMessage(`Handler: Log visibility toggled. Currently hidden: ${logContainer.classList.contains('hidden')}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
             });
-            console.log("UI INIT: Toggle Log button listener attached successfully.");
+            Game.logMessage("UI INIT: Toggle Log button listener attached successfully.", gameState, { level: 'DEBUG', target: 'CONSOLE' });
         } else {
-             if (!toggleLogBtn) console.error("UI INIT ERROR: Toggle Log button not found!");
-             if (!logContainer) console.error("UI INIT ERROR: Log container not found!");
+             if (!toggleLogBtn) Game.logMessage("UI INIT ERROR: Toggle Log button not found!", gameState, { level: 'ERROR', target: 'CONSOLE' });
+             if (!logContainer) Game.logMessage("UI INIT ERROR: Log container not found!", gameState, { level: 'ERROR', target: 'CONSOLE' });
         }
         // --- End Toggle Log Button Listener ---
 
         window.initListenersAttached = true; // Set flag
     } else {
-         console.log("UI INIT: Listeners already attached.");
+         Game.logMessage("UI INIT: Listeners already attached.", gameState, { level: 'DEBUG', target: 'CONSOLE' });
     }
 
     // Initial Size & Draw (pass gameState) - Moved from main.js initializeGame
     // Assumes global resizeAndDraw exists
     resizeAndDraw(gameState);
-    console.log("UI INIT: Initial resize and draw completed.");
+    Game.logMessage("UI INIT: Initial resize and draw completed.", gameState, { level: 'INFO', target: 'CONSOLE' });
 
     // Update log display explicitly after initialization messages - Moved from main.js initializeGame
     // Assumes global updateLogDisplay exists

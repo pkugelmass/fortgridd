@@ -1,4 +1,4 @@
-console.log("state_engaging_enemy.js loaded");
+// console.log("state_engaging_enemy.js loaded"); // Removed module loaded log
 
 /**
  * Handles AI logic when in the ENGAGING_ENEMY state, using gameState.
@@ -11,7 +11,7 @@ console.log("state_engaging_enemy.js loaded");
 function handleEngagingEnemyState(enemy, gameState) {
     // Check dependencies (Added applyKnockback, removed calculateKnockbackDestination)
     if (!enemy || !gameState || !gameState.player || !gameState.enemies || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function' || typeof performReevaluation !== 'function' || typeof hasClearLineOfSight !== 'function' || typeof hasClearCardinalLineOfSight !== 'function' || typeof applyKnockback !== 'function' || typeof updateUnitPosition !== 'function' || typeof getValidMoves !== 'function' || typeof isMoveSafe !== 'function') {
-        console.error("handleEngagingEnemyState: Missing enemy, gameState, or required functions (incl. applyKnockback).");
+        Game.logMessage("handleEngagingEnemyState: Missing enemy, gameState, or required functions (incl. applyKnockback).", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return false; // Cannot act without dependencies
     }
     const enemyId = enemy.id || 'Unknown Enemy';
@@ -30,7 +30,7 @@ function handleEngagingEnemyState(enemy, gameState) {
     }
 
     if (!currentTargetObject) {
-        // console.log(`Enemy ${enemyId} target invalid or defeated.`); // Quieter log
+        Game.logMessage(`Enemy ${enemyId} target invalid or defeated. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         enemy.targetEnemy = null;
         performReevaluation(enemy, gameState); // Pass gameState
         return false; // Needs re-evaluation
@@ -44,7 +44,7 @@ function handleEngagingEnemyState(enemy, gameState) {
     // Use hasClearLineOfSight and detectionRange
     // Assume AI_RANGE_MAX is global for now
     if (!hasClearLineOfSight(enemy, validatedTarget, enemy.detectionRange || AI_RANGE_MAX, gameState)) { // Pass gameState
-        // console.log(`Enemy ${enemyId} lost sight of target ${targetId}.`); // Quieter log
+        Game.logMessage(`Enemy ${enemyId} lost sight of target ${targetId}. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         enemy.targetEnemy = null;
         performReevaluation(enemy, gameState); // Pass gameState
         return false; // Needs re-evaluation
@@ -54,10 +54,10 @@ function handleEngagingEnemyState(enemy, gameState) {
     // Assume AI_FLEE_HEALTH_THRESHOLD is global for now
     const hpPercent = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP); // Use player max as fallback
     if (hpPercent < AI_FLEE_HEALTH_THRESHOLD) {
-        // console.log(`Enemy ${enemyId} HP low (${enemy.hp}), transitioning to FLEEING from ${targetId}.`); // Quieter log
+        Game.logMessage(`Enemy ${enemyId} HP low (${enemy.hp}), transitioning to FLEEING from ${targetId}.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         enemy.state = AI_STATE_FLEEING;
         // Target remains the same
-        Game.logMessage(`Enemy ${enemyId} health low, fleeing!`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+        Game.logMessage(`Enemy ${enemyId} health low, fleeing!`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT }); // Player log
         return false; // State changed, needs re-evaluation next loop
     }
 
@@ -85,11 +85,11 @@ function handleEngagingEnemyState(enemy, gameState) {
         // --- End Knockback Logic ---
 
         // Pass gameState to logMessage
-        Game.logMessage(`Enemy ${enemyId} shoots ${targetId} for ${damage} damage. (Ammo: ${enemy.resources.ammo})${knockbackMsg}`, gameState, LOG_CLASS_ENEMY_EVENT);
+        Game.logMessage(`Enemy ${enemyId} shoots ${targetId} for ${damage} damage. (Ammo: ${enemy.resources.ammo})${knockbackMsg}`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
 
         // Check if target was defeated *after* potential knockback
         if (validatedTarget.hp <= 0) {
-            // console.log(`Enemy ${enemyId} defeated target ${targetId}.`);
+            Game.logMessage(`Enemy ${enemyId} defeated target ${targetId}. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
             enemy.targetEnemy = null;
             performReevaluation(enemy, gameState);
             return false;
@@ -116,11 +116,11 @@ function handleEngagingEnemyState(enemy, gameState) {
         // --- End Knockback Logic ---
 
         // Pass gameState to logMessage
-        Game.logMessage(`Enemy ${enemyId} melees ${targetId} for ${damage} damage.${knockbackMsg}`, gameState, LOG_CLASS_ENEMY_EVENT);
+        Game.logMessage(`Enemy ${enemyId} melees ${targetId} for ${damage} damage.${knockbackMsg}`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
 
         // Check if target was defeated *after* potential knockback
         if (validatedTarget.hp <= 0) {
-            // console.log(`Enemy ${enemyId} defeated target ${targetId}.`);
+            Game.logMessage(`Enemy ${enemyId} defeated target ${targetId}. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
             enemy.targetEnemy = null;
             performReevaluation(enemy, gameState); // Pass gameState
             // Let main loop handle removal based on HP check
@@ -134,7 +134,7 @@ function handleEngagingEnemyState(enemy, gameState) {
     // A. Get Valid Moves (pass gameState)
     const possibleMoves = getValidMoves(enemy, gameState);
     if (possibleMoves.length === 0) {
-        Game.logMessage(`Enemy ${enemyId} is blocked while engaging ${targetId} and waits.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+        Game.logMessage(`Enemy ${enemyId} is blocked while engaging ${targetId} and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         return true; // Wait action
     }
 
@@ -168,9 +168,9 @@ function handleEngagingEnemyState(enemy, gameState) {
 
     if (safeCandidateMoves.length === 0) {
          if (potentialCandidates.length > 0) {
-              Game.logMessage(`Enemy ${enemyId} avoids moving closer to ${targetId} due to nearby known threats.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+              Game.logMessage(`Enemy ${enemyId} avoids moving closer to ${targetId} due to nearby known threats.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
          } else {
-              Game.logMessage(`Enemy ${enemyId} cannot find a suitable move towards ${targetId} and waits.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+              Game.logMessage(`Enemy ${enemyId} cannot find a suitable move towards ${targetId} and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
          }
          return true; // Wait action
     }
@@ -230,20 +230,20 @@ function handleEngagingEnemyState(enemy, gameState) {
     if (chosenMove && isRisky) {
         const rand = Math.random();
         if (rand < (typeof AI_ENGAGE_RISK_AVERSION_CHANCE !== 'undefined' ? AI_ENGAGE_RISK_AVERSION_CHANCE : 0.3)) {
-            Game.logMessage(`Enemy ${enemyId} hesitates moving to (${chosenMove.row}, ${chosenMove.col}) due to risk from ${targetId}.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+            Game.logMessage(`Enemy ${enemyId} hesitates moving to (${chosenMove.row}, ${chosenMove.col}) due to risk from ${targetId}.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
             return true; // Wait action (hesitated)
         }
     }
 
     // H. Execute Move
     if (chosenMove && (!isRisky || isRisky /* risk accepted */)) {
-        Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) moves towards target ${targetId} to (${chosenMove.row},${chosenMove.col}).`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+        Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) moves towards target ${targetId} to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         // Pass gameState to updateUnitPosition (anticipating refactor)
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true; // Move action complete
     }
 
     // --- 6. Default/Wait (Fallback) ---
-    Game.logMessage(`Enemy ${enemyId} waits (engaging ${targetId}).`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+    Game.logMessage(`Enemy ${enemyId} waits (engaging ${targetId}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
     return true; // Wait action complete
 }

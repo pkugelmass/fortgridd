@@ -1,4 +1,4 @@
-console.log("state_exploring.js loaded");
+// console.log("state_exploring.js loaded"); // Removed module loaded log
 
 /**
  * Handles AI logic when in the EXPLORING state, using gameState.
@@ -10,7 +10,7 @@ console.log("state_exploring.js loaded");
 function handleExploringState(enemy, gameState) {
     // Check dependencies
     if (!enemy || !gameState || !gameState.safeZone || typeof Game === 'undefined' || typeof Game.logMessage !== 'function' || typeof getSafeZoneCenter !== 'function' || typeof moveTowards !== 'function' || typeof moveRandomly !== 'function') {
-        console.error("handleExploringState: Missing enemy, gameState, or required functions.");
+        Game.logMessage("handleExploringState: Missing enemy, gameState, or required functions.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return false; // Cannot act without dependencies
     }
 
@@ -31,7 +31,7 @@ function handleExploringState(enemy, gameState) {
                   return true; // Moved randomly
               } else {
                   // Log using gameState
-                  Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) waits (stuck in storm).`, gameState, LOG_CLASS_ENEMY_EVENT);
+                  Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) waits (stuck in storm).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
                   return true; // Counts as acting (waiting) if stuck
               }
          }
@@ -49,7 +49,7 @@ function handleExploringState(enemy, gameState) {
             actionTaken = true;
         } else {
             // If moving towards center failed or center is null, wait
-            Game.logMessage(`Enemy ${enemyId} waits (blocked from center).`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+            Game.logMessage(`Enemy ${enemyId} waits (blocked from center).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
             actionTaken = true; // Waiting counts as an action
         }
     } else if (rand < AI_EXPLORE_MOVE_AGGRESSION_CHANCE + AI_EXPLORE_MOVE_RANDOM_CHANCE) {
@@ -60,13 +60,13 @@ function handleExploringState(enemy, gameState) {
         // If moveRandomly returns false (blocked), actionTaken remains false, handled below
     } else {
          // Wait action chosen explicitly
-         Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) waits.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+         Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
          actionTaken = true; // Waiting counts as an action
      }
 
      // If no move was successfully made (moveTowards/moveRandomly returned false because blocked)
      if (!actionTaken) {
-         Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) waits (exploring, blocked).`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+         Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) waits (exploring, blocked).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
          actionTaken = true; // Waiting because blocked counts as an action
      }
 

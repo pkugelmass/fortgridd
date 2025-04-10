@@ -1,4 +1,4 @@
-console.log("state_healing.js loaded");
+// console.log("state_healing.js loaded"); // Removed module loaded log
 
 /**
  * Handles the AI's turn when in the HEALING state, using gameState.
@@ -10,7 +10,7 @@ console.log("state_healing.js loaded");
 function handleHealingState(enemy, gameState) {
     // Check dependencies
     if (!enemy || !gameState || typeof useMedkit !== 'function') {
-        console.error("handleHealingState: Invalid enemy, gameState, or missing useMedkit function.");
+        Game.logMessage("handleHealingState: Invalid enemy, gameState, or missing useMedkit function.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         // Even if dependencies fail, we should probably transition out of HEALING
         if (enemy) enemy.state = AI_STATE_EXPLORING; // Default transition
         return true; // Count as an action (attempting to heal/recover from error)
@@ -22,14 +22,13 @@ function handleHealingState(enemy, gameState) {
     const healSuccess = useMedkit(enemy, gameState); // Pass gameState
 
     if (!healSuccess) {
-        // Log failure only if needed (useMedkit might log internally, or we log here)
-        // console.warn(`Enemy ${enemyId} failed to use medkit in HEALING state.`);
-        // Game.logMessage(`Enemy ${enemyId} fails to use medkit.`, gameState, LOG_CLASS_ENEMY_EVENT);
+        // Log failure only if needed (useMedkit now handles logging)
+        // Game.logMessage(`Enemy ${enemyId} failed to use medkit.`, gameState, { level: 'WARN', target: 'CONSOLE' }); // Example if useMedkit didn't log
     }
 
     // Always transition back to EXPLORING after attempting to heal
     // The reevaluation logic should prevent entering HEALING if conditions aren't met.
-    // console.log(`Enemy ${enemyId} transitioning from HEALING to EXPLORING.`); // Debug log
+    Game.logMessage(`Enemy ${enemyId} transitioning from HEALING to EXPLORING.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
     enemy.state = AI_STATE_EXPLORING;
 
     return true; // Attempting to heal (successful or not) consumes the turn.

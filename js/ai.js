@@ -1,4 +1,4 @@
-console.log("ai.js loaded");
+// console.log("ai.js loaded"); // Removed module loaded log
 
 // --- AI Configuration ---
 // Detection range now stored per enemy in the 'enemies' array objects
@@ -34,7 +34,7 @@ function performReevaluation(enemy, gameState) {
         // Log state change if different from original
         if (enemy.state !== originalState) {
             // Pass gameState to logMessage
-            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Sees ${nearestEnemy.id || 'Player'} -> ${enemy.state}`, gameState, LOG_CLASS_ENEMY_EVENT);
+            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Sees ${nearestEnemy.id || 'Player'} -> ${enemy.state}`, gameState, { level: 'DEBUG', target: 'CONSOLE' }); // Changed to DEBUG CONSOLE
         }
         return; // Decision made based on threat
     }
@@ -50,7 +50,7 @@ function performReevaluation(enemy, gameState) {
         enemy.targetResourceCoords = null; // Healing doesn't need a resource target
         if (enemy.state !== originalState) {
             // Pass gameState to logMessage
-            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Low HP & has medkit -> ${enemy.state}`, gameState, LOG_CLASS_ENEMY_EVENT);
+            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Low HP & has medkit -> ${enemy.state}`, gameState, { level: 'DEBUG', target: 'CONSOLE' }); // Changed to DEBUG CONSOLE
         }
         return; // Decision made to heal
     }
@@ -65,7 +65,7 @@ function performReevaluation(enemy, gameState) {
             enemy.targetResourceCoords = nearbyMedkit; // Seeking needs a target
             if (enemy.state !== originalState || enemy.targetResourceCoords !== nearbyMedkit) { // Log if state or target changed
                  // Pass gameState to logMessage
-                 Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Needs Medkit -> ${enemy.state} (${nearbyMedkit.row},${nearbyMedkit.col})`, gameState, LOG_CLASS_ENEMY_EVENT);
+                 Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Needs Medkit -> ${enemy.state} (${nearbyMedkit.row},${nearbyMedkit.col})`, gameState, { level: 'DEBUG', target: 'CONSOLE' }); // Changed to DEBUG CONSOLE
             }
             return; // Decision made to seek medkit
         }
@@ -80,7 +80,7 @@ function performReevaluation(enemy, gameState) {
             enemy.targetResourceCoords = nearbyAmmo;
             if (enemy.state !== originalState || enemy.targetResourceCoords !== nearbyAmmo) {
                  // Pass gameState to logMessage
-                 Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Needs Ammo -> ${enemy.state} (${nearbyAmmo.row},${nearbyAmmo.col})`, gameState, LOG_CLASS_ENEMY_EVENT);
+                 Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Needs Ammo -> ${enemy.state} (${nearbyAmmo.row},${nearbyAmmo.col})`, gameState, { level: 'DEBUG', target: 'CONSOLE' }); // Changed to DEBUG CONSOLE
             }
             return; // Decision made to seek ammo
         }
@@ -102,7 +102,7 @@ function performReevaluation(enemy, gameState) {
         enemy.targetResourceCoords = nearbyResource;
         if (enemy.state !== originalState || enemy.targetResourceCoords !== nearbyResource) {
             // Pass gameState to logMessage
-            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Proactively seeks ${resourceName} -> ${enemy.state} (${nearbyResource.row},${nearbyResource.col})`, gameState, LOG_CLASS_ENEMY_EVENT);
+            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Proactively seeks ${resourceName} -> ${enemy.state} (${nearbyResource.row},${nearbyResource.col})`, gameState, { level: 'DEBUG', target: 'CONSOLE' }); // Changed to DEBUG CONSOLE
         }
         return; // Decision made to seek proactively
     }
@@ -113,7 +113,7 @@ function performReevaluation(enemy, gameState) {
     enemy.targetResourceCoords = null; // Exploring doesn't need a target initially
     if (enemy.state !== originalState) {
         // Pass gameState to logMessage
-        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: No priority actions -> ${enemy.state}`, gameState, LOG_CLASS_ENEMY_EVENT);
+        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: No priority actions -> ${enemy.state}`, gameState, { level: 'DEBUG', target: 'CONSOLE' }); // Changed to DEBUG CONSOLE
     }
     // No return needed, default state set
 }
@@ -173,7 +173,7 @@ function runAiTurns(gameState) { // Renamed from executeAiTurns and accepts game
                     currentHandlerResult = handleHealingState(enemy, gameState);
                     break;
                 default:
-                    console.warn(`Enemy ${enemy.id} has unknown state: ${enemy.state}. Defaulting to Exploring.`);
+                    Game.logMessage(`Enemy ${enemy.id} has unknown state: ${enemy.state}. Defaulting to Exploring.`, gameState, { level: 'WARN', target: 'CONSOLE' });
                     enemy.state = AI_STATE_EXPLORING; // Force explore state
                     // Let the loop re-evaluate and run the Exploring handler next iteration
                     currentHandlerResult = false;
@@ -189,9 +189,9 @@ function runAiTurns(gameState) { // Renamed from executeAiTurns and accepts game
 
         if (!actionTaken) {
             // Loop limit reached without a handler returning true
-            console.warn(`Enemy ${enemy.id} reached max evaluations (${MAX_EVALUATIONS_PER_TURN}) without completing an action. Forcing wait.`);
+            Game.logMessage(`Enemy ${enemy.id} reached max evaluations (${MAX_EVALUATIONS_PER_TURN}) without completing an action. Forcing wait.`, gameState, { level: 'WARN', target: 'CONSOLE' });
             // Pass gameState to logMessage
-            Game.logMessage(`Enemy ${enemy.id} waits (evaluation limit).`, gameState, LOG_CLASS_ENEMY_EVENT);
+            Game.logMessage(`Enemy ${enemy.id} waits (evaluation limit).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
             // Consider this a completed turn action to prevent infinite game loops if AI gets stuck
         }
 

@@ -33,7 +33,11 @@
      *   [ ] **js/ai/state_fleeing.js:** Extract complex movement strategy logic (LOS break, safe move). (Identified: 2025-04-10)
      *   [ ] **js/ai/state_seeking_resources.js:** Separate concerns (validation, movement, arrival/pickup). (Identified: 2025-04-10)
      *   [ ] **js/ai/state_seeking_resources.js:** Clarify pickup logic/reliance on `moveTowards` side effects. (Identified: 2025-04-10)
- *   [ ] **Standardize Console Logging:** Implement a consistent format for `console.log` messages (e.g., `SUBJECT (coords) | Verb | Object (coords) | Details`). (Added: 2025-04-09)
+ *   [X] **Standardize Logging System (Refactor):** (Design: `project/design/LOGGING_DESIGN.md`) (Completed: 2025-04-10)
+     *   [X] Add `CONSOLE_LOG_LEVEL` setting to `js/config.js`.
+     *   [X] Modify `Game.logMessage` in `js/game.js` to use new parameters (`level`, `target`, `className`).
+     *   [X] Refactor all existing `Game.logMessage` callsites with appropriate `level`, `target`, `className`. (*Note: `main.js` required `write_to_file` fallback*)
+     *   [X] Refactor all direct `console.*` calls to use `Game.logMessage` or remove them. (*Note: `main.js` required `write_to_file` fallback; some remain in `map.js`, `drawing.js` due to lack of `gameState` context*)
  *   [ ] **Write Essential Unit Tests:** Add targeted unit tests for critical functions identified during refactoring or review (focus on behavior, not implementation details). (Added: 2025-04-09)
  *   [ ] Review AI state handler modules (`state_*.js`) for length and complexity; refactor if needed. (Added: 2025-04-09)
  *   [ ] Investigate creating a shared `canMoveTo(unit, targetRow, targetCol)` utility function for player/AI move validation. (Discovered: 2025-04-08)

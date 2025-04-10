@@ -1,5 +1,5 @@
 // AI Action Helpers (Using Items, etc.)
-console.log("ai_actions.js loaded");
+// console.log("ai_actions.js loaded"); // Removed module loaded log
 
 // --- AI Action Helpers ---
 
@@ -16,7 +16,7 @@ console.log("ai_actions.js loaded");
 function useMedkit(enemy, gameState) {
     // Validate inputs
     if (!enemy || !enemy.resources || !gameState || typeof Game === 'undefined' || typeof Game.logMessage !== 'function') {
-        console.error(`useMedkit: Invalid enemy, gameState, or Game object.`);
+        Game.logMessage(`useMedkit: Invalid enemy, gameState, or Game object.`, gameState, { level: 'ERROR', target: 'CONSOLE' });
         return false;
     }
 
@@ -46,7 +46,7 @@ function useMedkit(enemy, gameState) {
     Game.logMessage(
         `${enemyId} uses Medkit, heals ${actualHeal} HP (${enemy.hp}/${maxHp}). Medkits left: ${enemy.resources.medkits}`,
         gameState,
-        LOG_CLASS_ENEMY_EVENT // Use appropriate log class
+        { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT } // Use appropriate log class
     );
 
     return true; // Indicate successful use

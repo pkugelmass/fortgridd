@@ -1,4 +1,4 @@
-console.log("drawing.js loaded");
+// console.log("drawing.js loaded"); // Removed module loaded log
 
 // --- Drawing Functions ---
 // Refactored to accept gameState or specific state properties as parameters.
@@ -24,6 +24,7 @@ function drawGrid(ctx, gridWidth, gridHeight, cellSize) {
 function drawMapCells(ctx, mapData, safeZone, gridWidth, gridHeight, cellSize) {
     // Check required parameters
     if (!mapData || mapData.length === 0 || !safeZone || typeof TILE_COLORS === 'undefined') {
+        // Cannot log here easily without gameState, keep console.warn for now or refactor to pass gameState
         console.warn("drawMapCells skipped: Critical data missing (mapData, safeZone, TILE_COLORS).");
         return;
     }

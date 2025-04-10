@@ -1,5 +1,5 @@
 // AI Map Utility Helpers (Safe Zone Center, etc.)
-console.log("ai_map_utils.js loaded");
+// console.log("ai_map_utils.js loaded"); // Removed module loaded log
 
 /**
  * Calculates the approximate center of the current safe zone from gameState.
@@ -8,7 +8,7 @@ console.log("ai_map_utils.js loaded");
  */
 function getSafeZoneCenter(gameState) {
     if (!gameState || !gameState.safeZone) {
-        console.error("getSafeZoneCenter: gameState or gameState.safeZone is missing.");
+        Game.logMessage("getSafeZoneCenter: gameState or gameState.safeZone is missing.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return null; // Return null or a default if safeZone isn't ready
     }
     const zone = gameState.safeZone; // Get safeZone from gameState

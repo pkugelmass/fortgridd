@@ -1,4 +1,4 @@
-console.log("config.js loaded");
+// console.log("config.js loaded"); // Removed module loaded log
 
 // --- Game Configuration Constants ---
 
@@ -79,6 +79,7 @@ const HEAL_AMOUNT = 1;              // HP restored per heal action
 // UI / Game Logic Settings
 const MAX_LOG_MESSAGES = 50;        // Max messages displayed in the game log
 const AI_TURN_DELAY = 100;          // Milliseconds delay before AI turn starts
+const CONSOLE_LOG_LEVEL = 'DEBUG';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown.
 
 // --- Visuals & Appearance ---
 

@@ -1,5 +1,5 @@
 // AI Perception Helpers (Line of Sight, Finding Targets/Resources)
-console.log("ai_perception.js loaded");
+// console.log("ai_perception.js loaded"); // Removed module loaded log
 
 // --- AI Line of Sight Helper ---
 /**
@@ -13,7 +13,7 @@ console.log("ai_perception.js loaded");
 function hasClearCardinalLineOfSight(attacker, target, maxRange, gameState) {
     // Check dependencies, including gameState and mapData
     if (!attacker || !target || attacker.row === null || attacker.col === null || target.row === null || target.col === null || !gameState || !gameState.mapData || typeof TILE_WALL === 'undefined' || typeof TILE_TREE === 'undefined' || typeof GRID_HEIGHT === 'undefined' || typeof GRID_WIDTH === 'undefined') {
-        console.error("hasClearCardinalLineOfSight: Missing critical data or invalid unit positions."); return false;
+        Game.logMessage("hasClearCardinalLineOfSight: Missing critical data or invalid unit positions.", gameState, { level: 'ERROR', target: 'CONSOLE' }); return false;
     }
     const { mapData } = gameState; // Destructure mapData
 
@@ -27,7 +27,7 @@ function hasClearCardinalLineOfSight(attacker, target, maxRange, gameState) {
             const tileType = mapData[checkRow][checkCol];
             if (tileType === TILE_WALL || tileType === TILE_TREE) { return false; } // Blocked
         } else {
-            console.error("mapData issue during LoS check at row", checkRow); return false; // Map data error
+            Game.logMessage(`hasClearCardinalLineOfSight: mapData error at row ${checkRow}`, gameState, { level: 'ERROR', target: 'CONSOLE' }); return false; // Map data error
         }
     }
     return true; // LoS is clear
@@ -47,7 +47,7 @@ function hasClearLineOfSight(unitA, unitB, maxRange, gameState) {
     // Check dependencies, including gameState and mapData
     // Assume GRID_HEIGHT, GRID_WIDTH, TILE_WALL, TILE_TREE are global for now
     if (!unitA || !unitB || unitA.row === null || unitA.col === null || unitB.row === null || unitB.col === null || !gameState || !gameState.mapData || typeof traceLine !== 'function') {
-        console.error("hasClearLineOfSight: Missing critical data, gameState, mapData, or traceLine function.");
+        Game.logMessage("hasClearLineOfSight: Missing critical data, gameState, mapData, or traceLine function.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return false;
     }
     const { mapData } = gameState;
@@ -73,7 +73,7 @@ function hasClearLineOfSight(unitA, unitB, maxRange, gameState) {
 
         // Check boundaries (using global constants for now)
         if (checkRow < 0 || checkRow >= GRID_HEIGHT || checkCol < 0 || checkCol >= GRID_WIDTH) {
-            console.error("hasClearLineOfSight: traceLine went out of bounds."); // Should ideally not happen
+            Game.logMessage("hasClearLineOfSight: traceLine went out of bounds.", gameState, { level: 'WARN', target: 'CONSOLE' }); // Changed to WARN
             return false; // Out of bounds is blocked
         }
 
@@ -84,7 +84,7 @@ function hasClearLineOfSight(unitA, unitB, maxRange, gameState) {
                 return false; // Blocked by obstacle
             }
         } else {
-            console.error(`hasClearLineOfSight: mapData error at row ${checkRow}`);
+            Game.logMessage(`hasClearLineOfSight: mapData error at row ${checkRow}`, gameState, { level: 'ERROR', target: 'CONSOLE' });
             return false; // Missing map data is considered blocked
         }
     }
@@ -101,7 +101,7 @@ function hasClearLineOfSight(unitA, unitB, maxRange, gameState) {
  */
 function findNearestVisibleEnemy(enemy, gameState) {
     if (!enemy || !gameState || !gameState.player || !gameState.enemies) {
-        console.error("findNearestVisibleEnemy: Missing enemy or required gameState properties.");
+        Game.logMessage("findNearestVisibleEnemy: Missing enemy or required gameState properties.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return null;
     }
     const { player, enemies } = gameState; // Destructure
@@ -153,7 +153,7 @@ function findNearestVisibleEnemy(enemy, gameState) {
  */
 function findNearbyResource(enemy, range, resourceTileType, gameState) {
     if (!enemy || !gameState || !gameState.mapData || !gameState.safeZone) {
-        console.error("findNearbyResource: Missing enemy or required gameState properties.");
+        Game.logMessage("findNearbyResource: Missing enemy or required gameState properties.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return null;
     }
     const { mapData, safeZone } = gameState; // Destructure

@@ -1,4 +1,4 @@
-console.log("input.js loaded");
+// console.log("input.js loaded"); // Removed module loaded log
 
 /**
  * Handles keydown events for player actions.
@@ -10,17 +10,17 @@ console.log("input.js loaded");
  * @returns {string|null} The action intent string, or null if input is ignored or invalid.
  */
 function handleKeyDown(event, gameState) {
-    // console.log("handleKeyDown Fired! Key:", event.key);
+    // Game.logMessage(`handleKeyDown Fired! Key: ${event.key}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
 
     // Check prerequisites
-    if (typeof Game === 'undefined') { console.error("Game object not loaded!"); return null; }
-    if (!gameState) { console.error("handleKeyDown: gameState is missing!"); return null; }
+    if (typeof Game === 'undefined') { Game.logMessage("Game object not loaded!", gameState, { level: 'ERROR', target: 'CONSOLE' }); return null; }
+    if (!gameState) { Game.logMessage("handleKeyDown: gameState is missing!", gameState, { level: 'ERROR', target: 'CONSOLE' }); return null; }
     if (Game.isGameOver(gameState) || !Game.isPlayerTurn(gameState)) {
-        // console.log(`Input ignored: GameOver=${Game.isGameOver(gameState)}, IsPlayerTurn=${Game.isPlayerTurn(gameState)}`);
+        // Game.logMessage(`Input ignored: GameOver=${Game.isGameOver(gameState)}, IsPlayerTurn=${Game.isPlayerTurn(gameState)}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         return null; // Ignore input if game over or not player's turn
     }
     if (!gameState.player || gameState.player.row === null || gameState.player.col === null) {
-        console.warn("Player in gameState not ready, ignoring input.");
+        Game.logMessage("Player in gameState not ready, ignoring input.", gameState, { level: 'WARN', target: 'CONSOLE' });
         return null;
     }
 
@@ -60,7 +60,7 @@ function handleKeyDown(event, gameState) {
     // Return the determined action intent (or null if no action key was pressed)
     // The actual execution of the action (checking validity, changing state, ending turn)
     // will be handled by the main game loop based on this returned intent.
-    console.log("Input Intent:", actionIntent); // Log the intent for debugging
+    Game.logMessage(`Input Intent: ${actionIntent}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
     return actionIntent;
 
 } // End handleKeyDown
