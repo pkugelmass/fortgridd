@@ -32,7 +32,8 @@
  *   [x] **Clean Up TASKS.md:** Review completed tasks; consider moving them to a separate archive file (e.g., `project/COMPLETED_TASKS.md`) to keep the main file focused. (Added: 2025-04-09) (Completed: 2025-04-09)
  *   [ ] Review AI state handler modules (`state_*.js`) for length and complexity; refactor if needed. (Added: 2025-04-09)
  *   [x] Refactor ai_helpers.js into smaller, categorized modules (e.g., perception, movement, actions). (Discovered: 2025-04-09) (Completed: 2025-04-09)
- *   [ ] Refactor movement safety check (avoiding known threats) into a reusable helper function in `ai_helpers.js` and update `handleFleeingState` and `handleEngagingEnemyState` to use it. (Discovered: 2025-04-09)
+ *   [x] Refactor movement safety check (avoiding known threats) into a reusable helper function in `ai_movement.js` and update `handleFleeingState` and `handleEngagingEnemyState` to use it. (Discovered: 2025-04-09) (Completed: 2025-04-10)
+ *   [x] Refactor `tests/ai.test.js` into smaller, focused files (`ai_helpers.test.js`, `ai_transitions.test.js`, `ai_state_handlers.test.js`). (Requested: 2025-04-10) (Completed: 2025-04-10)
  *   [ ] Investigate creating a shared `canMoveTo(unit, targetRow, targetCol)` utility function for player/AI move validation. (Discovered: 2025-04-08)
  *   [ ] Refactor resource handling (AI & Player) using a configuration object in config.js. (Discovered: 2025-04-08)
 
@@ -54,13 +55,13 @@
 ## Discovered During Work
 *(Add new tasks identified during development here)*
 *   [ ] Fix player starting ammo initialization in js/main.js to correctly use PLAYER_START_AMMO from config.js (remove || 3 fallback). (Discovered: 2025-04-09)
-*   [ ] Modify findNearbyResource to ignore resources outside the safe zone. (Discovered: 2025-04-09)
-*   [ ] Modify getValidMoves to prevent movement into/within the storm (check safe zone). (Discovered: 2025-04-09)
-*   [ ] Refactor ai_helpers.js into smaller, categorized modules (e.g., perception, movement, actions) if it becomes too large. (Discovered: 2025-04-09)
-*   [ ] AI Tuning: Consider knockback effect in movement decisions (esp. for melee AI). (Discovered: 2025-04-09)
-*   [ ] Refactor movement safety check (avoiding known threats) into a reusable helper function in `ai_helpers.js` and update `handleFleeingState` and `handleEngagingEnemyState` to use it. (Discovered: 2025-04-09)
-*   [ ] Refine AI target selection logic (consider HP, randomness, etc.). (Discovered: 2025-04-08)
-*   [ ] Investigate creating a shared `canMoveTo(unit, targetRow, targetCol)` utility function for player/AI move validation. (Discovered: 2025-04-08)
+ *   [ ] Modify findNearbyResource to ignore resources outside the safe zone. (Discovered: 2025-04-09)
+ *   [ ] Modify getValidMoves to prevent movement into/within the storm (check safe zone). (Discovered: 2025-04-09)
+ *   [x] Refactor ai_helpers.js into smaller, categorized modules (e.g., perception, movement, actions) if it becomes too large. (Discovered: 2025-04-09) (Completed: 2025-04-09 - Done as part of initial refactor)
+ *   [ ] AI Tuning: Consider knockback effect in movement decisions (esp. for melee AI). (Discovered: 2025-04-09)
+ *   [x] Refactor movement safety check (avoiding known threats) into a reusable helper function in `ai_movement.js` and update `handleFleeingState` and `handleEngagingEnemyState` to use it. (Discovered: 2025-04-09) (Completed: 2025-04-10)
+ *   [ ] Refine AI target selection logic (consider HP, randomness, etc.). (Discovered: 2025-04-08)
+ *   [ ] Investigate creating a shared `canMoveTo(unit, targetRow, targetCol)` utility function for player/AI move validation. (Discovered: 2025-04-08)
 *   [ ] Refactor resource handling (AI & Player) using a configuration object in config.js. (Discovered: 2025-04-08)
 
 ---

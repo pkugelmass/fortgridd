@@ -121,23 +121,8 @@ function handleFleeingState(enemy) {
         }
     }
 
-    // Filter for safety (not adjacent to other enemies)
-    let safeAwayMoves = [];
-    for (const move of bestAwayMoves) {
-        let isSafe = true;
-        for (const otherEnemy of enemies) {
-            if (!otherEnemy || otherEnemy.id === enemy.id || otherEnemy.id === threat.id || otherEnemy.hp <= 0) continue; // Skip self, threat, dead
-
-            const adjacent = Math.abs(move.row - otherEnemy.row) <= 1 && Math.abs(move.col - otherEnemy.col) <= 1;
-            if (adjacent) {
-                isSafe = false;
-                break;
-            }
-        }
-        if (isSafe) {
-            safeAwayMoves.push(move);
-        }
-    }
+    // Filter for safety using the new helper function
+    const safeAwayMoves = bestAwayMoves.filter(move => isMoveSafe(enemy, move.row, move.col));
 
     if (safeAwayMoves.length > 0) {
         // Choose one of the safe moves (randomly if multiple)

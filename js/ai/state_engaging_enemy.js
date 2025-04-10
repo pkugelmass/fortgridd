@@ -221,22 +221,8 @@ function handleEngagingEnemyState(enemy) {
         hasClearLineOfSight(enemy, potentialThreat, enemy.detectionRange || AI_RANGE_MAX) // Visible
     );
 
-    let safeCandidateMoves = [];
-    for (const move of potentialCandidates) {
-        let isSafe = true;
-        // Check if this move lands adjacent to any VISIBLE OTHER threat
-        for (const otherThreat of allVisibleThreats) {
-            const adjacent = Math.abs(move.row - otherThreat.row) <= 1 && Math.abs(move.col - otherThreat.col) <= 1;
-            if (adjacent) {
-                isSafe = false;
-                // console.log(`DEBUG: Move (${move.row},${move.col}) rejected, adjacent to other threat ${otherThreat.id || 'Player'}`); // Optional Debug
-                break; // No need to check other threats for this move
-            }
-        }
-        if (isSafe) {
-            safeCandidateMoves.push(move);
-        }
-    }
+    // Use the new helper function to filter for safe moves
+    const safeCandidateMoves = potentialCandidates.filter(move => isMoveSafe(enemy, move.row, move.col));
 
     // If no safe moves are found among the candidates, the AI might have to wait or take a non-optimal move (currently falls through to wait)
     if (safeCandidateMoves.length === 0) {

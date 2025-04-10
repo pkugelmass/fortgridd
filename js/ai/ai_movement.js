@@ -127,6 +127,48 @@ function moveRandomly(enemy) {
     return false; // No valid moves
 }
 
+/**
+ * Checks if a potential move destination is considered "safe" for an enemy.
+ * Safe means the destination is not adjacent to any other known (visible) threats
+ * (excluding the enemy itself and its primary target).
+ * @param {object} enemy - The enemy considering the move.
+ * @param {number} targetRow - The row of the potential move destination.
+ * @param {number} targetCol - The column of the potential move destination.
+ * @returns {boolean} - True if the move is considered safe, false otherwise.
+ */
+function isMoveSafe(enemy, targetRow, targetCol) {
+    const primaryTarget = enemy.targetEnemy; // The enemy being focused on (e.g., fleeing from or engaging)
+
+    // Combine player and enemies into a list of potential threats
+    const potentialThreats = [];
+    if (typeof player !== 'undefined' && player.hp > 0) {
+        potentialThreats.push(player);
+    }
+    if (typeof enemies !== 'undefined') {
+        potentialThreats.push(...enemies);
+    }
+
+    for (const threat of potentialThreats) {
+        // Skip if threat is invalid, dead, the enemy itself, or the primary target
+        if (!threat || threat.hp <= 0 || threat === enemy || (primaryTarget && threat === primaryTarget)) { // Ensure primaryTarget exists before comparing
+            continue;
+        }
+
+        // Check if the enemy can actually see this other threat
+        // Assumes hasClearLineOfSight is available (loaded before this script)
+        if (typeof hasClearLineOfSight === 'function' && hasClearLineOfSight(enemy, threat, enemy.detectionRange || AI_RANGE_MAX)) {
+            // Check if the potential move is adjacent to this visible threat
+            const adjacent = Math.abs(targetRow - threat.row) <= 1 && Math.abs(targetCol - threat.col) <= 1;
+            if (adjacent) {
+                console.error(`[isMoveSafe ERROR] Adjacent and visible threat found: ${threat.id || 'Player'}. Returning false.`); // Add ERROR log
+                return false; // Move is not safe
+            }
+        }
+    }
+
+    return true; // No adjacent visible threats found, move is safe
+}
+
 
 /**
  * Calculates the potential destination tile for knockback based on attacker/target positions.
