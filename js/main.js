@@ -2,194 +2,83 @@
 console.log("SCRIPT START: Loading main.js...");
 
 // --- Configuration --- (Defined in config.js)
-// --- Game State Variables --- (Managed by Game object)
-let mapData = [];
-let currentCellSize = 0;
-// console.log("SCRIPT VARS: Game state managed by Game object.");
+// --- Game State Variable --- (Replaces individual globals like mapData, player, enemies)
+let gameState; // Will be initialized by initializeGame()
+let currentCellSize = 0; // Still needed for drawing calculations directly in main? Or move to Renderer? Keep for now.
+
 // --- Canvas Setup ---
 const canvas = document.getElementById('gameCanvas'); const ctx = canvas.getContext('2d');
 // console.log("SCRIPT SETUP: Canvas context obtained.");
 
+// UI Update functions (updateStatusBar, updateLogDisplay) moved to ui.js
+// Resize/Draw function (resizeAndDraw) moved to ui.js
 
-// --- Status Bar Update Function ---
+// --- Drawing Orchestration --- (Remains in main.js for now)
 /**
- * Updates the text content of the HTML status bar elements.
+ * Main drawing function - orchestrates drawing layers and updates status bar.
+ * @param {GameState} gameState - The current game state object.
  */
-function updateStatusBar() {
-    // Check if crucial objects/functions exist first
-    if (typeof Game === 'undefined' || typeof player === 'undefined' || typeof Game.getTurnNumber !== 'function' || typeof Game.isGameOver !== 'function') {
-        console.warn("updateStatusBar skipped: Game or Player object/functions missing.");
-        return;
-    }
-
-    // Get elements references
-    const medkitEl = document.getElementById('medkitsValue');
-    const ammoEl = document.getElementById('ammoValue');
-    const hpEl = document.getElementById('hpValue');
-    const shrinkEl = document.getElementById('shrinkValue');
-    const enemiesEl = document.getElementById('enemiesValue'); // Assuming this exists from previous step
-
-    try {
-        // Update Medkits
-        if (medkitEl && player.resources) { medkitEl.textContent = player.resources.medkits || 0; }
-        else if (medkitEl) { medkitEl.textContent = '--'; }
-
-        // Update Ammo
-        if (ammoEl && player.resources) { ammoEl.textContent = player.resources.ammo || 0; }
-        else if (ammoEl) { ammoEl.textContent = '--'; }
-
-        // Update HP
-        if (hpEl) { hpEl.textContent = `${player.hp ?? '--'} / ${player.maxHp || '--'}`; }
-        else { console.warn("updateStatusBar: hpValue element missing."); }
-
-        // Update Enemies Left
-        if (enemiesEl && typeof enemies !== 'undefined') { enemiesEl.textContent = enemies.filter(e => e && e.hp > 0).length; }
-        else if (enemiesEl) { enemiesEl.textContent = '--'; }
-        else { console.warn("updateStatusBar: enemiesValue element missing."); }
-
-        // --- Update Shrink Countdown ---
-        if (shrinkEl) { // Check if the element itself exists first
-            if (typeof SHRINK_INTERVAL !== 'undefined' && SHRINK_INTERVAL > 0) {
-                if (Game.isGameOver()) {
-                    shrinkEl.textContent = "N/A";
-                } else {
-                    const currentTurn = Game.getTurnNumber();
-                    // Ensure currentTurn is a valid number before calculating
-                    if (typeof currentTurn === 'number' && currentTurn > 0 && isFinite(currentTurn)) {
-                        const turnsSinceLastShrink = (currentTurn - 1) % SHRINK_INTERVAL;
-                        const turnsLeft = SHRINK_INTERVAL - turnsSinceLastShrink;
-                        shrinkEl.textContent = turnsLeft; // Set the calculated value
-                        // console.log(`DEBUG: Update Shrink - Turn: ${currentTurn}, Left: ${turnsLeft}`); // Keep commented unless needed
-                    } else {
-                         console.warn(`updateStatusBar: Invalid currentTurn number: ${currentTurn}`);
-                         shrinkEl.textContent = "?"; // Indicate calculation issue
-                    }
-                }
-            } else {
-                 // SHRINK_INTERVAL constant might be missing or invalid
-                 shrinkEl.textContent = "N/A";
-                 console.warn("updateStatusBar: SHRINK_INTERVAL missing or invalid.");
-            }
-        } else {
-             // Element with ID 'shrinkValue' was not found in HTML
-             console.warn("updateStatusBar: Element with ID 'shrinkValue' not found.");
-        }
-        // --- End Update Shrink Countdown ---
-
-    } catch (error) {
-        console.error("Error updating status bar:", error);
-    }
-}
-
-// --- Log Display Update Function --- (MODIFIED to use cssClass)
-/** Updates the HTML log container and scrolls to bottom. */
-function updateLogDisplay() {
-    const logContainer = document.getElementById('logContainer');
-    if (!logContainer || typeof Game === 'undefined' || typeof Game.getLog !== 'function') { return; }
-    try {
-        const logEntries = Game.getLog(); // Get array of {message, cssClass} objects
-        // Map entries to HTML paragraphs with optional class
-        logContainer.innerHTML = logEntries.map(entry =>
-             `<p class="${entry.cssClass || ''}">${entry.message}</p>`
-        ).join('');
-        // Force scroll to bottom
-        logContainer.scrollTop = logContainer.scrollHeight;
-    } catch (error) { console.error("Error updating log display:", error); }
-}
-
-// --- Drawing Orchestration ---
-/** Main drawing function - calls updateStatusBar */
-function redrawCanvas() {
-    if (!ctx || currentCellSize <= 0) { return; }
+function redrawCanvas(gameState) {
+    if (!ctx || currentCellSize <= 0 || !gameState) { return; }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (typeof drawMapCells === 'function') drawMapCells(ctx, GRID_WIDTH, GRID_HEIGHT, currentCellSize); else console.error("ERROR: drawMapCells not defined!");
+    // Pass gameState (or relevant parts) to drawing functions
+    // Corrected parameter order for drawMapCells: pass safeZone
+    if (typeof drawMapCells === 'function') drawMapCells(ctx, gameState.mapData, gameState.safeZone, GRID_WIDTH, GRID_HEIGHT, currentCellSize); else console.error("ERROR: drawMapCells not defined!");
     if (typeof drawGrid === 'function') drawGrid(ctx, GRID_WIDTH, GRID_HEIGHT, currentCellSize); else console.error("ERROR: drawGrid not defined!");
-    if (typeof drawEnemies === 'function') drawEnemies(ctx, currentCellSize); else console.error("ERROR: drawEnemies not defined!");
-    if (typeof drawPlayer === 'function') drawPlayer(ctx, currentCellSize); else console.error("ERROR: drawPlayer not defined!");
-    if (typeof drawUI === 'function') drawUI(ctx); else console.error("ERROR: drawUI not defined!");
-    updateStatusBar(); // Update HTML status bar
-    // Log display updated by Game.logMessage now, not usually needed here
-    // updateLogDisplay();
+    if (typeof drawEnemies === 'function') drawEnemies(ctx, gameState.enemies, currentCellSize); else console.error("ERROR: drawEnemies not defined!");
+    if (typeof drawPlayer === 'function') drawPlayer(ctx, gameState.player, currentCellSize); else console.error("ERROR: drawPlayer not defined!");
+    if (typeof drawUI === 'function') drawUI(ctx, gameState); else console.error("ERROR: drawUI not defined!"); // drawUI might need gameState for safe zone etc.
+    updateStatusBar(gameState); // Update HTML status bar using gameState
+    // Log display updated by Game.logMessage (which should call the global updateLogDisplay in ui.js)
 }
 
-// --- Resize Logic --- (MODIFIED to set log height)
-/** Calculates optimal cell size, resizes canvas AND log container, and redraws. */
-function resizeAndDraw() {
-    // console.log("Resizing canvas...");
-    const availableWidth = window.innerWidth - (CANVAS_PADDING * 2); const availableHeight = window.innerHeight - (CANVAS_PADDING * 2);
-    const cellWidthBasedOnWindow = availableWidth / GRID_WIDTH; const cellHeightBasedOnWindow = availableHeight / GRID_HEIGHT;
-    let newCellSize = Math.floor(Math.min(cellWidthBasedOnWindow, cellHeightBasedOnWindow));
-    currentCellSize = Math.max(newCellSize, MIN_CELL_SIZE);
-    if (currentCellSize <= 0 || !isFinite(currentCellSize) || GRID_WIDTH <= 0 || GRID_HEIGHT <= 0 || !isFinite(GRID_WIDTH) || !isFinite(GRID_HEIGHT)) { console.error(`Resize failed: Invalid dimensions.`); currentCellSize = MIN_CELL_SIZE; if(GRID_WIDTH <= 0 || GRID_HEIGHT <= 0) return; }
-
-    // Set Canvas dimensions
-    canvas.width = GRID_WIDTH * currentCellSize; canvas.height = GRID_HEIGHT * currentCellSize;
-    // console.log(`Resized: CellSize=${currentCellSize}px, Canvas=${canvas.width}x${canvas.height}`);
-
-    // --- NEW: Set Log Container Height ---
-    const logContainer = document.getElementById('logContainer');
-    if (logContainer) {
-        logContainer.style.height = `${canvas.height}px`; // Match canvas height
-        // console.log(`Set log container height to: ${canvas.height}px`); // Optional log
-    }
-    // --- End New Section ---
-
-    // Redraw canvas and update UI (which now includes log via logMessage -> updateLogDisplay)
-    if (typeof Game !== 'undefined') { if (typeof redrawCanvas === 'function') { redrawCanvas(); } else { console.error("resizeAndDraw ERROR: redrawCanvas function not defined!"); } }
-    else { /* ... Handle missing Game object ... */ }
-}
-
-
-// --- Enemy Creation Helper ---
+// --- Enemy Creation Helper --- (Remains in main.js)
 /**
- * Creates a single enemy with randomized stats, finds a valid starting position,
+ * Creates a single enemy, finds a valid starting position on the map in gameState,
  * adds the position to occupiedCoords, and returns the enemy object.
- * Includes the initial FSM state.
  * @param {number} enemyIndex - The index for generating the enemy ID.
  * @param {Array<object>} occupiedCoords - Array of {row, col} objects to avoid placing on.
+ * @param {GameState} gameState - The current game state (used for mapData).
  * @returns {object|null} The created enemy object or null if placement fails.
  */
-function createAndPlaceEnemy(enemyIndex, occupiedCoords) {
-    if (typeof findStartPosition !== 'function' || typeof mapData === 'undefined' || typeof GRID_WIDTH === 'undefined' || typeof GRID_HEIGHT === 'undefined' || typeof TILE_LAND === 'undefined') {
-        console.error("createAndPlaceEnemy: Missing required functions or globals.");
+function createAndPlaceEnemy(enemyIndex, occupiedCoords, gameState) {
+    // Check dependencies (including gameState and its mapData)
+    if (typeof findStartPosition !== 'function' || !gameState || !gameState.mapData || typeof GRID_WIDTH === 'undefined' || typeof GRID_HEIGHT === 'undefined' || typeof TILE_LAND === 'undefined') {
+        console.error("createAndPlaceEnemy: Missing required functions, gameState, or mapData.");
         return null;
     }
 
     let enemyStartPos = null;
     let placementAttempts = 0;
-    const maxPlacementAttempts = 50; // Limit attempts to find an accessible spot
+    const maxPlacementAttempts = 50;
 
     while (!enemyStartPos && placementAttempts < maxPlacementAttempts) {
         placementAttempts++;
-        const potentialPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
+        // Pass mapData from gameState to findStartPosition
+        const potentialPos = findStartPosition(gameState.mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
 
         if (potentialPos) {
-            // Check if the potential position has valid moves
-            const dummyEnemy = { row: potentialPos.row, col: potentialPos.col, id: `test_${enemyIndex}` }; // Need ID for getValidMoves check
+            // Check accessibility (getValidMoves will eventually need gameState too)
+            const dummyEnemy = { row: potentialPos.row, col: potentialPos.col, id: `test_${enemyIndex}` };
             if (typeof getValidMoves === 'function') {
-                const validMoves = getValidMoves(dummyEnemy);
+                // Anticipate getValidMoves needing gameState in the future
+                const validMoves = getValidMoves(dummyEnemy, gameState); // Pass gameState here
                 if (validMoves.length > 0) {
-                    enemyStartPos = potentialPos; // Found an accessible spot
-                    // console.log(`DEBUG: Found accessible spawn for enemy ${enemyIndex} at (${enemyStartPos.row},${enemyStartPos.col}) after ${placementAttempts} attempts.`);
+                    enemyStartPos = potentialPos;
                 } else {
-                    // console.log(`DEBUG: Spawn pos (${potentialPos.row},${potentialPos.col}) rejected, no valid moves.`);
-                    // Add this inaccessible spot to occupiedCoords temporarily for the *next* findStartPosition attempt
-                    // to avoid repeatedly picking the same bad spot within this loop.
-                    // Note: This temporary addition doesn't persist outside this function call.
                     occupiedCoords.push({ row: potentialPos.row, col: potentialPos.col });
                 }
             } else {
                 console.error("createAndPlaceEnemy: getValidMoves function not found! Cannot check spawn accessibility.");
-                enemyStartPos = potentialPos; // Fallback: Place anyway if check fails
+                enemyStartPos = potentialPos; // Fallback
             }
         } else {
-            // findStartPosition failed, break the loop early
-            break;
+            break; // findStartPosition failed
         }
-    } // End while loop for finding accessible position
+    }
 
     if (enemyStartPos) {
-        // Use constants from config.js for variation ranges (with fallbacks)
+        // Use constants from config.js
         const hpMin = AI_HP_MIN || 4; const hpMax = AI_HP_MAX || 6;
         const rangeMin = AI_RANGE_MIN || 6; const rangeMax = AI_RANGE_MAX || 10;
         const ammoMin = AI_AMMO_MIN || 1; const ammoMax = AI_AMMO_MAX || 2;
@@ -199,220 +88,437 @@ function createAndPlaceEnemy(enemyIndex, occupiedCoords) {
         const enemyStartingAmmo = Math.floor(Math.random() * (ammoMax - ammoMin + 1)) + ammoMin;
 
         const newEnemy = {
-            id: `enemy_${enemyIndex}`, row: enemyStartPos.row, col: enemyStartPos.col, color: ENEMY_DEFAULT_COLOR, // Use constant
+            id: `enemy_${enemyIndex}`, row: enemyStartPos.row, col: enemyStartPos.col, color: ENEMY_DEFAULT_COLOR,
             hp: enemyMaxHp, maxHp: enemyMaxHp,
             detectionRange: enemyDetectionRange,
             resources: {
                 ammo: enemyStartingAmmo,
-                medkits: AI_START_MEDKITS // Add starting medkits from config
+                medkits: AI_START_MEDKITS
             },
-            state: AI_STATE_EXPLORING, // <<< Added initial state here
-            targetEnemy: null, // Initialize targetEnemy property
-            targetResourceCoords: null // Initialize targetResourceCoords property
+            state: AI_STATE_EXPLORING,
+            targetEnemy: null,
+            targetResourceCoords: null
         };
-        occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col }); // Update occupied list
+        occupiedCoords.push({ row: newEnemy.row, col: newEnemy.col });
         return newEnemy;
     } else {
         console.error(`createAndPlaceEnemy: Could not find valid position for enemy ${enemyIndex + 1}.`);
-        return null; // Indicate failure
+        return null;
     }
 }
 
 
 // --- Reset Game Logic ---
-/** Resets the entire game state */
-function resetGame() {
+/**
+ * Resets the game state held within the global gameState object.
+ * Assumes gameState has been initialized previously.
+ * @param {GameState} gameStateRef - Reference to the global gameState object.
+ */
+function resetGame(gameStateRef) {
     console.log("--- GAME RESETTING ---");
-    // 1. Reset Game Manager State (uses config constants implicitly via init state)
-    if (typeof Game !== 'undefined') {
-        Game.currentTurn = 'player'; Game.gameActive = true; Game.turnNumber = 1;
-        // Use constants for grid size if needed, though likely set already
-        Game.safeZone = { minRow: 0, maxRow: (GRID_HEIGHT || 25) - 1, minCol: 0, maxCol: (GRID_WIDTH || 25) - 1 };
-        Game.gameLog = []; // Clear log array first
-        Game.logMessage("Game Reset.", LOG_CLASS_SYSTEM); // Use logMessage with constant
-    } else { console.error("RESET ERROR: Game object missing!"); return; } // Cannot proceed
+    if (!gameStateRef || typeof Game === 'undefined') {
+        console.error("RESET ERROR: GameState object or Game object missing!");
+        return; // Cannot proceed
+    }
 
-    // 2. Regenerate Map (uses config constants implicitly via createMapData)
+    // 1. Reset GameState Properties
+    gameStateRef.currentTurn = 'player';
+    gameStateRef.gameActive = true;
+    gameStateRef.turnNumber = 1;
+    gameStateRef.safeZone = { minRow: 0, maxRow: (GRID_HEIGHT || 25) - 1, minCol: 0, maxCol: (GRID_WIDTH || 25) - 1 };
+    gameStateRef.logMessages = []; // Clear log array
+
+    // 2. Regenerate Map
     if (typeof createMapData === 'function') {
-        mapData = createMapData();
-        console.log("INIT (Reset): Map regenerated.");
-    } else { console.error("RESET ERROR: createMapData missing!"); Game.setGameOver(); return; }
-
-    // 3. Reset Player (Uses config constants for starting resources/HP)
-    const occupiedCoords = []; // Reset occupied list for this reset run
-    if (typeof player !== 'undefined' && typeof findStartPosition === 'function') {
-        player.maxHp = PLAYER_MAX_HP || 10; // Set maxHP from config (provide fallback)
-        player.hp = player.maxHp;           // Reset HP to new max
-        player.resources = {
-            medkits: PLAYER_START_MEDKITS || 0, // Use config
-            ammo: PLAYER_START_AMMO // Use config (Removed || 3 fallback)
+        // Construct mapConfig object (copied from initializeGame)
+        const mapConfig = {
+            GRID_HEIGHT: typeof GRID_HEIGHT !== 'undefined' ? GRID_HEIGHT : 25,
+            GRID_WIDTH: typeof GRID_WIDTH !== 'undefined' ? GRID_WIDTH : 25,
+            TILE_WALL: typeof TILE_WALL !== 'undefined' ? TILE_WALL : 1,
+            TILE_LAND: typeof TILE_LAND !== 'undefined' ? TILE_LAND : 0,
+            INITIAL_WALL_CHANCE: typeof INITIAL_WALL_CHANCE !== 'undefined' ? INITIAL_WALL_CHANCE : 0.45,
+            CA_ITERATIONS: typeof CA_ITERATIONS !== 'undefined' ? CA_ITERATIONS : 4,
+            CA_WALL_THRESHOLD: typeof CA_WALL_THRESHOLD !== 'undefined' ? CA_WALL_THRESHOLD : 5,
+            FEATURE_SPAWN_CHANCE_TREE: typeof FEATURE_SPAWN_CHANCE_TREE !== 'undefined' ? FEATURE_SPAWN_CHANCE_TREE : 0.05,
+            FEATURE_SPAWN_CHANCE_MEDKIT: typeof FEATURE_SPAWN_CHANCE_MEDKIT !== 'undefined' ? FEATURE_SPAWN_CHANCE_MEDKIT : 0.02,
+            FEATURE_SPAWN_CHANCE_AMMO: typeof FEATURE_SPAWN_CHANCE_AMMO !== 'undefined' ? FEATURE_SPAWN_CHANCE_AMMO : 0.03,
+            TILE_TREE: typeof TILE_TREE !== 'undefined' ? TILE_TREE : 2,
+            TILE_MEDKIT: typeof TILE_MEDKIT !== 'undefined' ? TILE_MEDKIT : 3,
+            TILE_AMMO: typeof TILE_AMMO !== 'undefined' ? TILE_AMMO : 4
         };
-        const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
+        gameStateRef.mapData = createMapData(mapConfig); // Pass config object
+        console.log("INIT (Reset): Map regenerated.");
+    } else {
+        console.error("RESET ERROR: createMapData missing!");
+        Game.setGameOver(gameStateRef); // Use Game method with gameState
+        return;
+    }
+
+    // 3. Reset Player State (within gameStateRef.player)
+    const occupiedCoords = []; // Reset occupied list for placement
+    if (gameStateRef.player && typeof findStartPosition === 'function') {
+        gameStateRef.player.maxHp = PLAYER_MAX_HP || 10;
+        gameStateRef.player.hp = gameStateRef.player.maxHp;
+        gameStateRef.player.resources = {
+            medkits: PLAYER_START_MEDKITS || 0,
+            ammo: PLAYER_START_AMMO
+        };
+        // Pass mapData from gameStateRef
+        const startPos = findStartPosition(gameStateRef.mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
         if (startPos) {
-            player.row = startPos.row; player.col = startPos.col;
-            occupiedCoords.push({ row: player.row, col: player.col });
+            gameStateRef.player.row = startPos.row;
+            gameStateRef.player.col = startPos.col;
+            occupiedCoords.push({ row: gameStateRef.player.row, col: gameStateRef.player.col });
             console.log("INIT (Reset): Player state reset and placed.");
         } else {
-            console.error("RESET ERROR: Player start pos not found on new map!"); Game.setGameOver(); return;
+            console.error("RESET ERROR: Player start pos not found on new map!");
+            Game.setGameOver(gameStateRef);
+            return;
         }
-    } else { console.error("RESET ERROR: Player object or findStartPosition missing!"); Game.setGameOver(); return; }
+    } else {
+        console.error("RESET ERROR: Player object in gameState or findStartPosition missing!");
+        Game.setGameOver(gameStateRef);
+        return;
+    }
 
-    // 4. Reset and Replace Enemies (Uses helper function)
-    if (typeof enemies !== 'undefined' && typeof createAndPlaceEnemy === 'function') {
-        enemies.length = 0; // Clear the existing enemies array
-        const numEnemiesToPlace = NUM_ENEMIES || 3; // Use config or fallback
+    // 4. Reset and Replace Enemies (within gameStateRef.enemies)
+    if (gameStateRef.enemies && typeof createAndPlaceEnemy === 'function') {
+        gameStateRef.enemies.length = 0; // Clear the existing enemies array in gameState
+        const numEnemiesToPlace = NUM_ENEMIES || 3;
         console.log(`INIT (Reset): Placing ${numEnemiesToPlace} enemies...`);
         for (let i = 0; i < numEnemiesToPlace; i++) {
-            const newEnemy = createAndPlaceEnemy(i, occupiedCoords); // Call helper
+            // Pass gameStateRef to createAndPlaceEnemy
+            const newEnemy = createAndPlaceEnemy(i, occupiedCoords, gameStateRef);
             if (newEnemy) {
-                enemies.push(newEnemy);
-            } // Error logged within helper if placement failed
+                gameStateRef.enemies.push(newEnemy); // Add to gameStateRef.enemies
+            }
         }
-        console.log(`INIT (Reset): Finished placing ${enemies.length} enemies.`);
-    } else { console.error("RESET ERROR: Enemies array or createAndPlaceEnemy missing!"); Game.setGameOver(); return; }
-
-    // 5. Perform Initial Size/Draw for the new game state
-    if (typeof resizeAndDraw === 'function') {
-        resizeAndDraw(); // Resizes canvas and triggers redraw
-        console.log("INIT (Reset): resizeAndDraw complete.");
+        console.log(`INIT (Reset): Finished placing ${gameStateRef.enemies.length} enemies.`);
     } else {
-        console.error("RESET ERROR: resizeAndDraw missing!"); Game.setGameOver(); return;
+        console.error("RESET ERROR: Enemies array in gameState or createAndPlaceEnemy missing!");
+        Game.setGameOver(gameStateRef);
+        return;
     }
 
-    // Update log display to show the "Game Reset" message
-    if (typeof updateLogDisplay === 'function') {
-        updateLogDisplay();
-    }
+    // 5. Log Reset Message (using Game method with gameStateRef)
+    Game.logMessage("Game Reset.", gameStateRef, LOG_CLASS_SYSTEM);
+
+    // 6. Perform Initial Size/Draw for the new game state - Handled by initializeUI if called after reset
+    // 7. Update log display explicitly after reset - Handled by Game.logMessage or initializeUI
+
+    // TODO: Ensure UI is re-initialized or redrawn after reset if needed.
+    // For now, assume the browser refresh or initial load handles it.
+    // If reset needs immediate redraw without full UI re-init, call resizeAndDraw(gameStateRef) here.
 
     console.log("--- GAME RESET COMPLETE ---");
 }
 
-
-// --- Initialization --- (MODIFIED to use logMessage)
-/** Runs the initial game setup */
-function initializeGame() {
-    console.log("Initializing game...");
-    // Check essential dependencies early
-    if (typeof Game === 'undefined' || typeof redrawCanvas !== 'function' || typeof resizeAndDraw !== 'function') {
-        console.error("FATAL: Core objects/functions missing! Check script load order.");
-        // Attempt to draw fatal error if possible
-        if(ctx){ ctx.fillStyle = 'black'; ctx.fillRect(0, 0, 300, 150); ctx.font = '20px Arial'; ctx.fillStyle = 'red'; ctx.textAlign = 'center'; ctx.fillText('FATAL ERROR: Core setup failed.', 150, 75); }
-        return false; // Stop initialization
+// --- Player Turn Processing ---
+/**
+ * Processes the player's intended action based on the intent string.
+ * Modifies gameState, calls relevant game logic, logs actions, and ends the player's turn.
+ * @param {string|null} actionIntent - The intent string from handleKeyDown.
+ * @param {GameState} gameState - The current game state object.
+ */
+function processPlayerTurn(actionIntent, gameState) {
+    if (!actionIntent || !gameState || !gameState.player || !gameState.mapData || !gameState.enemies || typeof Game === 'undefined') {
+        console.error("processPlayerTurn: Invalid actionIntent or missing gameState/required properties.");
+        return; // Cannot process turn
     }
 
-    // 1. Create Map (Uses map gen constants from config implicitly)
-    if (!Game.isGameOver() && typeof createMapData === 'function') {
-        mapData = createMapData();
-    } else if (!Game.isGameOver()) {
-        console.error("INIT ERROR: createMapData missing!"); Game.setGameOver(); return false;
-    } else { console.log("INIT: Skipping map creation (Game Over state)."); return false; } // Should not happen on first init
+    // Ensure it's still the player's turn and game is active before processing
+    if (Game.isGameOver(gameState) || !Game.isPlayerTurn(gameState)) {
+        return; // Ignore if not player's turn or game over
+    }
 
-    // 2. Place Player (Set initial resources/HP from config)
-    const occupiedCoords = [];
-    if (!Game.isGameOver() && typeof player !== 'undefined' && typeof findStartPosition === 'function') {
-        const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
-        if (startPos) {
-            player.row = startPos.row; player.col = startPos.col;
-            occupiedCoords.push({ row: player.row, col: player.col });
-            // Use constants from config.js (provide fallbacks just in case)
-            player.maxHp = PLAYER_MAX_HP || 10;
-            player.hp = player.maxHp; // Start at full health
-            player.resources = {
-                medkits: PLAYER_START_MEDKITS || 0,
-                ammo: PLAYER_START_AMMO // Use config (Removed || 3 fallback)
-            };
-            console.log("INIT: Player placed successfully.");
-        } else {
-            console.error("INIT ERROR: Player start pos not found!"); Game.setGameOver(); return false;
+    // console.log(`PROCESS TURN: Received intent: ${actionIntent}`); // Quieter log
+
+    const player = gameState.player;
+    const mapData = gameState.mapData;
+    const enemies = gameState.enemies;
+    const gridHeight = mapData.length;
+    const gridWidth = mapData[0] ? mapData[0].length : 0;
+    let turnEnded = false; // Flag to track if the action consumed the turn
+
+    // --- Process Action Intent ---
+    // Assume config constants (TILE_*, PLAYER_*, RANGED_*, HEAL_*, LOG_CLASS_*) are global
+    switch (actionIntent) {
+        case 'MOVE_UP':
+        case 'MOVE_DOWN':
+        case 'MOVE_LEFT':
+        case 'MOVE_RIGHT':
+            { // Block scope for targetRow/Col
+                let dx = 0, dy = 0;
+                if (actionIntent === 'MOVE_UP') dy = -1;
+                else if (actionIntent === 'MOVE_DOWN') dy = 1;
+                else if (actionIntent === 'MOVE_LEFT') dx = -1;
+                else if (actionIntent === 'MOVE_RIGHT') dx = 1;
+
+                const targetRow = player.row + dy;
+                const targetCol = player.col + dx;
+
+                // 1. Boundary Check
+                if (targetRow < 0 || targetRow >= gridHeight || targetCol < 0 || targetCol >= gridWidth) {
+                    Game.logMessage(`Player move blocked by map edge at (${targetRow},${targetCol}).`, gameState, LOG_CLASS_PLAYER_NEUTRAL);
+                    break; // Don't end turn
+                }
+
+                // 2. Check for Enemy (Melee Attack)
+                const targetEnemy = enemies.find(enemy => enemy.hp > 0 && enemy.row === targetRow && enemy.col === targetCol);
+                if (targetEnemy) {
+                    const targetId = targetEnemy.id || '??';
+                    const damage = PLAYER_ATTACK_DAMAGE || 1;
+                    Game.logMessage(`Player attacks ${targetId} at (${targetRow},${targetCol}) for ${damage} damage.`, gameState, LOG_CLASS_PLAYER_GOOD);
+                    targetEnemy.hp -= damage;
+                    let knockbackMsg = "";
+                    if (targetEnemy.hp > 0) {
+                        const knockbackResult = applyKnockback(player, targetEnemy, gameState);
+                        if (knockbackResult.success) {
+                            knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
+                        } else if (knockbackResult.reason !== 'calc_error') {
+                            knockbackMsg = ` Knockback blocked (${knockbackResult.reason}).`;
+                        }
+                    }
+                    if (knockbackMsg) {
+                         Game.logMessage(knockbackMsg.trim(), gameState, LOG_CLASS_ENEMY_EVENT);
+                    }
+                    turnEnded = true;
+                    break;
+                }
+
+                // 3. Check Terrain (Movement)
+                const targetTileType = mapData[targetRow][targetCol];
+                if (targetTileType === TILE_LAND || targetTileType === TILE_MEDKIT || targetTileType === TILE_AMMO) {
+                    Game.logMessage(`Player moves to (${targetRow},${targetCol}).`, gameState, LOG_CLASS_PLAYER_NEUTRAL);
+                    updateUnitPosition(player, targetRow, targetCol, gameState);
+                    turnEnded = true;
+                } else {
+                    Game.logMessage(`Player move blocked by terrain at (${targetRow},${targetCol}).`, gameState, LOG_CLASS_PLAYER_NEUTRAL);
+                }
+            }
+            break;
+
+        case 'WAIT':
+            Game.logMessage("Player waits.", gameState, LOG_CLASS_PLAYER_NEUTRAL);
+            turnEnded = true;
+            break;
+
+        case 'HEAL':
+            if (player.resources.medkits >= HEAL_COST) {
+                if (player.hp < player.maxHp) {
+                    const healAmountActual = Math.min(HEAL_AMOUNT, player.maxHp - player.hp);
+                    player.resources.medkits -= HEAL_COST;
+                    player.hp += healAmountActual;
+                    Game.logMessage(`Player uses Medkit, heals ${healAmountActual} HP.`, gameState, LOG_CLASS_PLAYER_GOOD);
+                    turnEnded = true;
+                } else {
+                    Game.logMessage("Cannot heal: Full health.", gameState, LOG_CLASS_PLAYER_NEUTRAL);
+                }
+            } else {
+                Game.logMessage(`Cannot heal: Need ${HEAL_COST} medkits (Have: ${player.resources.medkits || 0}).`, gameState, LOG_CLASS_PLAYER_NEUTRAL);
+            }
+            break;
+
+        case 'SHOOT_UP':
+        case 'SHOOT_DOWN':
+        case 'SHOOT_LEFT':
+        case 'SHOOT_RIGHT':
+            { // Block scope
+                if (player.resources.ammo > 0) {
+                    player.resources.ammo--;
+                    let shootDirection = { dr: 0, dc: 0 };
+                    let dirString = "";
+                    if (actionIntent === 'SHOOT_UP') { shootDirection.dr = -1; dirString = "Up"; }
+                    else if (actionIntent === 'SHOOT_DOWN') { shootDirection.dr = 1; dirString = "Down"; }
+                    else if (actionIntent === 'SHOOT_LEFT') { shootDirection.dc = -1; dirString = "Left"; }
+                    else if (actionIntent === 'SHOOT_RIGHT') { shootDirection.dc = 1; dirString = "Right"; }
+
+                    let shotHit = false;
+                    let hitTarget = null;
+                    let blocked = false;
+                    let blockedBy = "";
+                    let hitCoord = null;
+
+                    const traceEndX = player.col + shootDirection.dc * (RANGED_ATTACK_RANGE + 1);
+                    const traceEndY = player.row + shootDirection.dr * (RANGED_ATTACK_RANGE + 1);
+                    const linePoints = traceLine(player.col, player.row, traceEndX, traceEndY);
+
+                    for (let i = 1; i < linePoints.length; i++) {
+                        const point = linePoints[i];
+                        const checkRow = point.row;
+                        const checkCol = point.col;
+                        const dist = Math.abs(checkRow - player.row) + Math.abs(checkCol - player.col);
+
+                        if (dist > RANGED_ATTACK_RANGE) break;
+                        if (checkRow < 0 || checkRow >= gridHeight || checkCol < 0 || checkCol >= gridWidth) {
+                            blocked = true; blockedBy = "Map Edge"; hitCoord = {row: checkRow, col: checkCol}; break;
+                        }
+                        const tileType = mapData[checkRow][checkCol];
+                        if (tileType === TILE_WALL || tileType === TILE_TREE) {
+                            blocked = true; blockedBy = (tileType === TILE_WALL ? "Wall" : "Tree"); hitCoord = {row: checkRow, col: checkCol}; break;
+                        }
+                        hitTarget = enemies.find(enemy => enemy.hp > 0 && enemy.row === checkRow && enemy.col === checkCol);
+                        if (hitTarget) {
+                            shotHit = true; hitCoord = {row: checkRow, col: checkCol}; break;
+                        }
+                    }
+
+                    let logMsg = `Player shoots ${dirString}`;
+                    let knockbackMsg = "";
+                    let msgClass = LOG_CLASS_PLAYER_NEUTRAL;
+
+                    if (shotHit && hitTarget) {
+                        const targetId = hitTarget.id || '??';
+                        const damage = RANGED_ATTACK_DAMAGE || 1;
+                        hitTarget.hp -= damage;
+                        logMsg += ` -> hits ${targetId} at (${hitTarget.row},${hitTarget.col}) for ${damage} damage! (HP: ${hitTarget.hp}/${hitTarget.maxHp})`;
+                        msgClass = LOG_CLASS_PLAYER_GOOD;
+
+                        if (hitTarget.hp > 0) {
+                            const knockbackResult = applyKnockback(player, hitTarget, gameState);
+                            if (knockbackResult.success) {
+                                knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
+                            } else if (knockbackResult.reason !== 'calc_error') {
+                                knockbackMsg = ` Knockback blocked (${knockbackResult.reason}).`;
+                            }
+                        }
+                    } else if (blocked) {
+                        logMsg += ` -> blocked by ${blockedBy}` + (hitCoord ? ` at (${hitCoord.row},${hitCoord.col})` : '') + ".";
+                    } else {
+                        logMsg += " -> missed.";
+                    }
+
+                    Game.logMessage(logMsg + knockbackMsg, gameState, msgClass);
+                    turnEnded = true;
+
+                } else {
+                    Game.logMessage("Cannot shoot: Out of ammo!", gameState, LOG_CLASS_PLAYER_BAD);
+                }
+            }
+            break;
+
+        default:
+            console.warn(`processPlayerTurn: Unknown actionIntent: ${actionIntent}`);
+            break;
+    }
+
+    // --- Post-Action Processing ---
+    if (turnEnded) {
+        const gameOver = Game.checkEndConditions(gameState);
+        if (!gameOver) {
+            Game.endPlayerTurn(gameState);
+            runAiTurns(gameState); // Trigger AI turns
         }
-    } else if (!Game.isGameOver()) {
-        console.error("INIT ERROR: Player object or findStartPosition missing!"); Game.setGameOver(); return false;
-    } else { console.log("INIT: Skipping player placement (Game Over state)."); return false; }
+    }
 
-    // 3. Place Enemies (Uses helper function)
-    if (!Game.isGameOver() && typeof enemies !== 'undefined' && typeof createAndPlaceEnemy === 'function') {
-        enemies.length = 0; // Ensure array is empty before populating
-        const numEnemiesToPlace = NUM_ENEMIES || 3; // Use config or fallback
-        console.log(`INIT: Placing ${numEnemiesToPlace} enemies...`);
-        for (let i = 0; i < numEnemiesToPlace; i++) {
-            const newEnemy = createAndPlaceEnemy(i, occupiedCoords); // Call helper
-            if (newEnemy) {
-                enemies.push(newEnemy);
-            } // Error logged within helper if placement failed
-        }
-        console.log(`INIT: Placed ${enemies.length} enemies.`);
-    } else if (!Game.isGameOver()) {
-        console.error("INIT ERROR: Enemies array or createAndPlaceEnemy missing!"); Game.setGameOver(); return false;
-    } else { console.log("INIT: Skipping enemy placement (Game Over state)."); }
+    // Always redraw after processing player input
+    // updateLogDisplay is handled by Game.logMessage
+    if (typeof redrawCanvas === 'function') redrawCanvas(gameState);
+    // if (typeof updateLogDisplay === 'function') updateLogDisplay(gameState); // Removed explicit call
+}
 
-    // 4. Initial Size & Draw
-    if (!Game.isGameOver()) {
-        resizeAndDraw(); // Handles initial sizing and drawing
-        console.log("INIT: Initial resize and draw completed.");
-    } else {
-        console.error("INIT: Game initialization failed before initial draw.");
-        redrawCanvas(); // Attempt to draw error UI
+// --- Initialization ---
+/** Runs the initial game setup, creating and populating the global gameState object. */
+function initializeGame() {
+    console.log("Initializing game...");
+    // Create the central GameState object
+    gameState = new GameState(); // Assign to the global variable
+
+    // Check essential dependencies (excluding UI functions moved to ui.js)
+    // Note: initializeUI will check for its dependencies (handleKeyDown, processPlayerTurn, resetGame, resizeAndDraw, updateLogDisplay)
+    if (typeof Game === 'undefined' || typeof redrawCanvas !== 'function' /* resizeAndDraw checked by initializeUI */ || typeof createMapData !== 'function' || typeof player !== 'undefined' /* Check global player template */ || typeof findStartPosition !== 'function' || typeof enemies !== 'undefined' /* Check global enemies template/array */ || typeof createAndPlaceEnemy !== 'function') {
+        console.error("FATAL: Core game logic objects/functions missing! Check script load order and definitions.");
+        if(ctx){ ctx.fillStyle = 'black'; ctx.fillRect(0, 0, 300, 150); ctx.font = '20px Arial'; ctx.fillStyle = 'red'; ctx.textAlign = 'center'; ctx.fillText('FATAL ERROR: Core setup failed.', 150, 75); }
+        gameState.gameActive = false; // Mark state as inactive
         return false;
     }
 
-// --- 5. Attach Listeners (Only ONCE) ---
-if (!window.initListenersAttached) {
-    console.log("INIT: Attaching listeners...");
-    // Resize Listener
-    if (typeof resizeAndDraw === 'function') { window.addEventListener('resize', resizeAndDraw); console.log("INIT: Resize listener attached."); }
-    else { console.error("INIT ERROR: Cannot attach resize listener.") }
-    // Input Listener
-    if (typeof handleKeyDown === 'function') { window.addEventListener('keydown', handleKeyDown); console.log("INIT: Input handler attached."); }
-    else { console.error("handleKeyDown function not found!"); }
-    // Restart Button Listener
-    const restartBtn = document.getElementById('restartButton');
-    if (restartBtn && typeof resetGame === 'function') { restartBtn.addEventListener('click', resetGame); console.log("INIT: Restart button listener attached."); }
-    else { console.error("INIT ERROR: Restart button or resetGame function missing!"); }
+    // 1. Set Initial State Properties
+    gameState.gameActive = true;
+    gameState.turnNumber = 1;
+    gameState.currentTurn = 'player'; // Player starts
+    gameState.safeZone = { minRow: 0, maxRow: GRID_HEIGHT - 1, minCol: 0, maxCol: GRID_WIDTH - 1 };
+    gameState.logMessages = []; // Initialize log array
 
-    // --- Toggle Log Button Listener (WITH DEBUG LOGS) ---
-    const toggleLogBtn = document.getElementById('toggleLogButton');
-    const logContainer = document.getElementById('logContainer');
-    // Log whether elements were found during setup
-    console.log("INIT: Toggle Log Button Found:", toggleLogBtn);
-    console.log("INIT: Log Container Found:", logContainer);
+    // 2. Create Map -> gameState.mapData
+    // Pass config constants to createMapData
+    // Construct a config object from global constants (ensure they exist)
+    const mapConfig = {
+        GRID_HEIGHT: typeof GRID_HEIGHT !== 'undefined' ? GRID_HEIGHT : 25,
+        GRID_WIDTH: typeof GRID_WIDTH !== 'undefined' ? GRID_WIDTH : 25,
+        TILE_WALL: typeof TILE_WALL !== 'undefined' ? TILE_WALL : 1,
+        TILE_LAND: typeof TILE_LAND !== 'undefined' ? TILE_LAND : 0,
+        INITIAL_WALL_CHANCE: typeof INITIAL_WALL_CHANCE !== 'undefined' ? INITIAL_WALL_CHANCE : 0.45,
+        CA_ITERATIONS: typeof CA_ITERATIONS !== 'undefined' ? CA_ITERATIONS : 4,
+        CA_WALL_THRESHOLD: typeof CA_WALL_THRESHOLD !== 'undefined' ? CA_WALL_THRESHOLD : 5,
+        FEATURE_SPAWN_CHANCE_TREE: typeof FEATURE_SPAWN_CHANCE_TREE !== 'undefined' ? FEATURE_SPAWN_CHANCE_TREE : 0.05,
+        FEATURE_SPAWN_CHANCE_MEDKIT: typeof FEATURE_SPAWN_CHANCE_MEDKIT !== 'undefined' ? FEATURE_SPAWN_CHANCE_MEDKIT : 0.02,
+        FEATURE_SPAWN_CHANCE_AMMO: typeof FEATURE_SPAWN_CHANCE_AMMO !== 'undefined' ? FEATURE_SPAWN_CHANCE_AMMO : 0.03,
+        TILE_TREE: typeof TILE_TREE !== 'undefined' ? TILE_TREE : 2,
+        TILE_MEDKIT: typeof TILE_MEDKIT !== 'undefined' ? TILE_MEDKIT : 3,
+        TILE_AMMO: typeof TILE_AMMO !== 'undefined' ? TILE_AMMO : 4
+    };
+    gameState.mapData = createMapData(mapConfig); // Pass config object
 
-    if (toggleLogBtn && logContainer) {
-        toggleLogBtn.addEventListener('click', () => {
-            // Log when the button is actually clicked
-            console.log('--- Toggle Log Button CLICKED! ---');
-            // Log the container element again inside the handler
-            console.log('Handler: Log container element:', logContainer);
-            // Log classes BEFORE toggling
-            console.log('Handler: Classes BEFORE toggle:', logContainer.className);
-            // Perform the toggle
-            logContainer.classList.toggle('hidden');
-             // Log classes AFTER toggling
-            console.log('Handler: Classes AFTER toggle:', logContainer.className);
-            // Log the expected state
-            console.log(`Handler: Log visibility toggled. Currently hidden: ${logContainer.classList.contains('hidden')}`);
-        });
-        console.log("INIT: Toggle Log button listener attached successfully.");
+    // 3. Place Player -> gameState.player
+    const occupiedCoords = [];
+    // Pass gameState.mapData to findStartPosition
+    const startPos = findStartPosition(gameState.mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
+    if (startPos) {
+        // Create player object and assign to gameState.player
+        // We might need a dedicated player creation function later
+        gameState.player = {
+            // Copy properties from global player template or define here
+            row: startPos.row,
+            col: startPos.col,
+            color: PLAYER_COLOR, // Use constant
+            maxHp: PLAYER_MAX_HP || 10,
+            hp: PLAYER_MAX_HP || 10,
+            resources: {
+                medkits: PLAYER_START_MEDKITS || 0,
+                ammo: PLAYER_START_AMMO
+            }
+            // Add other player properties as needed (e.g., id, name?)
+        };
+        occupiedCoords.push({ row: gameState.player.row, col: gameState.player.col });
+        console.log("INIT: Player placed successfully.");
     } else {
-         // Log if setup failed
-         if (!toggleLogBtn) console.error("INIT ERROR: Toggle Log button not found! Check ID 'toggleLogButton' in HTML.");
-         if (!logContainer) console.error("INIT ERROR: Log container not found! Check ID 'logContainer' in HTML.");
+        console.error("INIT ERROR: Player start pos not found!");
+        gameState.gameActive = false; return false;
     }
-    // --- End Toggle Log Button Listener ---
 
-    window.initListenersAttached = true; // Set flag
-} else {
-     console.log("INIT: Listeners already attached.");
-}
+    // 4. Place Enemies -> gameState.enemies
+    gameState.enemies = []; // Initialize enemies array in gameState
+    const numEnemiesToPlace = NUM_ENEMIES || 3;
+    console.log(`INIT: Placing ${numEnemiesToPlace} enemies...`);
+    for (let i = 0; i < numEnemiesToPlace; i++) {
+        // Pass gameState to createAndPlaceEnemy
+        const newEnemy = createAndPlaceEnemy(i, occupiedCoords, gameState);
+        if (newEnemy) {
+            gameState.enemies.push(newEnemy); // Add to gameState.enemies
+        }
+    }
+    console.log(`INIT: Placed ${gameState.enemies.length} enemies.`);
 
+    // 5. Initialize UI (Attaches listeners, performs initial draw)
+    if (typeof initializeUI === 'function') {
+        initializeUI(gameState); // Call function from ui.js
+    } else {
+        console.error("FATAL: initializeUI function not found! Check script load order.");
+        gameState.gameActive = false; return false;
+    }
+
+    // 6. Log Game Started (using Game method with gameState)
+    Game.logMessage("Game Started.", gameState, LOG_CLASS_SYSTEM);
     console.log("INIT: Initialization sequence complete.");
-    // Final status logs & Log Game Started
-    if (typeof Game !== 'undefined') { Game.logMessage("Game Started.", LOG_CLASS_SYSTEM); console.log(`Initial Turn: ${Game.getCurrentTurn()}`); } // Use constant
-    else { console.log("Game object not defined."); }
-    if(typeof player !== 'undefined' && player.row !== null) { console.log(`Player starting at: ${player.row}, ${player.col}`); console.log(`Initial resources:`, player.resources); }
-    if(typeof enemies !== 'undefined') console.log(`Placed ${enemies.length} enemies.`);
+    console.log(`Initial Turn: ${gameState.currentTurn}`);
+    if(gameState.player) { console.log(`Player starting at: ${gameState.player.row}, ${gameState.player.col}`); console.log(`Initial resources:`, gameState.player.resources); }
+    if(gameState.enemies) console.log(`Placed ${gameState.enemies.length} enemies.`);
+
+    // Explicit log update after init messages is now handled within initializeUI
 
     return true; // Indicate success
 }
 
 // --- Start Game ---
-initializeGame();
+initializeGame(); // Creates and populates the global gameState

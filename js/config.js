@@ -24,6 +24,7 @@ const FEATURE_SPAWN_CHANCE_AMMO = 0.04;   // Example: 4% chance on land (after m
 const PLAYER_MAX_HP = 15;
 const PLAYER_START_AMMO = 0;
 const PLAYER_START_MEDKITS = 0;
+const PLAYER_AMMO_PICKUP_AMOUNT = 1; // Example: Amount of ammo Player gains from pickup
 
 // AI Stats & Variations
 const NUM_ENEMIES = 30;              // Example Count

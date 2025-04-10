@@ -3,10 +3,8 @@ console.log("ai.js loaded");
 // --- AI Configuration ---
 // Detection range now stored per enemy in the 'enemies' array objects
 
-// Array to hold all enemy objects
-let enemies = [];
-
 // --- AI Turn Logic --- (Uses Game.logMessage with classes)
+// Global 'enemies' array removed; enemies are now accessed via gameState.enemies
 
 /**
  * Helper function to re-evaluate the situation when a target is invalid or gone.
@@ -14,12 +12,14 @@ let enemies = [];
  * Modifies the enemy's state based on current conditions and priorities.
  * Does NOT modify targets directly; state handlers are responsible for finding targets if needed.
  * @param {object} enemy - The enemy object.
+ * @param {GameState} gameState - The current game state.
  */
-function performReevaluation(enemy) {
+function performReevaluation(enemy, gameState) {
     const originalState = enemy.state; // Keep track for logging changes
 
     // 1. Threat Assessment (Highest Priority)
-    const nearestEnemy = findNearestVisibleEnemy(enemy);
+    // Pass gameState to perception helpers
+    const nearestEnemy = findNearestVisibleEnemy(enemy, gameState);
     if (nearestEnemy) {
         const hpPercent = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP); // Use maxHp if available
         if (hpPercent < AI_FLEE_HEALTH_THRESHOLD) {
@@ -33,7 +33,8 @@ function performReevaluation(enemy) {
         }
         // Log state change if different from original
         if (enemy.state !== originalState) {
-            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Sees ${nearestEnemy.id || 'Player'} -> ${enemy.state}`, LOG_CLASS_ENEMY_EVENT);
+            // Pass gameState to logMessage
+            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Sees ${nearestEnemy.id || 'Player'} -> ${enemy.state}`, gameState, LOG_CLASS_ENEMY_EVENT);
         }
         return; // Decision made based on threat
     }
@@ -48,7 +49,8 @@ function performReevaluation(enemy) {
         enemy.state = AI_STATE_HEALING;
         enemy.targetResourceCoords = null; // Healing doesn't need a resource target
         if (enemy.state !== originalState) {
-            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Low HP & has medkit -> ${enemy.state}`, LOG_CLASS_ENEMY_EVENT);
+            // Pass gameState to logMessage
+            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Low HP & has medkit -> ${enemy.state}`, gameState, LOG_CLASS_ENEMY_EVENT);
         }
         return; // Decision made to heal
     }
@@ -56,12 +58,14 @@ function performReevaluation(enemy) {
     // 3. Resource Acquisition (If No Threat & Not Healing)
     // Check Medkit need first (using the consolidated threshold)
     if (hpPercent < AI_HEAL_PRIORITY_THRESHOLD) { // Use the consolidated threshold
-        const nearbyMedkit = findNearbyResource(enemy, enemy.detectionRange, TILE_MEDKIT);
+        // Pass gameState to resource finding helper
+        const nearbyMedkit = findNearbyResource(enemy, enemy.detectionRange, TILE_MEDKIT, gameState);
         if (nearbyMedkit) {
             enemy.state = AI_STATE_SEEKING_RESOURCES;
             enemy.targetResourceCoords = nearbyMedkit; // Seeking needs a target
             if (enemy.state !== originalState || enemy.targetResourceCoords !== nearbyMedkit) { // Log if state or target changed
-                 Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Needs Medkit -> ${enemy.state} (${nearbyMedkit.row},${nearbyMedkit.col})`, LOG_CLASS_ENEMY_EVENT);
+                 // Pass gameState to logMessage
+                 Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Needs Medkit -> ${enemy.state} (${nearbyMedkit.row},${nearbyMedkit.col})`, gameState, LOG_CLASS_ENEMY_EVENT);
             }
             return; // Decision made to seek medkit
         }
@@ -69,12 +73,14 @@ function performReevaluation(enemy) {
     // Check Ammo need if medkit wasn't needed/found (using the new threshold)
     // Check enemy.resources.ammo
     if (enemy.resources && enemy.resources.ammo < AI_SEEK_AMMO_THRESHOLD) { // Use the new threshold and check resources object
-        const nearbyAmmo = findNearbyResource(enemy, enemy.detectionRange, TILE_AMMO);
+        // Pass gameState to resource finding helper
+        const nearbyAmmo = findNearbyResource(enemy, enemy.detectionRange, TILE_AMMO, gameState);
         if (nearbyAmmo) {
             enemy.state = AI_STATE_SEEKING_RESOURCES;
             enemy.targetResourceCoords = nearbyAmmo;
             if (enemy.state !== originalState || enemy.targetResourceCoords !== nearbyAmmo) {
-                 Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Needs Ammo -> ${enemy.state} (${nearbyAmmo.row},${nearbyAmmo.col})`, LOG_CLASS_ENEMY_EVENT);
+                 // Pass gameState to logMessage
+                 Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Needs Ammo -> ${enemy.state} (${nearbyAmmo.row},${nearbyAmmo.col})`, gameState, LOG_CLASS_ENEMY_EVENT);
             }
             return; // Decision made to seek ammo
         }
@@ -82,18 +88,21 @@ function performReevaluation(enemy) {
 
     // 4. Proactive Resource Acquisition (If No Threat, Not Healing, No Critical Need)
     // Check medkits first proactively
-    let nearbyResource = findNearbyResource(enemy, AI_PROACTIVE_SCAN_RANGE, TILE_MEDKIT);
+    // Pass gameState to resource finding helper
+    let nearbyResource = findNearbyResource(enemy, AI_PROACTIVE_SCAN_RANGE, TILE_MEDKIT, gameState);
     let resourceName = 'Medkit';
     if (!nearbyResource) {
         // Then check ammo proactively
-        nearbyResource = findNearbyResource(enemy, AI_PROACTIVE_SCAN_RANGE, TILE_AMMO);
+        // Pass gameState to resource finding helper
+        nearbyResource = findNearbyResource(enemy, AI_PROACTIVE_SCAN_RANGE, TILE_AMMO, gameState);
         resourceName = 'Ammo';
     }
     if (nearbyResource) {
         enemy.state = AI_STATE_SEEKING_RESOURCES;
         enemy.targetResourceCoords = nearbyResource;
         if (enemy.state !== originalState || enemy.targetResourceCoords !== nearbyResource) {
-            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Proactively seeks ${resourceName} -> ${enemy.state} (${nearbyResource.row},${nearbyResource.col})`, LOG_CLASS_ENEMY_EVENT);
+            // Pass gameState to logMessage
+            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Proactively seeks ${resourceName} -> ${enemy.state} (${nearbyResource.row},${nearbyResource.col})`, gameState, LOG_CLASS_ENEMY_EVENT);
         }
         return; // Decision made to seek proactively
     }
@@ -103,7 +112,8 @@ function performReevaluation(enemy) {
     enemy.state = AI_STATE_EXPLORING;
     enemy.targetResourceCoords = null; // Exploring doesn't need a target initially
     if (enemy.state !== originalState) {
-        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: No priority actions -> ${enemy.state}`, LOG_CLASS_ENEMY_EVENT);
+        // Pass gameState to logMessage
+        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: No priority actions -> ${enemy.state}`, gameState, LOG_CLASS_ENEMY_EVENT);
     }
     // No return needed, default state set
 }
@@ -114,20 +124,25 @@ const MAX_EVALUATIONS_PER_TURN = 3; // Limit state changes/re-evaluations per AI
  * Executes turns for all AI enemies. Logs actions with CSS classes.
  * Executes turns for all AI enemies based on their current state.
  * Allows for state re-evaluation and action within the same turn, up to a limit.
+ * @param {GameState} gameState - The current game state object.
  */
-function executeAiTurns() {
-    if (typeof Game === 'undefined' || Game.isGameOver() || Game.getCurrentTurn() !== 'ai' || typeof enemies === 'undefined') {
-        if (typeof Game !== 'undefined' && !Game.isGameOver() && Game.getCurrentTurn() === 'ai') {
-            Game.endAiTurn(); // Ensure turn ends even if AI logic is skipped
+function runAiTurns(gameState) { // Renamed from executeAiTurns and accepts gameState
+    // Check dependencies and game state using gameState
+    if (typeof Game === 'undefined' || !gameState || Game.isGameOver(gameState) || Game.getCurrentTurn(gameState) !== 'ai' || !gameState.enemies) {
+        if (typeof Game !== 'undefined' && gameState && !Game.isGameOver(gameState) && Game.getCurrentTurn(gameState) === 'ai') {
+            Game.endAiTurn(gameState); // Ensure turn ends even if AI logic is skipped, pass gameState
         }
         return;
     }
 
-    const currentEnemiesTurnOrder = [...enemies]; // Iterate over a snapshot
+    // Get active enemies from gameState
+    const activeEnemies = gameState.enemies.filter(e => e && e.hp > 0);
+    const currentEnemiesTurnOrder = [...activeEnemies]; // Iterate over a snapshot of active enemies
 
     for (let i = 0; i < currentEnemiesTurnOrder.length; i++) {
-        const enemy = enemies.find(e => e.id === currentEnemiesTurnOrder[i].id); // Find current enemy in main array
-        if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue; // Skip if invalid/dead
+        // Find the current enemy in the main gameState.enemies array to ensure modifications persist
+        const enemy = gameState.enemies.find(e => e.id === currentEnemiesTurnOrder[i].id);
+        if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue; // Skip if invalid/dead (redundant check but safe)
 
         // --- FSM Logic with Re-evaluation Loop ---
         let actionTaken = false;
@@ -135,26 +150,27 @@ function executeAiTurns() {
 
         while (!actionTaken && evaluationCount < MAX_EVALUATIONS_PER_TURN) {
             evaluationCount++;
-            performReevaluation(enemy); // Re-evaluate state *before* acting
+            performReevaluation(enemy, gameState); // Re-evaluate state *before* acting, pass gameState
 
             let currentHandlerResult = false; // Assume handler returns false (needs re-eval) unless it returns true
 
             // Call the handler function corresponding to the enemy's *current* (potentially updated) state
+            // Pass gameState to all state handlers
             switch (enemy.state) {
                 case AI_STATE_EXPLORING:
-                    currentHandlerResult = handleExploringState(enemy);
+                    currentHandlerResult = handleExploringState(enemy, gameState);
                     break;
                 case AI_STATE_SEEKING_RESOURCES:
-                    currentHandlerResult = handleSeekingResourcesState(enemy);
+                    currentHandlerResult = handleSeekingResourcesState(enemy, gameState);
                     break;
                 case AI_STATE_ENGAGING_ENEMY:
-                    currentHandlerResult = handleEngagingEnemyState(enemy);
+                    currentHandlerResult = handleEngagingEnemyState(enemy, gameState);
                     break;
                 case AI_STATE_FLEEING:
-                    currentHandlerResult = handleFleeingState(enemy);
+                    currentHandlerResult = handleFleeingState(enemy, gameState);
                     break;
                 case AI_STATE_HEALING: // Added 2025-04-09
-                    currentHandlerResult = handleHealingState(enemy);
+                    currentHandlerResult = handleHealingState(enemy, gameState);
                     break;
                 default:
                     console.warn(`Enemy ${enemy.id} has unknown state: ${enemy.state}. Defaulting to Exploring.`);
@@ -174,19 +190,20 @@ function executeAiTurns() {
         if (!actionTaken) {
             // Loop limit reached without a handler returning true
             console.warn(`Enemy ${enemy.id} reached max evaluations (${MAX_EVALUATIONS_PER_TURN}) without completing an action. Forcing wait.`);
-            Game.logMessage(`Enemy ${enemy.id} waits (evaluation limit).`, LOG_CLASS_ENEMY_EVENT);
+            // Pass gameState to logMessage
+            Game.logMessage(`Enemy ${enemy.id} waits (evaluation limit).`, gameState, LOG_CLASS_ENEMY_EVENT);
             // Consider this a completed turn action to prevent infinite game loops if AI gets stuck
         }
 
-        // Check end conditions after each enemy finishes its turn (potentially multiple evaluations)
-        if (Game.checkEndConditions()) return;
+        // Check end conditions after each enemy finishes its turn, pass gameState
+        if (Game.checkEndConditions(gameState)) return;
 
     } // End loop through enemies
 
-    // End AI turn only if game didn't end during loop
-    if (!Game.isGameOver()) {
-        Game.endAiTurn(); // Handles setting turn and redraw if needed
+    // End AI turn only if game didn't end during loop, pass gameState
+    if (!Game.isGameOver(gameState)) {
+        Game.endAiTurn(gameState); // Handles setting turn and redraw if needed
     }
     // If game ended, final redraw already handled by setGameOver or checks above
 
-} // End executeAiTurns
+} // End runAiTurns

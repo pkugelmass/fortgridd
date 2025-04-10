@@ -23,23 +23,29 @@
     <div id="mainContent">
         <canvas id="gameCanvas"></canvas> <div id="logContainer" class="hidden">          <p>Welcome to FortGridd!</p> </div>
     </div>
+    <!-- Core -->
     <script src="js/config.js"></script>
-    <script src="js/utils.js"></script> <!-- Added 2025-04-09 -->
-    <script src="js/ai/ai_perception.js"></script> <!-- Refactored 2025-04-09 -->
-    <script src="js/ai/ai_movement.js"></script> <!-- Refactored 2025-04-09 -->
-    <script src="js/ai/ai_actions.js"></script> <!-- Refactored 2025-04-09 -->
-    <script src="js/ai/ai_map_utils.js"></script> <!-- Refactored 2025-04-09 -->
+    <script src="js/gameState.js"></script> <!-- NEW -->
+    <script src="js/utils.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/game.js"></script>
+    <!-- AI Modules -->
+    <script src="js/ai/ai_perception.js"></script>
+    <script src="js/ai/ai_movement.js"></script>
+    <script src="js/ai/ai_actions.js"></script>
+    <script src="js/ai/ai_map_utils.js"></script>
     <script src="js/ai/state_exploring.js"></script>
     <script src="js/ai/state_seeking_resources.js"></script>
+    <script src="js/ai/state_healing.js"></script>
     <script src="js/ai/state_engaging_enemy.js"></script>
     <script src="js/ai/state_fleeing.js"></script>
-    <script src="js/ai/state_healing.js"></script> <!-- Added missing state handler 2025-04-09 -->
-    <script src="js/map.js"></script>
-    <script src="js/player.js"></script>
-    <script src="js/ai.js"></script>
-    <script src="js/game.js"></script>
+    <script src="js/ai.js"></script> <!-- Contains performReevaluation, executeAiTurns -->
+    <!-- Player & Presentation -->
+    <script src="js/player.js"></script> <!-- Minimal now -->
     <script src="js/drawing.js"></script>
     <script src="js/input.js"></script>
+    <script src="js/ui.js"></script> <!-- NEW UI Module -->
+    <!-- Main -->
     <script src="js/main.js"></script>
 </body>
 </html>

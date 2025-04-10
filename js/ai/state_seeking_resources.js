@@ -1,17 +1,25 @@
 console.log("state_seeking_resources.js loaded");
 
 /**
- * Handles AI logic when in the SEEKING_RESOURCES state.
- * Attempts to move towards the target resource. If the resource is gone upon arrival
- * or initially, re-evaluates the situation. If the AI reaches the resource, it picks it up.
+ * Handles AI logic when in the SEEKING_RESOURCES state, using gameState.
+ * Attempts to move towards the target resource. Re-evaluates if the resource is gone.
  * @param {object} enemy - The enemy object.
- * @returns {boolean} - True if an action was taken (move, pickup, wait), false if re-evaluation is needed.
+ * @param {GameState} gameState - The current game state.
+ * @returns {boolean} - True if an action was taken (move, wait), false if re-evaluation is needed or target invalid.
  */
-function handleSeekingResourcesState(enemy) {
+function handleSeekingResourcesState(enemy, gameState) {
+    // Check dependencies
+    if (!enemy || !gameState || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function' || typeof performReevaluation !== 'function' || typeof moveTowards !== 'function') {
+        console.error("handleSeekingResourcesState: Missing enemy, gameState, or required functions.");
+        return false; // Cannot act without dependencies
+    }
+    const enemyId = enemy.id || 'Unknown Enemy';
+    const { mapData } = gameState; // Destructure mapData
+
     // --- 1. Validate Target Resource Existence ---
     if (!enemy.targetResourceCoords) {
-        console.warn(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) in SEEKING state without targetResourceCoords. Re-evaluating.`);
-        performReevaluation(enemy);
+        console.warn(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) in SEEKING state without targetResourceCoords. Re-evaluating.`);
+        performReevaluation(enemy, gameState); // Pass gameState
         return false; // Needs re-evaluation
     }
 
@@ -19,59 +27,60 @@ function handleSeekingResourcesState(enemy) {
     const targetCol = enemy.targetResourceCoords.col;
 
     // Check if target coordinates are valid map indices
-    if (targetRow < 0 || targetRow >= GRID_HEIGHT || targetCol < 0 || targetCol >= GRID_WIDTH || !mapData || !mapData[targetRow]) {
-        console.warn(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) target resource coords (${targetRow},${targetCol}) are invalid or mapData missing. Re-evaluating.`);
+    // Assume GRID_HEIGHT, GRID_WIDTH are globally available for now
+    if (targetRow < 0 || targetRow >= GRID_HEIGHT || targetCol < 0 || targetCol >= GRID_WIDTH || !mapData[targetRow]) {
+        console.warn(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) target resource coords (${targetRow},${targetCol}) are invalid or mapData missing. Re-evaluating.`);
         enemy.targetResourceCoords = null;
-        performReevaluation(enemy);
+        performReevaluation(enemy, gameState); // Pass gameState
         return false; // Needs re-evaluation
     }
 
+    // Check if the resource is still there using gameState.mapData
+    // Assume TILE_MEDKIT, TILE_AMMO are globally available for now
     const currentTile = mapData[targetRow][targetCol];
     const isResourceTile = (currentTile === TILE_MEDKIT || currentTile === TILE_AMMO);
 
     // --- 2. Re-evaluation if Resource is Gone (Before Moving) ---
     if (!isResourceTile) {
-        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) finds target resource at (${targetRow},${targetCol}) is already gone. Re-evaluating...`, LOG_CLASS_ENEMY_EVENT);
+        // Pass gameState to logMessage
+        Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) finds target resource at (${targetRow},${targetCol}) is already gone. Re-evaluating...`, gameState, LOG_CLASS_ENEMY_EVENT);
         enemy.targetResourceCoords = null; // Clear the invalid target
-        performReevaluation(enemy);
+        performReevaluation(enemy, gameState); // Pass gameState
         return false; // Needs re-evaluation
     }
 
     // --- 3. Attempt Movement Towards Resource ---
     let actionTaken = false;
     if (enemy.row !== targetRow || enemy.col !== targetCol) {
-        // moveTowards returns true if it moved (or attempted random fallback), false if truly blocked
-        actionTaken = moveTowards(enemy, targetRow, targetCol, "resource");
-        // If moveTowards returned true, the action (move or wait due to block) is complete for this turn.
-        // If moveTowards returned false (truly blocked), we might consider it a 'wait' action.
+        // Pass gameState to moveTowards
+        actionTaken = moveTowards(enemy, targetRow, targetCol, "resource", gameState);
         if (!actionTaken) {
-             Game.logMessage(`Enemy ${enemy.id} waits (blocked from resource).`, LOG_CLASS_ENEMY_EVENT);
-             actionTaken = true; // Treat being blocked as a 'wait' action for turn completion.
+             // If moveTowards returned false (blocked), treat as wait
+             Game.logMessage(`Enemy ${enemyId} waits (blocked from resource).`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
+             actionTaken = true;
         }
     } else {
-        // Already at the target, proceed to pickup check. No move action needed.
-        // We don't set actionTaken=true yet, pickup is the action.
-    }
-
-    // --- 4. Check if Arrived at Target Coords ---
-    // Note: The actual pickup is handled by Game.checkAndPickupResourceAt, called via
-    // Game.updateUnitPosition within the moveTowards function during the final step.
-    if (enemy.row === targetRow && enemy.col === targetCol) {
-        // We assume the pickup was successful if moveTowards landed us here.
-        // The checkAndPickupResourceAt function already logged the specific pickup.
-        Game.logMessage(`Enemy ${enemy.id} reached target resource location (${enemy.row},${enemy.col}). Transitioning to Exploring.`, LOG_CLASS_ENEMY_EVENT);
-
+        // Already at the target location. The pickup logic is implicitly handled
+        // by updateUnitPosition which should have been called by moveTowards
+        // on the *previous* turn's successful move *onto* the resource tile.
+        // If we are here, it means we are *already* on the tile.
+        // The resource should have been picked up, and the tile changed.
+        // The check at the start of this function (!isResourceTile) should catch
+        // if the resource was picked up by someone else *before* this turn started.
+        // If we are on the tile and it *is* still a resource tile (somehow pickup failed?),
+        // we should probably re-evaluate or attempt pickup again explicitly.
+        // For now, assume arrival means pickup happened implicitly via moveTowards->updateUnitPosition->checkAndPickup.
+        // Log arrival and transition.
+        Game.logMessage(`Enemy ${enemyId} arrived at resource location (${enemy.row},${enemy.col}). Transitioning to Exploring.`, gameState, LOG_CLASS_ENEMY_EVENT); // Pass gameState
         enemy.targetResourceCoords = null; // Clear target
-        enemy.state = AI_STATE_EXPLORING; // Transition back to exploring
-        actionTaken = true; // Reaching the destination counts as the action for this state handler turn.
-        // Return true below
+        enemy.state = AI_STATE_EXPLORING; // Transition back
+        actionTaken = true; // Reaching/being at destination counts as action
     }
-    // If the resource disappeared before the AI could move onto it, the earlier check
-    // (!isResourceTile) or the moveTowards function failing would have handled it.
 
-    // If we moved towards the target but didn't arrive, actionTaken is true (from moveTowards).
-    // If we were already at the target and picked it up, actionTaken is true.
-    // If we were already at the target but it was gone, we returned false above.
-    // If we tried to move but were blocked, actionTaken is true (treated as wait).
+    // --- 4. Check if Arrived (Handled within step 3 logic now) ---
+    // The logic above now handles the arrival case. If the enemy moved this turn
+    // but didn't arrive, actionTaken is true from moveTowards. If the enemy
+    // was already at the location, actionTaken is set to true in the 'else' block.
+
     return actionTaken;
 }
