@@ -245,7 +245,7 @@ function resetGame() {
         player.hp = player.maxHp;           // Reset HP to new max
         player.resources = {
             medkits: PLAYER_START_MEDKITS || 0, // Use config
-            ammo: PLAYER_START_AMMO || 3        // Use config
+            ammo: PLAYER_START_AMMO // Use config (Removed || 3 fallback)
         };
         const startPos = findStartPosition(mapData, GRID_WIDTH, GRID_HEIGHT, TILE_LAND, occupiedCoords);
         if (startPos) {
@@ -319,7 +319,7 @@ function initializeGame() {
             player.hp = player.maxHp; // Start at full health
             player.resources = {
                 medkits: PLAYER_START_MEDKITS || 0,
-                ammo: PLAYER_START_AMMO || 3
+                ammo: PLAYER_START_AMMO // Use config (Removed || 3 fallback)
             };
             console.log("INIT: Player placed successfully.");
         } else {

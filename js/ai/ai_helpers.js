@@ -107,40 +107,46 @@ function hasClearLineOfSight(unitA, unitB, maxRange) {
 /**
  * Finds valid adjacent land cells for a unit to move into.
  * @param {object} unit - The unit (player or enemy) with {row, col}.
- * @returns {Array<object>} - An array of {row, col} objects for valid moves.
+ * @returns {Array<object>} - An array of {row, col} objects for valid moves (within map bounds, correct tile type, unoccupied, and inside safe zone).
  */
 function getValidMoves(unit) {
     const possibleMoves = [];
     const directions = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
+    const safeZone = Game.getSafeZone(); // Get current safe zone boundaries
 
     for (const dir of directions) {
         const targetRow = unit.row + dir.dr;
         const targetCol = unit.col + dir.dc;
 
+        // 1. Check Map Boundaries
         if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
-            // Allow movement onto LAND, MEDKIT, or AMMO tiles
-            if (typeof mapData !== 'undefined' && mapData[targetRow]) {
-                const tileType = mapData[targetRow][targetCol];
-                if (tileType === TILE_LAND || tileType === TILE_MEDKIT || tileType === TILE_AMMO) {
-                    let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol);
-                    let occupiedByOtherEnemy = false;
-                    if (enemies && enemies.length > 0) {
+            // 2. Check Safe Zone Boundaries
+            if (targetRow >= safeZone.minRow && targetRow <= safeZone.maxRow && targetCol >= safeZone.minCol && targetCol <= safeZone.maxCol) {
+                // 3. Check Tile Type (Allow LAND, MEDKIT, AMMO)
+                if (typeof mapData !== 'undefined' && mapData[targetRow]) {
+                    const tileType = mapData[targetRow][targetCol];
+                    if (tileType === TILE_LAND || tileType === TILE_MEDKIT || tileType === TILE_AMMO) {
+                        // 4. Check Occupancy
+                        let occupiedByPlayer = (typeof player !== 'undefined' && player.hp > 0 && player.row === targetRow && player.col === targetCol);
+                        let occupiedByOtherEnemy = false;
+                        if (enemies && enemies.length > 0) {
                     for (const otherEnemy of enemies) {
                         if (!otherEnemy || (unit.id && otherEnemy.id === unit.id) || otherEnemy.hp <= 0) continue; // Skip self or dead
                         if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) {
                             occupiedByOtherEnemy = true;
-                            break;
+                                    break;
+                                }
+                            }
                         }
+                        if (!occupiedByPlayer && !occupiedByOtherEnemy) {
+                            possibleMoves.push({ row: targetRow, col: targetCol }); // All checks passed
                         }
-                    }
-                    if (!occupiedByPlayer && !occupiedByOtherEnemy) {
-                        possibleMoves.push({ row: targetRow, col: targetCol });
-                    }
-                } // End check for valid tile types
-            } else if (typeof mapData === 'undefined' || !mapData[targetRow]) {
-                 console.error("getValidMoves: mapData error at row", targetRow);
-            } // End check for valid map data row
-        }
+                    } // End check for valid tile types
+                } else if (typeof mapData === 'undefined' || !mapData[targetRow]) {
+                     console.error("getValidMoves: mapData error at row", targetRow);
+                } // End check for valid map data row
+            } // End check for safe zone
+        } // End check for map boundaries
     }
     return possibleMoves;
 }
@@ -197,28 +203,34 @@ function findNearestVisibleEnemy(enemy) {
  * @param {object} enemy - The searching enemy object.
  * @param {number} range - The maximum search distance (Manhattan distance).
  * @param {number} resourceTileType - The TILE_* constant for the resource.
- * @returns {object|null} - The coordinates {row, col} of the nearest resource, or null.
+ * @returns {object|null} - The coordinates {row, col} of the nearest resource inside the safe zone, or null.
  */
 function findNearbyResource(enemy, range, resourceTileType) {
     let nearestResource = null;
     let minDistance = Infinity;
+    const safeZone = Game.getSafeZone(); // Get current safe zone
 
     // Simple square scan around the enemy
     for (let r = Math.max(0, enemy.row - range); r <= Math.min(GRID_HEIGHT - 1, enemy.row + range); r++) {
         for (let c = Math.max(0, enemy.col - range); c <= Math.min(GRID_WIDTH - 1, enemy.col + range); c++) {
-            const dist = Math.abs(r - enemy.row) + Math.abs(c - enemy.col); // Manhattan distance for range check simplicity
-            if (dist <= range && dist < minDistance) {
-                if (mapData && mapData[r] && mapData[r][c] === resourceTileType) {
-                    // Found a resource tile within range, now check LOS
-                    const resourceCoords = { row: r, col: c };
-                    // Use Euclidean distance for LOS check range, matching hasClearLineOfSight
-                    const losRange = Math.sqrt(Math.pow(r - enemy.row, 2) + Math.pow(c - enemy.col, 2));
-                    if (hasClearLineOfSight(enemy, resourceCoords, range)) { // Use 'range' as max distance for LOS check too
-                        minDistance = dist; // Store Manhattan distance for comparison
-                        nearestResource = resourceCoords;
+            // 1. Check if the coordinate is within the safe zone
+            if (r >= safeZone.minRow && r <= safeZone.maxRow && c >= safeZone.minCol && c <= safeZone.maxCol) {
+                const dist = Math.abs(r - enemy.row) + Math.abs(c - enemy.col); // Manhattan distance for range check simplicity
+                // 2. Check if within range and closer than previous finds
+                if (dist <= range && dist < minDistance) {
+                    // 3. Check if it's the correct resource type
+                    if (mapData && mapData[r] && mapData[r][c] === resourceTileType) {
+                        // 4. Check Line of Sight
+                        const resourceCoords = { row: r, col: c };
+                        // Use Euclidean distance for LOS check range, matching hasClearLineOfSight
+                        const losRange = Math.sqrt(Math.pow(r - enemy.row, 2) + Math.pow(c - enemy.col, 2));
+                        if (hasClearLineOfSight(enemy, resourceCoords, range)) { // Use 'range' as max distance for LOS check too
+                            minDistance = dist; // Store Manhattan distance for comparison
+                            nearestResource = resourceCoords;
+                        }
                     }
                 }
-            }
+            } // End safe zone check
         }
     }
     return nearestResource;

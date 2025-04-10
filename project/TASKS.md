@@ -64,8 +64,7 @@
     *   [x] Implement Knockback mechanic on attacks. (Completed: 2025-04-09)
     *   [x] Implement AI Medkit Usage logic (decide when to use, apply healing). (Validated: 2025-04-09 after debugging)
     *   [x] Fix AI Ammo Pickup Tile Update: Ensure map tile changes back to `TILE_LAND` after AI picks up ammo. Ensure medkit pickup is working as well. (Discovered: 2025-04-09) (Completed via Movement/Pickup Refactor 2025-04-09)
-    *   [ ] Review/Tune AI Ammo Seeking threshold and proactive logic. (Discovered: 2025-04-09)
-
+    *   [x] Review/Tune AI Ammo Seeking threshold and proactive logic. (Discovered: 2025-04-09) (Threshold adjusted manually 2025-04-09)
 
 
 4.  **Unit Testing:** (Started: 2025-04-08)
@@ -100,6 +99,9 @@
 ---
 ## Discovered During Work
 *(Add new tasks identified during development here)*
+*   [ ] Fix player starting ammo initialization in js/main.js to correctly use PLAYER_START_AMMO from config.js (remove || 3 fallback). (Discovered: 2025-04-09)
+*   [ ] Modify findNearbyResource to ignore resources outside the safe zone. (Discovered: 2025-04-09)
+*   [ ] Modify getValidMoves to prevent movement into/within the storm (check safe zone). (Discovered: 2025-04-09)
 *   [ ] Refactor ai_helpers.js into smaller, categorized modules (e.g., perception, movement, actions) if it becomes too large. (Discovered: 2025-04-09)
 *   [ ] AI Tuning: Consider knockback effect in movement decisions (esp. for melee AI). (Discovered: 2025-04-09)
 *   [x] Further refine AI risk assessment in ENGAGE state (e.g., consider safer alternative moves, avoid known threats, prefer maintaining LOS). (Completed: 2025-04-09)
