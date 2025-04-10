@@ -22,7 +22,7 @@ const FEATURE_SPAWN_CHANCE_AMMO = 0.04;   // Example: 4% chance on land (after m
 
 // Player Stats & Starting Conditions
 const PLAYER_MAX_HP = 15;
-const PLAYER_START_AMMO = 3;
+const PLAYER_START_AMMO = 0;
 const PLAYER_START_MEDKITS = 0;
 
 // AI Stats & Variations
@@ -41,14 +41,16 @@ const AI_STATE_EXPLORING = 'EXPLORING';
 const AI_STATE_SEEKING_RESOURCES = 'SEEKING_RESOURCES';
 const AI_STATE_ENGAGING_ENEMY = 'ENGAGING_ENEMY';
 const AI_STATE_FLEEING = 'FLEEING';
+const AI_STATE_HEALING = 'HEALING'; // Added 2025-04-09
 
 // AI FSM Decision Thresholds
-const AI_SEEK_HEALTH_THRESHOLD = 0.5; // Example: Seek medkit if health < 50%
+const AI_HEAL_PRIORITY_THRESHOLD = 0.5; // Example: Prioritize healing (use/seek medkit) if health < 50%
 const AI_FLEE_HEALTH_THRESHOLD = 0.25; // Example: Flee if health < 25%
+const AI_SEEK_AMMO_THRESHOLD = 1;      // Example: Seek ammo if count is less than this
 
 // AI Resource Interaction
 const AI_AMMO_PICKUP_AMOUNT = 1; // Example: Amount of ammo AI gains from pickup
-const AI_START_MEDKITS = 0;      // Example: Starting medkits for AI
+const AI_START_MEDKITS = 1;      // Example: Starting medkits for AI (Changed from 0 on 2025-04-09)
 
 // AI Exploring State Behavior
 const AI_PROACTIVE_SCAN_RANGE = 3; // Example: Range for scanning non-critical resources

@@ -37,6 +37,7 @@ const Game = {
         if (this.gameLog.length > MAX_LOG_MESSAGES) { // Use constant directly
             this.gameLog.shift(); // Use shift
         }
+        // Restore log display update (2025-04-09)
         if (typeof updateLogDisplay === 'function') { updateLogDisplay(); }
         else { console.warn("updateLogDisplay function not found!"); }
     },

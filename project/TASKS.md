@@ -60,9 +60,10 @@
             *   [x] Modify `executeAiTurns` to loop until action or limit. (Completed: 2025-04-09)
     *   [x] Implement `handleFleeingState` function (break LOS, transitions). (Completed: 2025-04-09)
     *   [x] Implement Knockback mechanic on attacks. (Completed: 2025-04-09)
-    *   [ ] Implement AI Medkit Usage logic (decide when to use, apply healing). (Added: 2025-04-09)
-    *   [ ] Implement perception/scanning logic within state handlers (using range, LOS). (Likely part of state handler implementation)
-    *   [ ] Implement resource pickup logic (update AI stats, update map). (Likely part of SeekingResources state)
+    *   [x] Implement AI Medkit Usage logic (decide when to use, apply healing). (Validated: 2025-04-09 after debugging)
+    *   [ ] Fix AI Ammo Pickup Tile Update: Ensure map tile changes back to `TILE_LAND` after AI picks up ammo. Ensure medkit pickup is working as well. (Discovered: 2025-04-09)
+    *   [ ] Review/Tune AI Ammo Seeking threshold and proactive logic. (Discovered: 2025-04-09)
+
 
 
 4.  **Unit Testing:** (Started: 2025-04-08)
@@ -97,9 +98,8 @@
 ---
 ## Discovered During Work
 *(Add new tasks identified during development here)*
+*   [ ] Refactor ai_helpers.js into smaller, categorized modules (e.g., perception, movement, actions) if it becomes too large. (Discovered: 2025-04-09)
 *   [ ] AI Tuning: Consider knockback effect in movement decisions (esp. for melee AI). (Discovered: 2025-04-09)
-*   [ ] Fix AI Ammo Pickup Tile Update: Ensure map tile changes back to `TILE_LAND` after AI picks up ammo. (Discovered: 2025-04-09)
-*   [ ] Review/Tune AI Ammo Seeking threshold and proactive logic. (Discovered: 2025-04-09)
 *   [x] Further refine AI risk assessment in ENGAGE state (e.g., consider safer alternative moves, avoid known threats, prefer maintaining LOS). (Completed: 2025-04-09)
 *   [ ] Refactor movement safety check (avoiding known threats) into a reusable helper function in `ai_helpers.js` and update `handleFleeingState` and `handleEngagingEnemyState` to use it. (Discovered: 2025-04-09)
 *   [ ] Refine AI target selection logic (consider HP, randomness, etc.). (Discovered: 2025-04-08)

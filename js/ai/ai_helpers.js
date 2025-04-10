@@ -315,77 +315,6 @@ function moveRandomly(enemy) {
     return false; // No valid moves
 }
 
-/**
- * Helper function to re-evaluate the situation when a target is invalid or gone.
- * Priority: Threats -> Critical Needs -> Proactive Needs -> Default Explore.
- * Modifies the enemy's state and potentially target directly.
- * @param {object} enemy - The enemy object.
- */
-function performReevaluation(enemy) {
-    // (a) Check Threats
-    const nearestEnemy = findNearestVisibleEnemy(enemy);
-    if (nearestEnemy) {
-        const hpPercent = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP);
-        if (hpPercent < AI_FLEE_HEALTH_THRESHOLD) {
-            enemy.state = AI_STATE_FLEEING;
-            enemy.targetEnemy = nearestEnemy;
-            enemy.targetResourceCoords = null; // Clear resource target when fleeing
-            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Sees ${nearestEnemy.id || 'Player'} and flees!`, LOG_CLASS_ENEMY_EVENT);
-        } else {
-            enemy.state = AI_STATE_ENGAGING_ENEMY;
-            enemy.targetEnemy = nearestEnemy;
-            enemy.targetResourceCoords = null; // Clear resource target when engaging
-            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Sees ${nearestEnemy.id || 'Player'} and engages!`, LOG_CLASS_ENEMY_EVENT);
-        }
-        return; // State changed
-    }
-    // Clear enemy target if no threat found (might have been set previously)
-    enemy.targetEnemy = null;
-
-    // (b) Check Critical Needs
-    const needsMedkit = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP) < AI_SEEK_HEALTH_THRESHOLD;
-    const needsAmmo = enemy.resources.ammo <= 0;
-
-    if (needsMedkit) {
-        const nearbyMedkit = findNearbyResource(enemy, enemy.detectionRange, TILE_MEDKIT);
-        if (nearbyMedkit) {
-            enemy.targetResourceCoords = nearbyMedkit;
-            enemy.state = AI_STATE_SEEKING_RESOURCES; // Stay (or re-enter) seeking
-            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Critically needs Medkit, found another nearby at (${nearbyMedkit.row},${nearbyMedkit.col}).`, LOG_CLASS_ENEMY_EVENT);
-            return; // Target updated, state confirmed
-        }
-    }
-    if (needsAmmo) { // Check ammo only if medkit wasn't critically needed or found
-        const nearbyAmmo = findNearbyResource(enemy, enemy.detectionRange, TILE_AMMO);
-        if (nearbyAmmo) {
-            enemy.targetResourceCoords = nearbyAmmo;
-            enemy.state = AI_STATE_SEEKING_RESOURCES; // Stay (or re-enter) seeking
-            Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Critically needs Ammo, found some nearby at (${nearbyAmmo.row},${nearbyAmmo.col}).`, LOG_CLASS_ENEMY_EVENT);
-            return; // Target updated, state confirmed
-        }
-    }
-
-    // (c) Check Proactive Needs
-    let nearbyResource = findNearbyResource(enemy, AI_PROACTIVE_SCAN_RANGE, TILE_MEDKIT);
-    let resourceName = 'Medkit';
-    if (!nearbyResource) {
-        nearbyResource = findNearbyResource(enemy, AI_PROACTIVE_SCAN_RANGE, TILE_AMMO);
-        resourceName = 'Ammo';
-    }
-    if (nearbyResource) {
-        enemy.targetResourceCoords = nearbyResource;
-        enemy.state = AI_STATE_SEEKING_RESOURCES; // Stay (or re-enter) seeking
-        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Proactively seeks ${resourceName} nearby at (${nearbyResource.row},${nearbyResource.col}).`, LOG_CLASS_ENEMY_EVENT);
-        return; // Target updated, state confirmed
-    }
-
-    // (d) Default to Exploring
-    Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) re-evaluates: Found no threats or other resources, switching to Exploring.`, LOG_CLASS_ENEMY_EVENT);
-    enemy.state = AI_STATE_EXPLORING;
-    enemy.targetResourceCoords = null; // Clear resource target when exploring
-    enemy.targetEnemy = null; // Ensure enemy target is also clear
-    // No return needed, state changed
-}
 
 /**
  * Calculates the potential destination tile for knockback based on attacker/target positions.
@@ -426,4 +355,29 @@ function calculateKnockbackDestination(attacker, target) {
     // console.log(`Knockback Calc: Attacker (${attacker.row},${attacker.col}), Target (${target.row},${target.col}) -> Push (${pushDr},${pushDc}) -> Dest (${destinationRow},${destinationCol})`); // Debug
 
     return { row: destinationRow, col: destinationCol };
+}
+
+// --- AI Action Helpers ---
+
+/**
+ * Applies healing from a medkit to an enemy.
+ * Decrements medkit count and increases HP, capped at max HP.
+ * Assumes the decision to use the medkit has already been made.
+ * @param {object} enemy - The enemy object using the medkit.
+ */
+function useMedkit(enemy) {
+    // Check and decrement enemy.resources.medkits
+    if (!enemy || !enemy.resources || enemy.resources.medkits <= 0) {
+        console.error(`useMedkit called for enemy ${enemy?.id} with no medkits.`);
+        return; // Cannot use if none available
+    }
+
+    enemy.resources.medkits--;
+    const healAmount = HEAL_AMOUNT; // Use global constant
+    const maxHp = enemy.maxHp || PLAYER_MAX_HP; // Use enemy's maxHp if defined, else fallback
+
+    enemy.hp = Math.min(enemy.hp + healAmount, maxHp);
+
+    // Logging is handled by the state handler that calls this
+    // Game.logMessage(`Enemy ${enemy.id} used a medkit, HP: ${enemy.hp}/${maxHp}, Medkits left: ${enemy.resources.medkits}`, LOG_CLASS_ENEMY_EVENT);
 }

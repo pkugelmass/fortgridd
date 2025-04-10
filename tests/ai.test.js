@@ -37,16 +37,18 @@ QUnit.module('AI FSM', function(hooks) {
         window.AI_STATE_SEEKING_RESOURCES = 'SEEKING_RESOURCES';
         window.AI_STATE_ENGAGING_ENEMY = 'ENGAGING_ENEMY';
         window.AI_STATE_FLEEING = 'FLEEING';
+        window.AI_STATE_HEALING = 'HEALING'; // Added 2025-04-09
         window.AI_FLEE_HEALTH_THRESHOLD = 0.25;
         window.AI_SEEK_HEALTH_THRESHOLD = 0.5;
+        window.AI_USE_MEDKIT_THRESHOLD = 0.35; // Added 2025-04-09
         window.AI_RANGE_MAX = 8; // Default range
         window.AI_PROACTIVE_SCAN_RANGE = 3;
         window.AI_EXPLORE_MOVE_AGGRESSION_CHANCE = 0.6;
         window.AI_EXPLORE_MOVE_RANDOM_CHANCE = 0.3;
         window.AI_EXPLORE_WAIT_CHANCE = 0.1;
         window.LOG_CLASS_ENEMY_EVENT = 'log-enemy-event';
-        // Add other constants used by handleExploringState and its helpers
         window.PLAYER_MAX_HP = 15; // Example value
+        window.HEAL_AMOUNT = 5; // Example heal amount for tests
 
         // --- Mock AI Helper Functions ---
         // Default mocks (can be overridden in specific tests)
@@ -59,6 +61,11 @@ QUnit.module('AI FSM', function(hooks) {
         window.traceLine = function(startRow, startCol, endRow, endCol) { return true; }; // Default: assume clear LOS
         // Mock isCellOccupied if needed by movement helpers
         window.isCellOccupied = function(row, col, excludeUnitId = null) { return false; }; // Default: assume cell is free
+
+        // Mock new state handler and helper (Added 2025-04-09)
+        window.handleHealingState = function(enemy) { return false; }; // Default mock: does nothing, returns false
+        window.useMedkit = function(enemy) { /* Default mock does nothing */ };
+        window.performReevaluation = function(enemy) { /* Default mock does nothing */ }; // Add mock for reevaluation itself
     });
 
     // --- handleExploringState Tests ---
@@ -524,5 +531,232 @@ QUnit.module('AI FSM', function(hooks) {
         assert.strictEqual(enemy.state, AI_STATE_EXPLORING, 'Enemy should transition to EXPLORING state after finding resource gone upon arrival');
     });
     */
+
+    // --- performReevaluation Transition Tests (Added 2025-04-09) ---
+
+    QUnit.test('performReevaluation: Transition to FLEEING (Threat + Critical HP)', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', row: 1, col: 1, hp: 3, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, medkits: 1 }; // Critical HP
+        window.enemies.push(enemy);
+        window.player.row = 1; window.player.col = 2; // Player nearby
+
+        window.findNearestVisibleEnemy = function(unit) { return window.player; }; // Threat found
+
+        // Act
+        performReevaluation(enemy);
+
+        // Assert
+        assert.strictEqual(enemy.state, AI_STATE_FLEEING, 'State should be FLEEING');
+    });
+
+     QUnit.test('performReevaluation: Transition to ENGAGING_ENEMY (Threat + Sufficient HP)', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', row: 1, col: 1, hp: 10, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, medkits: 1 }; // Sufficient HP
+        window.enemies.push(enemy);
+        window.player.row = 1; window.player.col = 2; // Player nearby
+
+        window.findNearestVisibleEnemy = function(unit) { return window.player; }; // Threat found
+
+        // Act
+        performReevaluation(enemy);
+
+        // Assert
+        assert.strictEqual(enemy.state, AI_STATE_ENGAGING_ENEMY, 'State should be ENGAGING_ENEMY');
+    });
+
+    QUnit.test('performReevaluation: Transition to HEALING (No Threat + Low HP + Has Medkit)', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', row: 1, col: 1, hp: 4, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, medkits: 1 }; // Low HP (4/15 ~ 26% < 35% threshold), has medkit
+        window.enemies.push(enemy);
+
+        window.findNearestVisibleEnemy = function(unit) { return null; }; // NO Threat
+
+        // Act
+        performReevaluation(enemy);
+
+        // Assert
+        assert.strictEqual(enemy.state, AI_STATE_HEALING, 'State should be HEALING');
+    });
+
+     QUnit.test('performReevaluation: NO Transition to HEALING (No Threat + Low HP + NO Medkit)', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', row: 1, col: 1, hp: 4, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, medkits: 0 }; // Low HP, NO medkit
+        window.enemies.push(enemy);
+
+        window.findNearestVisibleEnemy = function(unit) { return null; }; // NO Threat
+        // Mock finding a resource to ensure it doesn't heal but seeks instead
+        const medkitCoords = { row: 0, col: 1 };
+        window.mapData[medkitCoords.row][medkitCoords.col] = TILE_MEDKIT;
+        window.findNearbyResource = function(unit, range, type) {
+            if (type === TILE_MEDKIT) return medkitCoords;
+            return null;
+        };
+
+
+        // Act
+        performReevaluation(enemy);
+
+        // Assert
+        // It should seek the medkit because HP is below AI_SEEK_HEALTH_THRESHOLD (4/15=26% < 50%)
+        assert.strictEqual(enemy.state, AI_STATE_SEEKING_RESOURCES, 'State should be SEEKING_RESOURCES (not HEALING)');
+    });
+
+     QUnit.test('performReevaluation: NO Transition to HEALING (No Threat + Sufficient HP + Has Medkit)', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', row: 1, col: 1, hp: 10, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, medkits: 1 }; // Sufficient HP (10/15 ~ 66% > 35% threshold), has medkit
+        window.enemies.push(enemy);
+
+        window.findNearestVisibleEnemy = function(unit) { return null; }; // NO Threat
+        window.findNearbyResource = function(unit, range, type) { return null; }; // No resources needed
+
+        // Act
+        performReevaluation(enemy);
+
+        // Assert
+        assert.strictEqual(enemy.state, AI_STATE_EXPLORING, 'State should be EXPLORING (not HEALING)');
+    });
+
+     QUnit.test('performReevaluation: Transition to SEEKING_RESOURCES (No Threat, Low HP, No Medkit, Resource Visible)', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', row: 1, col: 1, hp: 6, maxHp: 15, state: AI_STATE_EXPLORING, detectionRange: 5, medkits: 0 }; // Low HP (6/15 = 40% < 50% seek threshold), no medkit
+        window.enemies.push(enemy);
+        const medkitCoords = { row: 0, col: 1 };
+        window.mapData[medkitCoords.row][medkitCoords.col] = TILE_MEDKIT;
+
+        window.findNearestVisibleEnemy = function(unit) { return null; }; // NO Threat
+        window.findNearbyResource = function(unit, range, type) {
+            if (type === TILE_MEDKIT) return medkitCoords;
+            return null;
+        };
+
+        // Act
+        performReevaluation(enemy);
+
+        // Assert
+        assert.strictEqual(enemy.state, AI_STATE_SEEKING_RESOURCES, 'State should be SEEKING_RESOURCES');
+        assert.deepEqual(enemy.targetResourceCoords, medkitCoords, 'Target should be the visible medkit');
+    });
+
+     QUnit.test('performReevaluation: Transition to EXPLORING (Default - No Threat, Sufficient HP, No Resources Needed/Visible)', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', row: 1, col: 1, hp: 15, maxHp: 15, state: AI_STATE_FLEEING, detectionRange: 5, medkits: 1 }; // Start in non-exploring state
+        window.enemies.push(enemy);
+
+        window.findNearestVisibleEnemy = function(unit) { return null; }; // NO Threat
+        window.findNearbyResource = function(unit, range, type) { return null; }; // No resources
+
+        // Act
+        performReevaluation(enemy);
+
+        // Assert
+        assert.strictEqual(enemy.state, AI_STATE_EXPLORING, 'State should default to EXPLORING');
+    });
+
+
+    // --- handleHealingState Tests (Added 2025-04-09) ---
+
+    QUnit.test('handleHealingState: Uses medkit and returns true when medkits available', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', row: 1, col: 1, hp: 5, maxHp: 15, state: AI_STATE_HEALING, medkits: 1 };
+        window.enemies.push(enemy);
+        let useMedkitCalled = false;
+        // Override useMedkit mock for this test
+        window.useMedkit = function(unit) {
+            assert.strictEqual(unit.id, enemy.id, "useMedkit called with correct enemy");
+            useMedkitCalled = true;
+            // Simulate the heal effect for assertion consistency if needed, though the helper test covers mechanics
+            unit.hp += HEAL_AMOUNT;
+            unit.medkits--;
+        };
+
+        // Act
+        const result = handleHealingState(enemy);
+
+        // Assert
+        assert.ok(useMedkitCalled, "useMedkit helper function should be called");
+        assert.strictEqual(result, true, "handleHealingState should return true (action taken)");
+        assert.strictEqual(enemy.medkits, 0, "Enemy medkits should be decremented");
+        assert.strictEqual(enemy.hp, 5 + HEAL_AMOUNT, "Enemy HP should be increased");
+    });
+
+    QUnit.test('handleHealingState: Does not use medkit and returns false if no medkits available', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', row: 1, col: 1, hp: 5, maxHp: 15, state: AI_STATE_HEALING, medkits: 0 }; // NO medkits
+        window.enemies.push(enemy);
+        let useMedkitCalled = false;
+        window.useMedkit = function(unit) { useMedkitCalled = true; }; // Track if called
+
+        let reevaluationCalled = false;
+        window.performReevaluation = function(unit) { // Mock reevaluation
+             assert.strictEqual(unit.id, enemy.id, "performReevaluation called on correct enemy");
+             reevaluationCalled = true;
+             unit.state = AI_STATE_EXPLORING; // Simulate reevaluation result
+        };
+
+
+        // Act
+        const result = handleHealingState(enemy);
+
+        // Assert
+        assert.notOk(useMedkitCalled, "useMedkit helper function should NOT be called");
+        assert.strictEqual(result, false, "handleHealingState should return false (no action taken)");
+        assert.strictEqual(enemy.medkits, 0, "Enemy medkits should remain 0");
+        assert.strictEqual(enemy.hp, 5, "Enemy HP should not change");
+        assert.ok(reevaluationCalled, "performReevaluation should be called as fallback");
+        assert.strictEqual(enemy.state, AI_STATE_EXPLORING, "State should be changed by mock reevaluation");
+    });
+
+
+    // --- useMedkit Helper Tests (Added 2025-04-09) ---
+
+    QUnit.test('useMedkit: Decrements medkits and increases HP', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', hp: 5, maxHp: 15, medkits: 2 };
+
+        // Act
+        useMedkit(enemy); // Call the actual helper
+
+        // Assert
+        assert.strictEqual(enemy.medkits, 1, "Medkits should decrement by 1");
+        assert.strictEqual(enemy.hp, 5 + HEAL_AMOUNT, "HP should increase by HEAL_AMOUNT");
+    });
+
+    QUnit.test('useMedkit: HP is capped at maxHp', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', hp: 13, maxHp: 15, medkits: 1 }; // HP close to max
+        window.HEAL_AMOUNT = 5; // Ensure heal amount would exceed max
+
+        // Act
+        useMedkit(enemy); // Call the actual helper
+
+        // Assert
+        assert.strictEqual(enemy.medkits, 0, "Medkits should decrement by 1");
+        assert.strictEqual(enemy.hp, 15, "HP should be capped at maxHp (15)");
+    });
+
+     QUnit.test('useMedkit: Handles enemy with defined maxHp property', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', hp: 18, maxHp: 20, medkits: 1 }; // Different maxHp
+        window.HEAL_AMOUNT = 5;
+
+        // Act
+        useMedkit(enemy); // Call the actual helper
+
+        // Assert
+        assert.strictEqual(enemy.medkits, 0, "Medkits should decrement by 1");
+        assert.strictEqual(enemy.hp, 20, "HP should be capped at enemy specific maxHp (20)");
+    });
+
+    QUnit.test('useMedkit: Does nothing if medkits is 0', function(assert) {
+        // Arrange
+        const enemy = { id: 'E1', hp: 5, maxHp: 15, medkits: 0 };
+
+        // Act
+        useMedkit(enemy); // Call the actual helper
+
+        // Assert
+        assert.strictEqual(enemy.medkits, 0, "Medkits should remain 0");
+        assert.strictEqual(enemy.hp, 5, "HP should not change");
+    });
 
 });
