@@ -57,9 +57,9 @@
     *   [x] Refactor AI turn logic for immediate action after re-evaluation. (Completed: 2025-04-09)
         *   [x] Modify state handlers to return true/false. (Completed: 2025-04-09)
         *   [x] Modify `performReevaluation` to only set state. (Verified: 2025-04-09)
-        *   [x] Modify `executeAiTurns` to loop until action or limit. (Completed: 2025-04-09)
+            *   [x] Modify `executeAiTurns` to loop until action or limit. (Completed: 2025-04-09)
     *   [x] Implement `handleFleeingState` function (break LOS, transitions). (Completed: 2025-04-09)
-    *   [ ] Implement Knockback mechanic on attacks.
+    *   [x] Implement Knockback mechanic on attacks. (Completed: 2025-04-09)
     *   [ ] Implement AI Medkit Usage logic (decide when to use, apply healing). (Added: 2025-04-09)
     *   [ ] Implement perception/scanning logic within state handlers (using range, LOS). (Likely part of state handler implementation)
     *   [ ] Implement resource pickup logic (update AI stats, update map). (Likely part of SeekingResources state)
@@ -72,11 +72,15 @@
     *   [x] Add tests for state transitions based on various conditions (Started with Exploring state). (Started: 2025-04-08)
     *   [x] Add tests for resource pickup functionality (`handleSeekingResourcesState`, `performReevaluation`). (Completed: 2025-04-08)
     *   [x] Add tests for basic state actions (moving, fleeing) (Started with Exploring state default actions). (Started: 2025-04-08)
+    *   [ ] Add unit tests for `calculateKnockbackDestination` helper function. (Added: 2025-04-09)
+    *   [ ] Expand unit tests for AI state handlers (Engaging, Fleeing, etc.). (Added: 2025-04-09)
 
- ### Ongoing
+
+ ### Ongoing / Refinement
 
  *   [ ] Add more unit tests as code is refactored/added.
  *   [ ] Fix commented-out unit tests in tests/ai.test.js for handleSeekingResourcesState. (Added: 2025-04-08)
+ *   [ ] Review AI state handler modules (`state_*.js`) for length and complexity; refactor if needed. (Added: 2025-04-09)
  *   [ ] Practice small, logical Git commits with clear messages.
 
 ---
@@ -93,6 +97,8 @@
 ---
 ## Discovered During Work
 *(Add new tasks identified during development here)*
+*   [ ] AI Tuning: Consider knockback effect in movement decisions (esp. for melee AI). (Discovered: 2025-04-09)
+*   [ ] Fix AI Ammo Pickup Tile Update: Ensure map tile changes back to `TILE_LAND` after AI picks up ammo. (Discovered: 2025-04-09)
 *   [ ] Review/Tune AI Ammo Seeking threshold and proactive logic. (Discovered: 2025-04-09)
 *   [x] Further refine AI risk assessment in ENGAGE state (e.g., consider safer alternative moves, avoid known threats, prefer maintaining LOS). (Completed: 2025-04-09)
 *   [ ] Refactor movement safety check (avoiding known threats) into a reusable helper function in `ai_helpers.js` and update `handleFleeingState` and `handleEngagingEnemyState` to use it. (Discovered: 2025-04-09)

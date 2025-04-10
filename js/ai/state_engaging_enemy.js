@@ -48,11 +48,65 @@ function handleEngagingEnemyState(enemy) {
         target.hp -= damage;
         enemy.resources.ammo--;
         const targetId = target.id || 'Player';
-        Game.logMessage(`Enemy ${enemy.id} shoots ${targetId} for ${damage} damage. (Ammo: ${enemy.resources.ammo})`, LOG_CLASS_ENEMY_EVENT);
+        let knockbackMsg = ""; // Initialize knockback message part
+
+        // --- Knockback Logic (Ranged) ---
+        if (target.hp > 0) { // Only apply knockback if target survived
+            const knockbackDest = calculateKnockbackDestination(enemy, target);
+            // console.log(`[KB Debug AI Ranged] Attacker (${enemy.row},${enemy.col}), Target (${target.row},${target.col})`); // DEBUG REMOVED
+            if (knockbackDest) {
+                const { row: destRow, col: destCol } = knockbackDest;
+                // console.log(`[KB Debug AI Ranged] Calculated Dest: (${destRow},${destCol})`); // DEBUG REMOVED
+                // Check destination validity (bounds, terrain, occupancy)
+                const isInBounds = destRow >= 0 && destRow < GRID_HEIGHT && destCol >= 0 && destCol < GRID_WIDTH;
+                let isTerrainValid = false;
+                if (isInBounds && mapData && mapData[destRow]) {
+                    const tileType = mapData[destRow][destCol];
+                    isTerrainValid = tileType !== TILE_WALL && tileType !== TILE_TREE;
+                }
+                let isOccupied = false;
+                if (isInBounds && isTerrainValid) {
+                    // Check player
+                    if (typeof player !== 'undefined' && player.hp > 0 && player.row === destRow && player.col === destCol) {
+                        isOccupied = true;
+                    }
+                    // Check other enemies
+                    if (!isOccupied && typeof enemies !== 'undefined') {
+                        for (const otherEnemy of enemies) {
+                            // Check if it's a different, living enemy at the destination
+                            if (otherEnemy && otherEnemy.hp > 0 && otherEnemy.id !== target.id && otherEnemy.row === destRow && otherEnemy.col === destCol) {
+                                isOccupied = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (isInBounds && isTerrainValid && !isOccupied) {
+                    // Game.logMessage(`${targetId} knocked back from (${target.row},${target.col}) to (${destRow},${destCol})!`, target === player ? LOG_CLASS_PLAYER_BAD : LOG_CLASS_ENEMY_EVENT); // REMOVED Redundant Log
+                    target.row = destRow;
+                    target.col = destCol;
+                    knockbackMsg = ` ${targetId} knocked back to (${destRow},${destCol}).`; // Store success message
+                    // Note: redrawCanvas happens at end of AI turn
+                } else {
+                    // Optional: Log why knockback failed
+                    // console.log(`[KB Debug AI Ranged] Blocked: Bounds=${isInBounds}, Terrain=${isTerrainValid}, Occupied=${isOccupied}`); // DEBUG REMOVED
+                    knockbackMsg = " Knockback blocked."; // Store blocked message
+                }
+            } else {
+                 // console.log(`[KB Debug AI Ranged] calculateKnockbackDestination returned null.`); // DEBUG REMOVED
+                 knockbackMsg = " Knockback calc error."; // Store error message
+            }
+        }
+        // --- End Knockback Logic ---
+
+        // Log combined attack and knockback message
+        Game.logMessage(`Enemy ${enemy.id} shoots ${targetId} for ${damage} damage. (Ammo: ${enemy.resources.ammo})${knockbackMsg}`, LOG_CLASS_ENEMY_EVENT);
+
 
         if (target.hp <= 0) {
             console.log(`Enemy ${enemy.id} defeated target ${targetId}.`);
-            Game.logMessage(`Enemy ${enemy.id} defeated ${targetId}!`, LOG_CLASS_ENEMY_EVENT); // Log defeat explicitly
+            // Game.logMessage(`Enemy ${enemy.id} defeated ${targetId}!`, LOG_CLASS_ENEMY_EVENT); // Defeat message handled by checkEndConditions now implicitly
             enemy.targetEnemy = null;
             performReevaluation(enemy); // Re-evaluate after kill
             return false; // Needs re-evaluation (find new target/state)
@@ -65,11 +119,64 @@ function handleEngagingEnemyState(enemy) {
         const damage = AI_ATTACK_DAMAGE; // Use AI's damage
         target.hp -= damage;
         const targetId = target.id || 'Player';
-        Game.logMessage(`Enemy ${enemy.id} melees ${targetId} for ${damage} damage.`, LOG_CLASS_ENEMY_EVENT);
+        let knockbackMsg = ""; // Initialize knockback message part
+
+        // --- Knockback Logic (Melee) ---
+        if (target.hp > 0) { // Only apply knockback if target survived
+            const knockbackDest = calculateKnockbackDestination(enemy, target);
+            // console.log(`[KB Debug AI Melee] Attacker (${enemy.row},${enemy.col}), Target (${target.row},${target.col})`); // DEBUG REMOVED
+            if (knockbackDest) {
+                const { row: destRow, col: destCol } = knockbackDest;
+                // console.log(`[KB Debug AI Melee] Calculated Dest: (${destRow},${destCol})`); // DEBUG REMOVED
+                // Check destination validity (bounds, terrain, occupancy)
+                const isInBounds = destRow >= 0 && destRow < GRID_HEIGHT && destCol >= 0 && destCol < GRID_WIDTH;
+                let isTerrainValid = false;
+                if (isInBounds && mapData && mapData[destRow]) {
+                    const tileType = mapData[destRow][destCol];
+                    isTerrainValid = tileType !== TILE_WALL && tileType !== TILE_TREE;
+                }
+                let isOccupied = false;
+                if (isInBounds && isTerrainValid) {
+                    // Check player
+                    if (typeof player !== 'undefined' && player.hp > 0 && player.row === destRow && player.col === destCol) {
+                        isOccupied = true;
+                    }
+                    // Check other enemies
+                    if (!isOccupied && typeof enemies !== 'undefined') {
+                        for (const otherEnemy of enemies) {
+                            // Check if it's a different, living enemy at the destination
+                            if (otherEnemy && otherEnemy.hp > 0 && otherEnemy.id !== target.id && otherEnemy.row === destRow && otherEnemy.col === destCol) {
+                                isOccupied = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (isInBounds && isTerrainValid && !isOccupied) {
+                    // Game.logMessage(`${targetId} knocked back from (${target.row},${target.col}) to (${destRow},${destCol})!`, target === player ? LOG_CLASS_PLAYER_BAD : LOG_CLASS_ENEMY_EVENT); // REMOVED Redundant Log
+                    target.row = destRow;
+                    target.col = destCol;
+                    knockbackMsg = ` ${targetId} knocked back to (${destRow},${destCol}).`; // Store success message
+                    // Note: redrawCanvas happens at end of AI turn
+                } else {
+                    // Optional: Log why knockback failed
+                     // console.log(`[KB Debug AI Melee] Blocked: Bounds=${isInBounds}, Terrain=${isTerrainValid}, Occupied=${isOccupied}`); // DEBUG REMOVED
+                     knockbackMsg = " Knockback blocked."; // Store blocked message
+                }
+            } else {
+                 // console.log(`[KB Debug AI Melee] calculateKnockbackDestination returned null.`); // DEBUG REMOVED
+                 knockbackMsg = " Knockback calc error."; // Store error message
+            }
+        }
+        // --- End Knockback Logic ---
+
+        // Log combined attack and knockback message
+        Game.logMessage(`Enemy ${enemy.id} melees ${targetId} for ${damage} damage.${knockbackMsg}`, LOG_CLASS_ENEMY_EVENT);
 
         if (target.hp <= 0) {
             console.log(`Enemy ${enemy.id} defeated target ${targetId}.`);
-             Game.logMessage(`Enemy ${enemy.id} defeated ${targetId}!`, LOG_CLASS_ENEMY_EVENT); // Log defeat explicitly
+             // Game.logMessage(`Enemy ${enemy.id} defeated ${targetId}!`, LOG_CLASS_ENEMY_EVENT); // Defeat message handled by checkEndConditions now implicitly
             enemy.targetEnemy = null;
             performReevaluation(enemy); // Re-evaluate after kill
             return false; // Needs re-evaluation (find new target/state)

@@ -1,4 +1,4 @@
-console.log("ai_helpers.js loaded");
+ console.log("ai_helpers.js loaded");
 
 // --- AI Line of Sight Helper ---
 /**
@@ -385,4 +385,45 @@ function performReevaluation(enemy) {
     enemy.targetResourceCoords = null; // Clear resource target when exploring
     enemy.targetEnemy = null; // Ensure enemy target is also clear
     // No return needed, state changed
+}
+
+/**
+ * Calculates the potential destination tile for knockback based on attacker/target positions.
+ * Pushes 1 tile directly away from the attacker.
+ * @param {object} attacker - The unit initiating the attack ({row, col}).
+ * @param {object} target - The unit being hit ({row, col}).
+ * @returns {object|null} - Coordinates {row, col} of the tile the target would be pushed to, or null if input is invalid.
+ */
+function calculateKnockbackDestination(attacker, target) {
+    // DEBUG: Log input coordinates - REMOVED
+    // console.log(`[KB Calc Input] Attacker: (${attacker?.row}, ${attacker?.col}), Target: (${target?.row}, ${target?.col})`);
+
+    if (!attacker || !target || attacker.row === null || attacker.col === null || target.row === null || target.col === null) {
+        console.error("calculateKnockbackDestination: Invalid attacker or target position.");
+        return null; // Indicate error or invalid input
+    }
+
+    const dr = target.row - attacker.row;
+    const dc = target.col - attacker.col;
+
+    // Determine the push direction vector (sign of the difference)
+    // This pushes directly away, including diagonals
+    let pushDr = Math.sign(dr);
+    let pushDc = Math.sign(dc);
+
+    // Handle the case where attacker and target are somehow in the same spot
+    // (shouldn't happen for attacks, but defensive check)
+    if (pushDr === 0 && pushDc === 0) {
+         // Default push direction if calculation fails (e.g., push down)
+         console.warn("calculateKnockbackDestination: Attacker and target at same position? Defaulting push direction.");
+         pushDr = 1;
+    }
+
+    // Calculate the destination tile
+    const destinationRow = target.row + pushDr;
+    const destinationCol = target.col + pushDc;
+
+    // console.log(`Knockback Calc: Attacker (${attacker.row},${attacker.col}), Target (${target.row},${target.col}) -> Push (${pushDr},${pushDc}) -> Dest (${destinationRow},${destinationCol})`); // Debug
+
+    return { row: destinationRow, col: destinationCol };
 }

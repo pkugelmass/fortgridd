@@ -99,17 +99,70 @@ function handleKeyDown(event) {
             let logMsg = `Player shoots ${shootDirection.dr === -1 ? 'Up' : shootDirection.dr === 1 ? 'Down' : shootDirection.dc === -1 ? 'Left' : 'Right'}`;
             let targetDefeated = false;
             let msgClass = LOG_CLASS_PLAYER_NEUTRAL; // Default log style
+            let knockbackMsg = ""; // Initialize knockback message part HERE
 
             if (shotHit && hitTarget) { // Apply damage if hit
                 const targetId = hitTarget.id || '??'; const damage = RANGED_ATTACK_DAMAGE;
                 hitTarget.hp -= damage;
                 logMsg += ` -> hits ${targetId} at (${hitTarget.row},${hitTarget.col}) for ${damage} damage! (HP: ${hitTarget.hp}/${hitTarget.maxHp})`;
                 msgClass = LOG_CLASS_PLAYER_GOOD; // Style hit as positive for player
+
+                // let knockbackMsg = ""; // Initialize knockback message part - MOVED UP
+                // --- Knockback Logic (Player Ranged) ---
+                if (hitTarget.hp > 0) { // Only apply knockback if target survived
+                    const knockbackDest = calculateKnockbackDestination(player, hitTarget); // Use helper
+                    // console.log(`[KB Debug Player Ranged] Attacker (${player.row},${player.col}), Target (${hitTarget.row},${hitTarget.col})`); // DEBUG REMOVED
+                    if (knockbackDest) {
+                        const { row: destRow, col: destCol } = knockbackDest;
+                        // console.log(`[KB Debug Player Ranged] Calculated Dest: (${destRow},${destCol})`); // DEBUG REMOVED
+                        // Check destination validity (bounds, terrain, occupancy)
+                        const isInBounds = destRow >= 0 && destRow < GRID_HEIGHT && destCol >= 0 && destCol < GRID_WIDTH;
+                        let isTerrainValid = false;
+                        if (isInBounds && mapData && mapData[destRow]) {
+                            const tileType = mapData[destRow][destCol];
+                            isTerrainValid = tileType !== TILE_WALL && tileType !== TILE_TREE;
+                        }
+                        let isOccupied = false;
+                        if (isInBounds && isTerrainValid) {
+                            // Check player (shouldn't be possible, but defensive)
+                            if (typeof player !== 'undefined' && player.hp > 0 && player.row === destRow && player.col === destCol) {
+                                isOccupied = true;
+                            }
+                            // Check other enemies
+                            if (!isOccupied && typeof enemies !== 'undefined') {
+                                for (const otherEnemy of enemies) {
+                                    // Check if it's a different, living enemy at the destination
+                                    if (otherEnemy && otherEnemy.hp > 0 && otherEnemy.id !== hitTarget.id && otherEnemy.row === destRow && otherEnemy.col === destCol) {
+                                        isOccupied = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (isInBounds && isTerrainValid && !isOccupied) {
+                            // Log knockback *before* the main hit message for clarity - REMOVED, will append below
+                            // Game.logMessage(`${targetId} knocked back from (${hitTarget.row},${hitTarget.col}) to (${destRow},${destCol})!`, LOG_CLASS_ENEMY_EVENT); // REMOVED Redundant Log
+                            hitTarget.row = destRow;
+                            hitTarget.col = destCol;
+                            knockbackMsg = ` ${targetId} knocked back to (${destRow},${destCol}).`; // Store success message
+                        } else {
+                             // console.log(`[KB Debug Player Ranged] Blocked: Bounds=${isInBounds}, Terrain=${isTerrainValid}, Occupied=${isOccupied}`); // DEBUG REMOVED
+                             knockbackMsg = " Knockback blocked."; // Store blocked message
+                        }
+                    } else {
+                         // console.log(`[KB Debug Player Ranged] calculateKnockbackDestination returned null.`); // DEBUG REMOVED
+                         knockbackMsg = " Knockback calc error."; // Store error message
+                    }
+                }
+                // --- End Knockback Logic ---
+
                 if (hitTarget.hp <= 0) { targetDefeated = true; } // Mark for removal below
             } else if (blocked) { logMsg += ` -> blocked by ${blockedBy}` + (hitCoord ? ` at (${hitCoord.row},${hitCoord.col})` : '') + "."; msgClass = LOG_CLASS_PLAYER_NEUTRAL; } // Neutral style for block
               else { logMsg += " -> missed."; msgClass = LOG_CLASS_PLAYER_NEUTRAL; } // Neutral style for miss
 
-            Game.logMessage(logMsg, msgClass); // Log the outcome
+            // Append knockback message to the main log message
+            Game.logMessage(logMsg + knockbackMsg, msgClass); // Log the combined outcome
 
             if (targetDefeated) { // Handle defeat separately (message logged by checkEndConditions)
                  enemies = enemies.filter(e => e !== hitTarget); // Remove dead enemy
@@ -134,7 +187,60 @@ function handleKeyDown(event) {
                 const targetId = targetEnemy.id || '??'; const damage = PLAYER_ATTACK_DAMAGE;
                 Game.logMessage(`Player attacks ${targetId} at (${targetRow},${targetCol}) for ${damage} damage.`, LOG_CLASS_PLAYER_GOOD); // Log Attack as positive
                 targetEnemy.hp -= damage;
+
+                let knockbackMsg = ""; // Initialize knockback message part
+                // --- Knockback Logic (Player Melee) ---
                 let targetDefeated = false;
+                if (targetEnemy.hp > 0) { // Only apply knockback if target survived
+                    const knockbackDest = calculateKnockbackDestination(player, targetEnemy); // Use helper
+                    // console.log(`[KB Debug Player Melee] Attacker (${player.row},${player.col}), Target (${targetEnemy.row},${targetEnemy.col})`); // DEBUG REMOVED
+                    if (knockbackDest) {
+                        const { row: destRow, col: destCol } = knockbackDest;
+                        // console.log(`[KB Debug Player Melee] Calculated Dest: (${destRow},${destCol})`); // DEBUG REMOVED
+                        // Check destination validity (bounds, terrain, occupancy)
+                        const isInBounds = destRow >= 0 && destRow < GRID_HEIGHT && destCol >= 0 && destCol < GRID_WIDTH;
+                        let isTerrainValid = false;
+                        if (isInBounds && mapData && mapData[destRow]) {
+                            const tileType = mapData[destRow][destCol];
+                            isTerrainValid = tileType !== TILE_WALL && tileType !== TILE_TREE;
+                        }
+                        let isOccupied = false;
+                        if (isInBounds && isTerrainValid) {
+                            // Check player (shouldn't be possible, but defensive)
+                            if (typeof player !== 'undefined' && player.hp > 0 && player.row === destRow && player.col === destCol) {
+                                isOccupied = true;
+                            }
+                            // Check other enemies
+                            if (!isOccupied && typeof enemies !== 'undefined') {
+                                for (const otherEnemy of enemies) {
+                                    // Check if it's a different, living enemy at the destination
+                                    if (otherEnemy && otherEnemy.hp > 0 && otherEnemy.id !== targetEnemy.id && otherEnemy.row === destRow && otherEnemy.col === destCol) {
+                                        isOccupied = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        if (isInBounds && isTerrainValid && !isOccupied) {
+                            // Game.logMessage(`${targetId} knocked back from (${targetRow},${targetCol}) to (${destRow},${destCol})!`, LOG_CLASS_ENEMY_EVENT); // REMOVED Redundant Log
+                            targetEnemy.row = destRow;
+                            targetEnemy.col = destCol;
+                            knockbackMsg = ` ${targetId} knocked back to (${destRow},${destCol}).`; // Store success message
+                        } else {
+                             // console.log(`[KB Debug Player Melee] Blocked: Bounds=${isInBounds}, Terrain=${isTerrainValid}, Occupied=${isOccupied}`); // DEBUG REMOVED
+                             knockbackMsg = " Knockback blocked."; // Store blocked message
+                        }
+                    } else {
+                         // console.log(`[KB Debug Player Melee] calculateKnockbackDestination returned null.`); // DEBUG REMOVED
+                         knockbackMsg = " Knockback calc error."; // Store error message
+                    }
+                }
+                // --- End Knockback Logic ---
+
+                // Append knockback message to the main log message (already done above where damage is logged)
+                // Game.logMessage(`Player attacks ${targetId} at (${targetRow},${targetCol}) for ${damage} damage.${knockbackMsg}`, LOG_CLASS_PLAYER_GOOD); // Log Attack as positive - Already logged above
+
                 if (targetEnemy.hp <= 0) { targetDefeated = true; }
                 if (targetDefeated) { enemies = enemies.filter(enemy => enemy !== targetEnemy); /* Defeat msg handled by checkEndConditions */ }
                 if (typeof redrawCanvas === 'function') redrawCanvas(); // Show attack results
