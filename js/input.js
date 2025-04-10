@@ -143,8 +143,8 @@ function handleKeyDown(event) {
                         if (isInBounds && isTerrainValid && !isOccupied) {
                             // Log knockback *before* the main hit message for clarity - REMOVED, will append below
                             // Game.logMessage(`${targetId} knocked back from (${hitTarget.row},${hitTarget.col}) to (${destRow},${destCol})!`, LOG_CLASS_ENEMY_EVENT); // REMOVED Redundant Log
-                            hitTarget.row = destRow;
-                            hitTarget.col = destCol;
+                            // Use the new centralized function to update position and handle pickup
+                            updateUnitPosition(hitTarget, destRow, destCol); // Call global function
                             knockbackMsg = ` ${targetId} knocked back to (${destRow},${destCol}).`; // Store success message
                         } else {
                              // console.log(`[KB Debug Player Ranged] Blocked: Bounds=${isInBounds}, Terrain=${isTerrainValid}, Occupied=${isOccupied}`); // DEBUG REMOVED
@@ -224,8 +224,8 @@ function handleKeyDown(event) {
 
                         if (isInBounds && isTerrainValid && !isOccupied) {
                             // Game.logMessage(`${targetId} knocked back from (${targetRow},${targetCol}) to (${destRow},${destCol})!`, LOG_CLASS_ENEMY_EVENT); // REMOVED Redundant Log
-                            targetEnemy.row = destRow;
-                            targetEnemy.col = destCol;
+                            // Use the new centralized function to update position and handle pickup
+                            updateUnitPosition(targetEnemy, destRow, destCol); // Call global function
                             knockbackMsg = ` ${targetId} knocked back to (${destRow},${destCol}).`; // Store success message
                         } else {
                              // console.log(`[KB Debug Player Melee] Blocked: Bounds=${isInBounds}, Terrain=${isTerrainValid}, Occupied=${isOccupied}`); // DEBUG REMOVED
@@ -252,20 +252,15 @@ function handleKeyDown(event) {
                 const targetTileType = mapData[targetRow][targetCol];
                 // Walkable Check (includes TILE_AMMO and TILE_MEDKIT)
                 if (targetTileType === TILE_LAND || targetTileType === TILE_MEDKIT || targetTileType === TILE_AMMO) {
-                    const oldRow = player.row; const oldCol = player.col; // Store for logging if needed
-                    player.row = targetRow; player.col = targetCol; // Move player
-                    let resourceCollected = false; // Initialize flag HERE
-                    let resourceType = "";
-                    let resourceLoc = `(${targetRow},${targetCol})`;
-                    // Check for resource collection
-                    // REMOVED duplicate declaration: let resourceCollected = false;
-                    if (targetTileType === TILE_MEDKIT) { if (player.resources) { player.resources.medkits++; resourceType = "Medkit"; } mapData[player.row][player.col] = TILE_LAND; resourceCollected = true; }
-                    else if (targetTileType === TILE_AMMO) { if (player.resources) { player.resources.ammo++; resourceType = "Ammo"; } mapData[player.row][player.col] = TILE_LAND; resourceCollected = true; }
+                    // Log the move *before* updating position and checking pickup
+                    Game.logMessage(`Player moves to (${targetRow},${targetCol}).`, LOG_CLASS_PLAYER_NEUTRAL);
 
-                    if (resourceCollected) { Game.logMessage(`Player moves to ${resourceLoc} & collects ${resourceType}.`, LOG_CLASS_PLAYER_NEUTRAL); } // Log collection
-                    // else { Game.logMessage(`Player moves to (${targetRow},${targetCol}).`, LOG_CLASS_PLAYER_NEUTRAL); } // Optional move log
+                    // Use the new centralized function to update position and handle pickup
+                    updateUnitPosition(player, targetRow, targetCol); // Call global function
 
-                    if (typeof redrawCanvas === 'function') redrawCanvas(); // Show move results
+                    // Note: The checkAndPickupResourceAt function called by updateUnitPosition will log the pickup if it occurs.
+
+                    if (typeof redrawCanvas === 'function') redrawCanvas(); // Show move results (pickup will be reflected)
                     Game.endPlayerTurn(); // End turn after move
                 } else {
                     // Log blocked move by terrain

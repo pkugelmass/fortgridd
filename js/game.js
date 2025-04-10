@@ -187,6 +187,9 @@ const Game = {
         // The old conditional logic is removed:
         // if (didShrink || damageApplied) { ... } else { drawUI(ctx); }
     },
+
+    // --- Unit Position & Pickup Helpers MOVED to js/utils.js (2025-04-09) ---
+
 };
 
 // console.log("Game object created"); // Quieter log

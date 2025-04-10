@@ -53,36 +53,21 @@ function handleSeekingResourcesState(enemy) {
         // We don't set actionTaken=true yet, pickup is the action.
     }
 
-    // --- 4. Check if Arrived at Target AND Pickup (Only if at target coords) ---
+    // --- 4. Check if Arrived at Target Coords ---
+    // Note: The actual pickup is handled by Game.checkAndPickupResourceAt, called via
+    // Game.updateUnitPosition within the moveTowards function during the final step.
     if (enemy.row === targetRow && enemy.col === targetCol) {
-        // Verify resource still exists *now*
-        const tileAtArrival = mapData[enemy.row][enemy.col];
-        if (tileAtArrival === TILE_MEDKIT || tileAtArrival === TILE_AMMO) {
-            // Pickup Logic
-            let pickedUpItem = "Unknown Resource";
-            if (tileAtArrival === TILE_MEDKIT) {
-                enemy.resources.medkits = (enemy.resources.medkits || 0) + 1;
-                pickedUpItem = "Medkit";
-            } else if (tileAtArrival === TILE_AMMO) {
-                enemy.resources.ammo = (enemy.resources.ammo || 0) + (AI_AMMO_PICKUP_AMOUNT || 1);
-                pickedUpItem = "Ammo";
-            }
+        // We assume the pickup was successful if moveTowards landed us here.
+        // The checkAndPickupResourceAt function already logged the specific pickup.
+        Game.logMessage(`Enemy ${enemy.id} reached target resource location (${enemy.row},${enemy.col}). Transitioning to Exploring.`, LOG_CLASS_ENEMY_EVENT);
 
-            mapData[enemy.row][enemy.col] = TILE_LAND; // Remove resource from map
-            Game.logMessage(`Enemy ${enemy.id} picked up ${pickedUpItem} at (${enemy.row},${enemy.col}). Transitioning to Exploring.`, LOG_CLASS_ENEMY_EVENT);
-
-            enemy.targetResourceCoords = null; // Clear target
-            enemy.state = AI_STATE_EXPLORING; // Transition back to exploring
-            actionTaken = true; // Pickup counts as the action
-            // Return true below
-        } else {
-            // Resource disappeared between start of turn/move and arrival/pickup attempt
-            Game.logMessage(`Enemy ${enemy.id} arrived at (${enemy.row},${enemy.col}) but resource was gone. Re-evaluating...`, LOG_CLASS_ENEMY_EVENT);
-            enemy.targetResourceCoords = null;
-            performReevaluation(enemy);
-            return false; // Needs re-evaluation
-        }
+        enemy.targetResourceCoords = null; // Clear target
+        enemy.state = AI_STATE_EXPLORING; // Transition back to exploring
+        actionTaken = true; // Reaching the destination counts as the action for this state handler turn.
+        // Return true below
     }
+    // If the resource disappeared before the AI could move onto it, the earlier check
+    // (!isResourceTile) or the moveTowards function failing would have handled it.
 
     // If we moved towards the target but didn't arrive, actionTaken is true (from moveTowards).
     // If we were already at the target and picked it up, actionTaken is true.

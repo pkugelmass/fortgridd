@@ -285,8 +285,8 @@ function moveTowards(enemy, targetRow, targetCol, logReason) {
     if (chosenMove) {
         // Log message includes the STARTING position before the move
         Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards ${logReason} to (${chosenMove.row},${chosenMove.col}).`, LOG_CLASS_ENEMY_EVENT);
-        enemy.row = chosenMove.row;
-        enemy.col = chosenMove.col;
+        // Use the new centralized function to update position and handle pickup
+        updateUnitPosition(enemy, chosenMove.row, chosenMove.col); // Call global function
         return true;
     }
 
@@ -306,8 +306,8 @@ function moveRandomly(enemy) {
         const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
         // Log message includes the STARTING position before the move
         Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves randomly to (${chosenMove.row},${chosenMove.col}).`, LOG_CLASS_ENEMY_EVENT);
-        enemy.row = chosenMove.row;
-        enemy.col = chosenMove.col;
+        // Use the new centralized function to update position and handle pickup
+        updateUnitPosition(enemy, chosenMove.row, chosenMove.col); // Call global function
         return true;
     }
     // Log failure to move randomly only if it was attempted as a fallback (e.g., from moveTowards)

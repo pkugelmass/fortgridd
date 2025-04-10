@@ -84,8 +84,8 @@ function handleEngagingEnemyState(enemy) {
 
                 if (isInBounds && isTerrainValid && !isOccupied) {
                     // Game.logMessage(`${targetId} knocked back from (${target.row},${target.col}) to (${destRow},${destCol})!`, target === player ? LOG_CLASS_PLAYER_BAD : LOG_CLASS_ENEMY_EVENT); // REMOVED Redundant Log
-                    target.row = destRow;
-                    target.col = destCol;
+                    // Use the new centralized function to update position and handle pickup
+                    updateUnitPosition(target, destRow, destCol); // Call global function
                     knockbackMsg = ` ${targetId} knocked back to (${destRow},${destCol}).`; // Store success message
                     // Note: redrawCanvas happens at end of AI turn
                 } else {
@@ -155,8 +155,8 @@ function handleEngagingEnemyState(enemy) {
 
                 if (isInBounds && isTerrainValid && !isOccupied) {
                     // Game.logMessage(`${targetId} knocked back from (${target.row},${target.col}) to (${destRow},${destCol})!`, target === player ? LOG_CLASS_PLAYER_BAD : LOG_CLASS_ENEMY_EVENT); // REMOVED Redundant Log
-                    target.row = destRow;
-                    target.col = destCol;
+                    // Use the new centralized function to update position and handle pickup
+                    updateUnitPosition(target, destRow, destCol); // Call global function
                     knockbackMsg = ` ${targetId} knocked back to (${destRow},${destCol}).`; // Store success message
                     // Note: redrawCanvas happens at end of AI turn
                 } else {
@@ -321,8 +321,8 @@ function handleEngagingEnemyState(enemy) {
     // H. Execute Move
     if (chosenMove && (!isRisky || (isRisky /* && risk accepted - implicitly handled by not returning in G */))) {
         Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards target ${target.id || 'Player'} to (${chosenMove.row},${chosenMove.col}).`, LOG_CLASS_ENEMY_EVENT);
-        enemy.row = chosenMove.row;
-        enemy.col = chosenMove.col;
+        // Use the new centralized function to update position and handle pickup
+        updateUnitPosition(enemy, chosenMove.row, chosenMove.col); // Call global function
         return true; // Move action complete
     }
 

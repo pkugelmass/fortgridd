@@ -25,6 +25,8 @@
     *   [x] Update reviewed files to reference constants from `config.js`.
 
 ### Deeper Refactoring & Consistency
+*   [x] Refactor Movement & Pickup Logic: Centralize unit position updates and resource pickups using Game.updateUnitPosition and Game.checkAndPickupResourceAt helpers. (Completed: 2025-04-09)
+*   [x] Move Movement/Pickup Helpers: Relocated `checkAndPickupResourceAt` and `updateUnitPosition` from `js/game.js` to new `js/utils.js` file for better organization. Updated calls and `index.html`. (Completed: 2025-04-09)
 
 ---
 ## Phase 2: AI Evolution (Started: 2025-04-08)
@@ -61,7 +63,7 @@
     *   [x] Implement `handleFleeingState` function (break LOS, transitions). (Completed: 2025-04-09)
     *   [x] Implement Knockback mechanic on attacks. (Completed: 2025-04-09)
     *   [x] Implement AI Medkit Usage logic (decide when to use, apply healing). (Validated: 2025-04-09 after debugging)
-    *   [ ] Fix AI Ammo Pickup Tile Update: Ensure map tile changes back to `TILE_LAND` after AI picks up ammo. Ensure medkit pickup is working as well. (Discovered: 2025-04-09)
+    *   [x] Fix AI Ammo Pickup Tile Update: Ensure map tile changes back to `TILE_LAND` after AI picks up ammo. Ensure medkit pickup is working as well. (Discovered: 2025-04-09) (Completed via Movement/Pickup Refactor 2025-04-09)
     *   [ ] Review/Tune AI Ammo Seeking threshold and proactive logic. (Discovered: 2025-04-09)
 
 

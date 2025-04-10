@@ -1,41 +1,31 @@
-# FortGridd Handoff Document (2025-04-09 - End of Day)
+# FortGridd Handoff Document (2025-04-09 - End of Session)
 
-This document summarizes the status of the AI Finite State Machine (FSM) development within the `develop 2` branch after debugging the AI Medkit Usage logic.
+*(Purpose: To capture the immediate next steps and context for the next work session, not to restate the entire project roadmap or completed tasks.)*
 
 ## Project Context
 
 *   **Project:** FortGridd - Turn-based tactical survival game.
 *   **Current Branch:** `develop 2`
-*   **Goal:** Implement Phase 2 (AI Evolution) features, focusing on the Finite State Machine (FSM).
+*   **Last Major Action:** Refactored unit movement and resource pickup logic into centralized helper functions (`updateUnitPosition`, `checkAndPickupResourceAt`) located in the new `js/utils.js` file. This resolved inconsistent pickup behavior and improved code organization.
 
-## Last Completed Actions (Debugging AI Healing)
+## Next Task & Plan
 
-*   **Initial Implementation:** Implemented `AI_STATE_HEALING` logic (state, thresholds, helpers, handlers).
-*   **Debugging Round 1 (AI Not Healing):**
-    *   Updated `js/config.js`: Set `AI_START_MEDKITS` to `1`, consolidated healing thresholds to `AI_HEAL_PRIORITY_THRESHOLD`, added `AI_SEEK_AMMO_THRESHOLD`.
-    *   Updated `js/ai/ai_helpers.js` (`performReevaluation`) to use new/renamed constants.
-*   **Debugging Round 2 (Game Freeze):**
-    *   Refactored `performReevaluation` function from `js/ai/ai_helpers.js` to `js/ai.js` for better organization.
-    *   Corrected resource access in `performReevaluation` (now in `js/ai.js`) to use `enemy.resources.medkits` and `enemy.resources.ammo`.
-    *   Corrected resource access in `useMedkit` (`js/ai/ai_helpers.js`) to use `enemy.resources.medkits`.
-    *   Corrected resource access in `handleHealingState` (`js/ai/state_healing.js`) to use `enemy.resources.medkits` and ensure it returns `true`.
-    *   Identified and fixed a `ReferenceError` by adding the missing script tag for `js/ai/state_healing.js` in `index.html`.
-*   **Cleanup:** Removed temporary debug logs from `js/ai/state_healing.js` and restored `updateLogDisplay()` call in `js/game.js`.
+The next immediate task identified in `TASKS.md` is:
+*   **Review/Tune AI Ammo Seeking threshold and proactive logic.** (Discovered: 2025-04-09)
 
-## Current Task Status (from TASKS.md)
+**Plan for Next Session:**
 
-*   `[x] Implement AI Medkit Usage logic (decide when to use, apply healing). (Validated: 2025-04-09 after debugging)`
-    *   **Note:** Logic is now confirmed working via manual testing.
+1.  **Locate Logic:** Identify the exact code responsible for the AI deciding to enter the `AI_STATE_SEEKING_RESOURCES` state specifically for ammo. This is likely within the `performReevaluation` function in `js/ai.js`.
+2.  **Review Threshold:** Examine the current `AI_SEEK_AMMO_THRESHOLD` constant in `js/config.js` and how it's used in the decision logic.
+3.  **Analyze Proactive Behavior:** Determine if the current logic is purely reactive (seek ammo only when empty) or if there's any proactive element (e.g., seeking ammo when low but not empty).
+4.  **Consider Tuning Options:**
+    *   Is the current fixed threshold appropriate, or should it be a percentage of max ammo (if max ammo becomes a concept)?
+    *   Should the decision to seek ammo be influenced by other factors, such as:
+        *   Currently seeing an enemy? (Maybe prioritize fighting/fleeing over seeking ammo).
+        *   Having a ranged weapon equipped (if different weapon types are added)?
+        *   Current health level? (Low health might prioritize healing/fleeing).
+    *   How "proactive" should the AI be? Should it top up ammo whenever it sees some nearby and isn't immediately threatened?
+5.  **Discussion & Implementation:** Discuss these tuning options and implement any agreed-upon changes to the threshold value in `config.js` and/or the decision logic in `js/ai.js`.
+6.  **Playtesting:** Tuning AI behavior often requires iterative playtesting to observe the results and make further adjustments.
 
-## Next Steps / Issues Identified (Pending Action)
-
-1.  **Issue: Resources Not Picked Up After Move/Knockback** (Next to Address)
-    *   **Observation:** Units landing on resource tiles due to knockback or non-seeking movement do not pick them up.
-    *   **Plan:**
-        *   Create `checkAndPickupResourceAt(unit, row, col)` helper in `js/game.js`. This function will check the map tile, update unit resources, update the map tile to `TILE_LAND`, log the event, and return true/false.
-        *   Create `updateUnitPosition(unit, newRow, newCol)` function in `js/game.js`. This function will update unit coordinates and then call `checkAndPickupResourceAt`.
-        *   Refactor all player movement (`js/input.js`), AI movement (`js/ai/ai_helpers.js`), and knockback logic (`js/game.js` or `js/main.js`) to use `updateUnitPosition`.
-
-## Agreed Next Action
-
-*   Address the **Resources Not Picked Up After Move/Knockback** issue using the plan outlined above.
+*(Note: While unit testing remains important (especially for recent refactors), addressing this specific AI behavior tuning task is the next item listed.)*
