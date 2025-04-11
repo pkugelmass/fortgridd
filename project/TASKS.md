@@ -23,8 +23,8 @@
 *   [X] **Test `js/config.js`** (Completed: 2025-04-10 - Refactored existing tests for type/range checks)
 *   [X] **Test `js/gameState.js`** (Completed: 2025-04-10 - Added constructor default checks)
 *   [X] **Test `js/map.js`** (Completed: 2025-04-10 - Added tests for `createMapData` structure and `countWallNeighbours`)
-*   [ ] **Test `js/player.js` & `js/playerActions.js`**
-*   [ ] **Test `js/ai.js` & `js/ai/*` (State handlers, perception, movement, etc.)**
+*   [X] **Test `js/player.js` & `js/playerActions.js`** (Completed: 2025-04-10 - Deleted player.js, added tests for playerActions.js; Verified & Fixed: 2025-04-10)
+*   [ ] **Test `js/ai.js` & `js/ai/*` (State handlers, perception, movement, etc.)** (Next Step)
 *   [ ] **Test `js/game.js`**
 *   [ ] **Test `js/input.js` (functions called by handlers)**
 *   [ ] **Test `js/drawing.js` & `js/ui.js` (underlying logic only)**

@@ -40,46 +40,64 @@ function createMockUnit(isPlayer = false, overrides = {}) {
  * @returns {object} A mock gameState object.
  */
 function createMockGameState(overrides = {}) {
-    // Default simple 5x5 map with land and a wall
-    const defaultMapData = [
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0],
-        [0, 0, 1, 0, 0], // Wall at (2,2)
-        [0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0]
-    ];
+    // Determine grid size: Use overrides, or default to 5x5
+    const targetGridHeight = overrides.gridHeight || 5;
+    const targetGridWidth = overrides.gridWidth || 5;
+
+    // Generate default mapData *if not provided* and dimensions differ from default 5x5, or if explicitly requested size
+    let useDefaultMapData;
+    if (overrides.mapData) {
+        useDefaultMapData = overrides.mapData; // Use provided mapData
+    } else if (targetGridHeight !== 5 || targetGridWidth !== 5 || overrides.gridHeight || overrides.gridWidth) {
+        // Generate a simple land map of the target size
+        useDefaultMapData = Array.from({ length: targetGridHeight }, () => Array(targetGridWidth).fill(TILE_LAND || 0));
+        // Do NOT add a default central wall for generated maps, keep them clear unless specified by test
+    } else {
+        // Use the hardcoded 5x5 default (which includes a wall) only if no size/map override is given
+        useDefaultMapData = [
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 1, 0, 0], // Wall at (2,2)
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0]
+        ];
+    }
+
 
     // Use helper to create default player/enemies only if not explicitly overridden (even with null/empty)
     const defaultPlayer = overrides.player === undefined ? createMockUnit(true, { row: 1, col: 1 }) : overrides.player;
     const defaultEnemies = overrides.enemies === undefined ? [createMockUnit(false, { row: 3, col: 3, id: 'enemy_1' })] : overrides.enemies;
 
     const defaults = {
-        mapData: defaultMapData,
+        mapData: useDefaultMapData, // Use the determined/generated mapData
         player: defaultPlayer, // Will be null if overrides.player was null
         enemies: defaultEnemies, // Will be [] if overrides.enemies was []
-        gridWidth: defaultMapData[0] ? defaultMapData[0].length : 0,
-        gridHeight: defaultMapData.length,
+        // Set dimensions based on the *actual* mapData being used
+        gridWidth: useDefaultMapData[0] ? useDefaultMapData[0].length : 0,
+        gridHeight: useDefaultMapData.length,
         currentTurn: 0,
         logMessages: [], // For potential log checking
-        safeZone: { // Example safe zone
-            centerX: Math.floor((defaultMapData[0] ? defaultMapData[0].length : 0) / 2),
-            centerY: Math.floor(defaultMapData.length / 2),
-            radius: 100 // Large enough to cover default map initially
+        safeZone: { // Example safe zone, calculated from actual dimensions
+            centerX: Math.floor((useDefaultMapData[0] ? useDefaultMapData[0].length : 0) / 2),
+            centerY: Math.floor(useDefaultMapData.length / 2),
+            radius: Math.max(useDefaultMapData.length, (useDefaultMapData[0] ? useDefaultMapData[0].length : 0)) // Ensure radius covers map
         }
         // Add other gameState properties as needed for tests
     };
 
-    // Simple merge for top-level properties
+    // Simple merge for top-level properties, allowing overrides to take precedence
     const finalGameState = { ...defaults, ...overrides };
 
-    // Ensure grid dimensions match mapData if mapData was overridden
+    // If mapData was explicitly provided in overrides, ensure dimensions match it
     if (overrides.mapData) {
         finalGameState.gridHeight = finalGameState.mapData.length;
         finalGameState.gridWidth = finalGameState.mapData[0] ? finalGameState.mapData[0].length : 0;
-         // Optionally recalculate safeZone center if mapData changes significantly
-         finalGameState.safeZone.centerX = Math.floor(finalGameState.gridWidth / 2);
-         finalGameState.safeZone.centerY = Math.floor(finalGameState.gridHeight / 2);
+        // Recalculate safeZone based on provided mapData dimensions
+        finalGameState.safeZone.centerX = Math.floor(finalGameState.gridWidth / 2);
+        finalGameState.safeZone.centerY = Math.floor(finalGameState.gridHeight / 2);
+        finalGameState.safeZone.radius = Math.max(finalGameState.gridHeight, finalGameState.gridWidth);
     }
+    // If only dimensions were provided, mapData and dimensions should already match from the logic above
 
 
     return finalGameState;
@@ -137,6 +155,7 @@ const MOCKED_CONSTANTS = {
     TILE_TREE: 2,
     TILE_MEDKIT: 3,
     TILE_AMMO: 4,
+    TILE_BOUNDARY: 5, // Added
     PLAYER_MAX_HP: 15,
     PLAYER_START_AMMO: 3,
     PLAYER_START_MEDKITS: 0,
@@ -144,6 +163,12 @@ const MOCKED_CONSTANTS = {
     AI_MAX_HP: 10,
     AI_START_AMMO: 1,
     AI_AMMO_PICKUP_AMOUNT: 2,
+    PLAYER_ATTACK_DAMAGE: 2, // Added
+    RANGED_ATTACK_RANGE: 5, // Added
+    RANGED_ATTACK_DAMAGE: 2, // Added
+    HEAL_COST: 1, // Added
+    HEAL_AMOUNT: 1, // Added
+    // Knockback constants are not directly used by playerActions, handled by applyKnockback
     LOG_CLASS_PLAYER_GOOD: 'log-player-good',
     LOG_CLASS_ENEMY_EVENT: 'log-enemy-event',
     LOG_CLASS_COMBAT: 'log-combat',

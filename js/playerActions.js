@@ -133,19 +133,28 @@ const PlayerActions = {
                 const point = linePoints[i];
                 const checkRow = point.row;
                 const checkCol = point.col;
-                const dist = Math.abs(checkRow - player.row) + Math.abs(checkCol - player.col); // Simple Manhattan distance for range check
+                // Use Chebyshev distance (max of row/col difference) for grid range
+                const dist = Math.max(Math.abs(checkRow - player.row), Math.abs(checkCol - player.col));
 
-                if (dist > RANGED_ATTACK_RANGE) break;
+                if (dist > RANGED_ATTACK_RANGE) {
+                    break;
+                }
                 if (checkRow < 0 || checkRow >= gridHeight || checkCol < 0 || checkCol >= gridWidth) {
-                    blocked = true; blockedBy = "Map Edge"; hitCoord = { row: checkRow, col: checkCol }; break;
+                    blocked = true; blockedBy = "Map Edge"; hitCoord = { row: checkRow, col: checkCol };
+                    break;
                 }
                 const tileType = mapData[checkRow][checkCol];
-                if (tileType === TILE_WALL || tileType === TILE_TREE) {
-                    blocked = true; blockedBy = (tileType === TILE_WALL ? "Wall" : "Tree"); hitCoord = { row: checkRow, col: checkCol }; break;
+                // Add TILE_BOUNDARY check
+                if (tileType === TILE_WALL || tileType === TILE_TREE || tileType === TILE_BOUNDARY) {
+                    blocked = true;
+                    blockedBy = (tileType === TILE_WALL ? "Wall" : (tileType === TILE_TREE ? "Tree" : "Boundary")); // Update blockedBy message
+                    hitCoord = { row: checkRow, col: checkCol };
+                    break;
                 }
                 hitTarget = enemies.find(enemy => enemy.hp > 0 && enemy.row === checkRow && enemy.col === checkCol);
                 if (hitTarget) {
-                    shotHit = true; hitCoord = { row: checkRow, col: checkCol }; break;
+                    shotHit = true; hitCoord = { row: checkRow, col: checkCol };
+                    break;
                 }
             }
 
@@ -168,14 +177,13 @@ const PlayerActions = {
                         knockbackMsg = ` Knockback blocked (${knockbackResult.reason}).`;
                     }
                 } else if (hitTarget.hp > 0) {
-                     Game.logMessage("handleShoot: applyKnockback function not found!", gameState, { level: 'WARN', target: 'CONSOLE' });
+                    Game.logMessage("handleShoot: applyKnockback function not found!", gameState, { level: 'WARN', target: 'CONSOLE' });
                 }
             } else if (blocked) {
                 logMsg += ` -> blocked by ${blockedBy}` + (hitCoord ? ` at (${hitCoord.row},${hitCoord.col})` : '') + ".";
             } else {
                 logMsg += " -> missed.";
             }
-
             Game.logMessage(logMsg + knockbackMsg, gameState, { level: 'PLAYER', target: 'PLAYER', className: msgClass });
             return true; // Turn consumed
 
