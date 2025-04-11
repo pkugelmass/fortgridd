@@ -17,6 +17,19 @@
     *   [X] **Prioritize Refactoring:** Proceed with high-priority refactoring tasks (e.g., `ai_helpers.js`, movement checks) after initial test triage. (Next Step)
     *   [ ] **Revisit & Improve Tests:** After refactoring, revisit commented-out tests and write new, targeted tests for the refactored code structure.
 
+### Comprehensive Unit Testing Overhaul (Plan Adopted: 2025-04-10)
+*(Systematically review and rewrite/create unit tests module by module, focusing on core logic, edge cases, and failure states. Mock dependencies as needed. Skip trivial code and rendering logic. See `project/TESTING_GUIDELINES.md`)*
+*   [X] **Test `js/utils.js`** (Completed: 2025-04-10 - Split into `tests/utils/*`, added helpers, fixed failures)
+*   [ ] **Test `js/config.js`**
+*   [ ] **Test `js/gameState.js`**
+*   [ ] **Test `js/map.js`**
+*   [ ] **Test `js/player.js` & `js/playerActions.js`**
+*   [ ] **Test `js/ai.js` & `js/ai/*` (State handlers, perception, movement, etc.)**
+*   [ ] **Test `js/game.js`**
+*   [ ] **Test `js/input.js` (functions called by handlers)**
+*   [ ] **Test `js/drawing.js` & `js/ui.js` (underlying logic only)**
+*   [ ] **Test `js/main.js` (initialization)**
+
 
  ### Refactoring / Cleanup Tasks
  *(To be prioritized after test triage)*

@@ -32,11 +32,18 @@
   <script src="../js/input.js"></script>
   <script src="../js/main.js"></script>
 
+  <!-- Load Test Helpers FIRST -->
+  <script src="test-helpers.js"></script>
+
   <!-- Load Test Scripts -->
   <!-- Add test files here -->
   <script src="config.test.js"></script>
   <script src="main.test.js"></script> <!-- Added main.js tests -->
-  <!-- <script src="utils.test.js"></script> -->
+  <!-- <script src="utils.test.js"></script> --> <!-- Removed 2025-04-10 -> Split into tests/utils/* -->
+  <script src="utils/traceLine.test.js"></script>
+  <script src="utils/knockback.test.js"></script>
+  <script src="utils/positioning.test.js"></script>
+  <script src="utils/resources.test.js"></script>
   <!-- <script src="ai.test.js"></script> --> <!-- Replaced by specific AI test files -->
   <script src="ai/ai_helpers.test.js"></script>
   <script src="ai/ai_transitions.test.js"></script>

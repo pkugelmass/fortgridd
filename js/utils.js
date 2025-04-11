@@ -8,11 +8,26 @@
  * @returns {boolean} - True if a resource was picked up, false otherwise.
  */
 function checkAndPickupResourceAt(unit, row, col, gameState) {
-    // Validate inputs, including gameState and its properties
-    if (!unit || !unit.resources || !gameState || !gameState.mapData || !gameState.player || !gameState.mapData[row] || typeof Game === 'undefined' || typeof Game.logMessage !== 'function') {
-        Game.logMessage(`checkAndPickupResourceAt: Invalid unit, gameState, or coordinates (${row},${col}).`, gameState, { level: 'ERROR', target: 'CONSOLE' });
+    // Validate inputs first, handle null gameState before logging with it
+    if (!unit || !unit.resources || typeof Game === 'undefined' || typeof Game.logMessage !== 'function') {
+        // Log error without gameState if unit is invalid or logMessage is missing
+        if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
+            Game.logMessage(`checkAndPickupResourceAt: Invalid unit.`, null, { level: 'ERROR', target: 'CONSOLE' });
+        } else {
+            console.error(`checkAndPickupResourceAt: Invalid unit or Game.logMessage missing.`);
+        }
         return false;
     }
+     if (!gameState || !gameState.mapData || !gameState.player) {
+        Game.logMessage(`checkAndPickupResourceAt: Invalid gameState.`, null, { level: 'ERROR', target: 'CONSOLE' });
+        return false;
+     }
+     // Now safe to access gameState properties for further checks
+     if (!gameState.mapData[row]) {
+         Game.logMessage(`checkAndPickupResourceAt: Invalid coordinates (row ${row} doesn't exist).`, gameState, { level: 'ERROR', target: 'CONSOLE' });
+         return false;
+     }
+
     // Get grid dimensions from mapData for bounds checking
     const gridHeight = gameState.mapData.length;
     const gridWidth = gameState.mapData[0] ? gameState.mapData[0].length : 0;
@@ -65,11 +80,22 @@ function checkAndPickupResourceAt(unit, row, col, gameState) {
  * @param {GameState} gameState - The current game state.
  */
 function updateUnitPosition(unit, newRow, newCol, gameState) {
-    // Validate inputs, including gameState and mapData
-    if (!unit || newRow === null || newCol === null || !gameState || !gameState.mapData) {
-         Game.logMessage(`updateUnitPosition: Invalid unit, destination, or gameState.`, gameState, { level: 'ERROR', target: 'CONSOLE' });
+    // Validate inputs first, handle null gameState before logging with it
+    if (!unit || newRow === null || newCol === null) {
+         // Log error without gameState if unit/coords invalid
+         if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
+            Game.logMessage(`updateUnitPosition: Invalid unit or destination.`, null, { level: 'ERROR', target: 'CONSOLE' });
+         } else {
+             console.error(`updateUnitPosition: Invalid unit or destination.`);
+         }
          return;
     }
+     if (!gameState || !gameState.mapData) {
+         // Log error without gameState if gameState invalid
+         Game.logMessage(`updateUnitPosition: Invalid gameState.`, null, { level: 'ERROR', target: 'CONSOLE' });
+         return;
+     }
+
     // Get grid dimensions from mapData for bounds checking
     const gridHeight = gameState.mapData.length;
     const gridWidth = gameState.mapData[0] ? gameState.mapData[0].length : 0;
@@ -123,7 +149,8 @@ function findStartPosition(mapData, gridWidth, gridHeight, walkableTileType, occ
         }
         attempts++;
     }
-    Game.logMessage("Could not find a valid *unoccupied* starting position after max attempts!", gameState, { level: 'ERROR', target: 'CONSOLE' });
+    // Log error, but cannot pass gameState as it's not available in this function's scope
+    Game.logMessage("Could not find a valid *unoccupied* starting position after max attempts!", null, { level: 'ERROR', target: 'CONSOLE' });
     return null; // Return null if no suitable position is found
 }
 
