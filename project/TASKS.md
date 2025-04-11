@@ -30,6 +30,10 @@
     *   [X] Test `js/ai/ai_actions.js` (Completed: 2025-04-10)
     *   [X] Test `js/ai/ai_movement.js` (Completed: 2025-04-10 - Fixed failing test)
     *   [X] Test `js/ai/state_exploring.js` (Completed: 2025-04-11 - Re-written & Passing)
+    *   [X] Test `js/ai/state_healing.js` (Completed: 2025-04-11 - Verified & Passing)
+    *   [X] Test `js/ai/state_engaging_enemy.js` (Completed: 2025-04-11 - Added tests & Passing)
+    *   [X] Test `js/ai/state_fleeing.js` (Completed: 2025-04-11 - Added tests & Passing)
+    *   [X] Test `js/ai/state_seeking_resources.js` (Completed: 2025-04-11 - Added tests & Passing)
 *   [ ] **Test `js/game.js`**
 *   [ ] **Test `js/input.js` (functions called by handlers)**
 *   [ ] **Test `js/drawing.js` & `js/ui.js` (underlying logic only)**

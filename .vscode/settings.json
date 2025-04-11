@@ -1,4 +1,4 @@
 {
-    "cline.disableBrowserTool": true,
+    "cline.disableBrowserTool": false,
     "cline.enableCheckpoints": false
 }
