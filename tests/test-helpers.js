@@ -80,10 +80,17 @@ function createMockGameState(overrides = {}) {
         safeZone: { // Example safe zone, calculated from actual dimensions
             centerX: Math.floor((useDefaultMapData[0] ? useDefaultMapData[0].length : 0) / 2),
             centerY: Math.floor(useDefaultMapData.length / 2),
-            radius: Math.max(useDefaultMapData.length, (useDefaultMapData[0] ? useDefaultMapData[0].length : 0)) // Ensure radius covers map
+            radius: Math.max(useDefaultMapData.length, (useDefaultMapData[0] ? useDefaultMapData[0].length : 0)), // Ensure radius covers map
+            // Add min/max bounds needed by findNearbyResource (Added 2025-04-10)
+            minRow: 0, // Default to full map initially
+            maxRow: useDefaultMapData.length - 1,
+            minCol: 0,
+            maxCol: (useDefaultMapData[0] ? useDefaultMapData[0].length : 0) - 1
         }
         // Add other gameState properties as needed for tests
     };
+    // Note: Actual safe zone shrinking logic is in game.js, not replicated here.
+    // Tests needing specific safe zone bounds should override the safeZone object.
 
     // Simple merge for top-level properties, allowing overrides to take precedence
     const finalGameState = { ...defaults, ...overrides };
@@ -96,8 +103,14 @@ function createMockGameState(overrides = {}) {
         finalGameState.safeZone.centerX = Math.floor(finalGameState.gridWidth / 2);
         finalGameState.safeZone.centerY = Math.floor(finalGameState.gridHeight / 2);
         finalGameState.safeZone.radius = Math.max(finalGameState.gridHeight, finalGameState.gridWidth);
+        // Also update min/max bounds if mapData was overridden (Added 2025-04-10)
+        finalGameState.safeZone.minRow = 0;
+        finalGameState.safeZone.maxRow = finalGameState.gridHeight - 1;
+        finalGameState.safeZone.minCol = 0;
+        finalGameState.safeZone.maxCol = finalGameState.gridWidth - 1;
     }
-    // If only dimensions were provided, mapData and dimensions should already match from the logic above
+    // If only dimensions were provided, mapData and dimensions should already match from the logic above,
+    // and the default safeZone bounds calculated initially will be correct.
 
 
     return finalGameState;
@@ -177,6 +190,20 @@ const MOCKED_CONSTANTS = {
     LOG_CLASS_ERROR: 'log-error',
     LOG_CLASS_WARN: 'log-warn',
     LOG_CLASS_INFO: 'log-info',
+    // AI Specific Thresholds/Ranges (Added 2025-04-10)
+    AI_FLEE_HEALTH_THRESHOLD: 0.3, // Flee below 30% HP
+    AI_HEAL_PRIORITY_THRESHOLD: 0.6, // Consider healing or seeking medkit below 60% HP
+    AI_SEEK_AMMO_THRESHOLD: 3, // Seek ammo if below 3
+    AI_PROACTIVE_SCAN_RANGE: 8, // Look further for proactive resources
+    AI_ENGAGE_RISK_AVERSION_CHANCE: 0.3, // 30% chance to hesitate if move is risky
+    AI_RANGE_MAX: 10, // Default max range if detectionRange not set on enemy
+    AI_STATE_EXPLORING: 'EXPLORING', // Define AI states for tests
+    AI_STATE_SEEKING_RESOURCES: 'SEEKING_RESOURCES',
+    AI_STATE_ENGAGING_ENEMY: 'ENGAGING_ENEMY',
+    AI_STATE_FLEEING: 'FLEEING',
+    AI_STATE_HEALING: 'HEALING',
+    AI_ATTACK_DAMAGE: 1, // Default AI damage for tests
+    MAX_EVALUATIONS_PER_TURN: 3, // From ai.js
     // Add other constants from config.js as needed for tests
 };
 
