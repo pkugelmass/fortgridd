@@ -29,8 +29,12 @@ function countWallNeighbours(grid, r, c, gridHeight, gridWidth, tileWall) {
             // Count out-of-bounds as walls
             if (checkRow < 0 || checkRow >= gridHeight || checkCol < 0 || checkCol >= gridWidth) {
                 count++;
-            } else if (grid[checkRow] && grid[checkRow][checkCol] === tileWall) { // Check if the neighbour is a wall
-                count++;
+            } else if (grid[checkRow]) {
+                // Check if the neighbour is a regular wall OR a boundary wall
+                const neighbourTile = grid[checkRow][checkCol];
+                if (neighbourTile === tileWall || neighbourTile === TILE_BOUNDARY) {
+                    count++;
+                }
             }
         }
     }
@@ -63,11 +67,11 @@ function createMapData(config) {
     for (let row = 0; row < GRID_HEIGHT; row++) {
         currentMap[row] = [];
         for (let col = 0; col < GRID_WIDTH; col++) {
-            // Ensure borders are walls
+            // Ensure borders are indestructible boundary walls
             if (row === 0 || row === GRID_HEIGHT - 1 || col === 0 || col === GRID_WIDTH - 1) {
-                currentMap[row][col] = TILE_WALL;
+                currentMap[row][col] = TILE_BOUNDARY; // Use new constant for border
             } else {
-                currentMap[row][col] = (Math.random() < INITIAL_WALL_CHANCE) ? TILE_WALL : TILE_LAND;
+                currentMap[row][col] = (Math.random() < INITIAL_WALL_CHANCE) ? TILE_WALL : TILE_LAND; // Inner cells use regular wall/land
             }
         }
     }

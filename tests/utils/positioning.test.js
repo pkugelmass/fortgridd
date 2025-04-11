@@ -69,18 +69,27 @@ QUnit.module('Positioning Functions (utils.js)', function() {
             const gridHeight = 3;
             const occupiedCoords = [{ row: 1, col: 1 }]; // Occupy the only walkable spot
 
-            // Mock Math.random to always return values pointing to the occupied spot (or edges)
-            Math.random = () => 0.5; // Will always try row 1, col 1
+            const originalRandom = Math.random; // Store before mocking
+            try {
+                // Mock Math.random to always return values pointing to the occupied spot (or edges)
+                Math.random = () => 0.5; // Will always try row 1, col 1
 
-            const pos = findStartPosition(mapData, gridWidth, gridHeight, TILE_LAND, occupiedCoords);
-            assert.strictEqual(pos, null, 'Returns null when the only walkable spot is occupied');
+                const pos = findStartPosition(mapData, gridWidth, gridHeight, TILE_LAND, occupiedCoords);
+                assert.strictEqual(pos, null, 'Returns null when the only walkable spot is occupied');
+            } finally {
+                Math.random = originalRandom; // Ensure restoration even if assert fails
+            }
             // Check if the specific error exists (guideline: don't test exact count)
             assert.ok(logMock.calls.some(log => log.message.includes("Could not find a valid *unoccupied* starting position") && log.options.level === 'ERROR'),
                       'Should log error when no position found');
         });
 
          QUnit.test('Returns null when no walkable tiles exist (ignoring edges)', function(assert) {
+            // Verify TILE_LAND is correctly set by the helper
+            assert.strictEqual(TILE_LAND, 0, 'Pre-check: TILE_LAND should be 0');
+
             const mapData = [
+                [1, 1, 1, 1], // Using TILE_WALL (1) which should be set by setupTestConstants
                 [1, 1, 1, 1],
                 [1, 1, 1, 1],
                 [1, 1, 1, 1],
@@ -90,20 +99,14 @@ QUnit.module('Positioning Functions (utils.js)', function() {
             const gridHeight = 4;
             const occupiedCoords = [];
 
-             let attemptCount = 0;
-             const maxAttemptsForTest = (gridWidth * gridHeight * 2) + 5;
-             Math.random = () => {
-                 attemptCount++;
-                 if (attemptCount > maxAttemptsForTest) {
-                     throw new Error("findStartPosition exceeded expected max attempts in test.");
-                 }
-                 return 0.5; // Will always try row 1/2, col 1/2
-             };
+             // Remove Math.random mock; let the function hit maxAttempts naturally
+             // Math.random = () => 0.5;
 
             const pos = findStartPosition(mapData, gridWidth, gridHeight, TILE_LAND, occupiedCoords);
             assert.strictEqual(pos, null, 'Returns null when no walkable tiles exist');
-            // Guideline: Logging is secondary. Primary check is the null return value.
-            // The previous log assertion failed because the log call in findStartPosition uses an undefined gameState.
+            // Check if the expected error log occurred after max attempts
+            assert.ok(logMock.calls.some(log => log.message.includes("Could not find a valid *unoccupied* starting position") && log.options.level === 'ERROR'),
+                      'Should log error after max attempts');
         });
 
         QUnit.test('Handles empty mapData gracefully', function(assert) {

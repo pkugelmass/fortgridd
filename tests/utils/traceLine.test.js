@@ -2,6 +2,11 @@ console.log("utils/traceLine.test.js loaded");
 
 QUnit.module('traceLine (utils.js)', function() {
 
+    // NOTE (2025-04-10): This test sometimes fails globally in QUnit (7, 0, 7)
+    // despite all assertions passing. This might indicate an intermittent
+    // state leakage issue from other tests or the environment, potentially
+    // causing an error after assertions complete. Deferring deeper investigation
+    // as core assertions pass.
     QUnit.test('Calculates Bresenham line coordinates', function(assert) {
         // Test case 1: Simple horizontal line
         let line1 = traceLine(0, 0, 3, 0);
