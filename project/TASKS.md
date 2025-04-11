@@ -20,8 +20,8 @@
 ### Comprehensive Unit Testing Overhaul (Plan Adopted: 2025-04-10)
 *(Systematically review and rewrite/create unit tests module by module, focusing on core logic, edge cases, and failure states. Mock dependencies as needed. Skip trivial code and rendering logic. See `project/TESTING_GUIDELINES.md`)*
 *   [X] **Test `js/utils.js`** (Completed: 2025-04-10 - Split into `tests/utils/*`, added helpers, fixed failures)
-*   [ ] **Test `js/config.js`**
-*   [ ] **Test `js/gameState.js`**
+*   [X] **Test `js/config.js`** (Completed: 2025-04-10 - Refactored existing tests for type/range checks)
+*   [X] **Test `js/gameState.js`** (Completed: 2025-04-10 - Added constructor default checks)
 *   [ ] **Test `js/map.js`**
 *   [ ] **Test `js/player.js` & `js/playerActions.js`**
 *   [ ] **Test `js/ai.js` & `js/ai/*` (State handlers, perception, movement, etc.)**

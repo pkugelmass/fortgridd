@@ -5,8 +5,8 @@
 // --- Gameplay & Logic ---
 
 // Grid & Display (Core Layout)
-const GRID_WIDTH = 50;              // Example Size
-const GRID_HEIGHT = 44;             // Example Size
+const GRID_WIDTH = 50;              // (Test Range: 10-100)
+const GRID_HEIGHT = 44;             // (Test Range: 10-100)
 const MIN_CELL_SIZE = 8;            // Minimum cell size for rendering calculations
 const CANVAS_PADDING = 20;          // Padding around the canvas
 
@@ -24,20 +24,20 @@ const FEATURE_SPAWN_CHANCE_AMMO = 0.04;   // Example: 4% chance on land (after m
 const PLAYER_MAX_HP = 15;
 const PLAYER_START_AMMO = 0;
 const PLAYER_START_MEDKITS = 0;
-const PLAYER_AMMO_PICKUP_AMOUNT = 1; // Example: Amount of ammo Player gains from pickup
+const PLAYER_AMMO_PICKUP_AMOUNT = 1; // Example: Amount of ammo Player gains from pickup (Test: > 0)
 
 // AI Stats & Variations
-const NUM_ENEMIES = 30;              // Example Count
-const AI_ATTACK_DAMAGE = 2;
-const AI_HP_MIN = 12;                // Min starting HP for AI variation
-const AI_HP_MAX = 15;                // Max starting HP for AI variation
-const AI_RANGE_MIN = 5;             // Min detection range for AI variation
-const AI_RANGE_MAX = 8;            // Max detection range for AI variation
-const AI_AMMO_MIN = 0;              // Min starting ammo for AI variation
-const AI_AMMO_MAX = 0;              // Max starting ammo for AI variation
-const AI_PURSUE_HP_THRESHOLD = 0.3; // HP percentage above which AI will pursue targets
+const NUM_ENEMIES = 30;              // Example Count (Test Range: 0-100)
+const AI_ATTACK_DAMAGE = 2;         // (Test: > 0)
+const AI_HP_MIN = 12;                // Min starting HP for AI variation (Test: > 0 if defined)
+const AI_HP_MAX = 15;                // Max starting HP for AI variation (Test: > 0 if defined)
+const AI_RANGE_MIN = 5;             // Min detection range for AI variation (Test: > 0 if defined)
+const AI_RANGE_MAX = 8;            // Max detection range for AI variation (Test: > 0 if defined)
+const AI_AMMO_MIN = 0;              // Min starting ammo for AI variation (Test: >= 0 if defined)
+const AI_AMMO_MAX = 0;              // Max starting ammo for AI variation (Test: >= 0 if defined)
+const AI_PURSUE_HP_THRESHOLD = 0.3; // HP percentage above which AI will pursue targets (Test: 0-1 if defined)
 
-// AI FSM States
+// AI FSM States (Test: strings)
 const AI_STATE_EXPLORING = 'EXPLORING';
 const AI_STATE_SEEKING_RESOURCES = 'SEEKING_RESOURCES';
 const AI_STATE_ENGAGING_ENEMY = 'ENGAGING_ENEMY';
@@ -50,8 +50,8 @@ const AI_FLEE_HEALTH_THRESHOLD = 0.35; // Example: Flee if health < 25%
 const AI_SEEK_AMMO_THRESHOLD = 4;      // Example: Seek ammo if count is less than this
 
 // AI Resource Interaction
-const AI_AMMO_PICKUP_AMOUNT = 1; // Example: Amount of ammo AI gains from pickup
-const AI_START_MEDKITS = 0;      // Example: Starting medkits for AI (Changed from 0 on 2025-04-09)
+const AI_AMMO_PICKUP_AMOUNT = 1; // Example: Amount of ammo AI gains from pickup (Test: > 0)
+const AI_START_MEDKITS = 0;      // Example: Starting medkits for AI (Test: >= 0)
 
 // AI Exploring State Behavior
 const AI_PROACTIVE_SCAN_RANGE = 3; // Example: Range for scanning non-critical resources
@@ -64,22 +64,22 @@ const AI_ENGAGE_RISK_AVERSION_CHANCE = 0.2; // Example: 30% chance to hesitate i
 
 // Combat
 const PLAYER_ATTACK_DAMAGE = 2;     // Melee damage dealt by player
-const RANGED_ATTACK_RANGE = 5;      // Max range for player/AI ranged attacks
-const RANGED_ATTACK_DAMAGE = 2;     // Damage dealt by player ranged attacks (AI uses AI_ATTACK_DAMAGE for now)
+const RANGED_ATTACK_RANGE = 5;      // Max range for player/AI ranged attacks (Test: > 0)
+const RANGED_ATTACK_DAMAGE = 2;     // Damage dealt by player ranged attacks (AI uses AI_ATTACK_DAMAGE for now) (Test: > 0)
 
 // Shrinking Map Config
-const SHRINK_INTERVAL = 15;         // Turns between map shrinks
-const SHRINK_AMOUNT = 1;            // Cells removed per side during shrink
-const STORM_DAMAGE = 1;             // HP damage per turn in the storm
+const SHRINK_INTERVAL = 15;         // Turns between map shrinks (Test: >= 5)
+const SHRINK_AMOUNT = 1;            // Cells removed per side during shrink (Test: >= 1)
+const STORM_DAMAGE = 1;             // HP damage per turn in the storm (Test: >= 1)
 
 // Healing Config
-const HEAL_COST = 1;                // Medkits required to heal
-const HEAL_AMOUNT = 1;              // HP restored per heal action
+const HEAL_COST = 1;                // Medkits required to heal (Test: >= 0)
+const HEAL_AMOUNT = 1;              // HP restored per heal action (Test: > 0)
 
 // UI / Game Logic Settings
-const MAX_LOG_MESSAGES = 50;        // Max messages displayed in the game log
-const AI_TURN_DELAY = 100;          // Milliseconds delay before AI turn starts
-const CONSOLE_LOG_LEVEL = 'INFO';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown.
+const MAX_LOG_MESSAGES = 50;        // Max messages displayed in the game log (Test: > 0)
+const AI_TURN_DELAY = 100;          // Milliseconds delay before AI turn starts (Test: >= 0)
+const CONSOLE_LOG_LEVEL = 'INFO';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown. (Test: string, one of valid)
 
 // --- Visuals & Appearance ---
 
