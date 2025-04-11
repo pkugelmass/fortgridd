@@ -34,7 +34,7 @@
     *   [X] Test `js/ai/state_engaging_enemy.js` (Completed: 2025-04-11 - Added tests & Passing)
     *   [X] Test `js/ai/state_fleeing.js` (Completed: 2025-04-11 - Added tests & Passing)
     *   [X] Test `js/ai/state_seeking_resources.js` (Completed: 2025-04-11 - Added tests & Passing)
-*   [X] **Test `js/game.js`** (Completed: 2025-04-11 - Added tests & Passing)
+*   [X] **Test `js/game.js`** (Completed: 2025-04-11 - Broken down into `tests/game/*` modules; see helper enhancement task below)
 *   [X] **Test `js/input.js` (functions called by handlers)** (Completed: 2025-04-11 - Added tests & Passing)
 *   [ ] **Test `js/drawing.js` & `js/ui.js` (underlying logic only)** (Skipped per guidelines: 2025-04-11)
 *   [X] **Test `js/main.js` (initialization)** (Completed: 2025-04-11 - Added tests for init call & result handling)
@@ -59,11 +59,18 @@
      *   [X] Modify `Game.logMessage` in `js/game.js` to use new parameters (`level`, `target`, `className`).
      *   [X] Refactor all existing `Game.logMessage` callsites with appropriate `level`, `target`, `className`. (*Note: `main.js` required `write_to_file` fallback*)
      *   [X] Refactor all direct `console.*` calls to use `Game.logMessage` or remove them. (*Note: `main.js` required `write_to_file` fallback; some remain in `map.js`, `drawing.js` due to lack of `gameState` context*)
+ *   [ ] **Enhance Test Helpers & Standardize Test Setup (Initiated: 2025-04-11)**
+     *   [X] Add `setupGameMocks` helper to `test-helpers.js`. (Completed: 2025-04-11)
+     *   [X] Refactor `tests/game/safe_zone.test.js` to use `setupGameMocks`. (Completed: 2025-04-11)
+     *   [ ] Refactor remaining `tests/game/*` modules to use `setupGameMocks`. (Next Step)
+     *   [ ] Develop a robust helper in `test-helpers.js` for mocking global utility functions (e.g., `updateUnitPosition`, `getValidMoves`, `isMoveSafe`). (Identified: 2025-04-11)
+     *   [ ] Refactor remaining test modules (e.g., `tests/ai/*`, `tests/utils/*`) to use standardized helpers once available.
+ *   [X] **Refactor repetitive test setup boilerplate into helper functions** (setupGameMocks added; global utility helper pending). (Identified: 2025-04-10, Updated: 2025-04-11)
  *   [ ] **Write Essential Unit Tests:** Add targeted unit tests for critical functions identified during refactoring or review (focus on behavior, not implementation details). (Added: 2025-04-09)
+ *   [ ] Review and break up overly long test modules (e.g., `state_engaging_enemy.test.js`). (Identified: 2025-04-11)
  *   [ ] Review AI state handler modules (`state_*.js`) for length and complexity; refactor if needed. (Added: 2025-04-09)
  *   [ ] Investigate creating a shared `canMoveTo(unit, targetRow, targetCol)` utility function for player/AI move validation. (Discovered: 2025-04-08)
  *   [ ] Refactor resource handling (AI & Player) using a configuration object in config.js. (Discovered: 2025-04-08)
- *   [ ] Refactor repetitive test setup boilerplate into a helper function in `test-helpers.js`. (Identified: 2025-04-10)
 
  ### General Process
  *   [ ] Practice small, logical Git commits with clear messages.

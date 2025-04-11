@@ -23,4 +23,5 @@ Our primary goal for unit testing is to ensure the core game logic functions cor
 *   **Keep Focused:** Aim for one logical concept or path per test.
 *   **Clear Assertions:** Use descriptive messages in `assert` statements.
 *   **Mock Dependencies:** Isolate the unit under test by mocking its dependencies where practical. Ensure mocks correctly target the actual object/function being used by the code under test (e.g., mock `Game.logMessage` directly, not `window.Game.logMessage` if the code references the `Game` constant).
+*   **Prioritize Central Helpers:** Strive to perform test setup (creating mock game states, units, constants, mocking dependencies) using the functions provided in `tests/test-helpers.js`. When encountering setup challenges or failing tests due to setup issues, prioritize enhancing the central helper functions rather than implementing complex setup logic or workarounds directly within individual test files.
 *   **Readability:** Write clear, understandable test code.

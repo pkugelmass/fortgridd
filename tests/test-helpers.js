@@ -160,6 +160,73 @@ function setupLogMock() {
 }
 
 
+/**
+ * Sets up mocks for specified global functions attached to the window object.
+ * Handles storing originals, applying mocks, tracking calls, and restoring.
+ *
+ * @param {Object.<string, function|boolean>} mocksToSetup - Keys are global function names (e.g., 'findStartPosition').
+ *                                                        Values are mock functions or `true` to use a default spy.
+ *                                                        If a function is provided, it will be used as the mock.
+ *                                                        If `true`, a simple spy that tracks calls will be used.
+ * @returns {{calls: Object.<string, {count: number, args: Array<any>}>, restore: function}}
+ *          `calls`: An object where keys are function names and values track call count and arguments.
+ *          `restore`: A function to restore all original global functions.
+ */
+function setupGlobalMocks(mocksToSetup = {}) {
+    const originalFunctions = {};
+    const mockCalls = {};
+
+    // Helper to create a default spy
+    const createSpy = (funcName) => {
+        return (...args) => {
+            if (!mockCalls[funcName]) mockCalls[funcName] = { count: 0, args: [] };
+            mockCalls[funcName].count++;
+            mockCalls[funcName].args.push(args);
+            // Default spy doesn't return anything specific unless overridden
+        };
+    };
+
+    // Apply mocks
+    for (const funcName in mocksToSetup) {
+        if (typeof window[funcName] === 'function') {
+            originalFunctions[funcName] = window[funcName]; // Store original
+
+            const mockValue = mocksToSetup[funcName];
+            if (typeof mockValue === 'function') {
+                // Use the provided mock function, but wrap it to track calls
+                window[funcName] = (...args) => {
+                     if (!mockCalls[funcName]) mockCalls[funcName] = { count: 0, args: [] };
+                     mockCalls[funcName].count++;
+                     mockCalls[funcName].args.push(args);
+                     return mockValue(...args); // Execute the provided mock logic
+                };
+            } else if (mockValue === true) {
+                // Use the default spy
+                window[funcName] = createSpy(funcName);
+            } else {
+                 console.warn(`Invalid mock value for global function ${funcName}. Expected function or true.`);
+                 // Optionally, apply a default spy anyway or skip
+                 window[funcName] = createSpy(funcName);
+            }
+        } else {
+            console.warn(`Cannot mock global function ${funcName}: Function not found on window object.`);
+        }
+    }
+
+    // Restore function
+    function restore() {
+        for (const funcName in originalFunctions) {
+            window[funcName] = originalFunctions[funcName];
+        }
+    }
+
+    return {
+        calls: mockCalls,
+        restore: restore
+    };
+}
+
+
 // --- Constant Mocking Helpers ---
 
 const MOCKED_CONSTANTS = {
@@ -204,6 +271,9 @@ const MOCKED_CONSTANTS = {
     AI_STATE_HEALING: 'HEALING',
     AI_ATTACK_DAMAGE: 1, // Default AI damage for tests
     MAX_EVALUATIONS_PER_TURN: 3, // From ai.js
+    SHRINK_INTERVAL: 10, // Default from config.js (Added 2025-04-11)
+    SHRINK_AMOUNT: 1, // Default from config.js (Added 2025-04-11)
+    STORM_DAMAGE: 1, // Default from config.js (Added 2025-04-11)
     // Add other constants from config.js as needed for tests
 };
 
@@ -239,3 +309,76 @@ function cleanupTestConstants() {
 
 
 // Add more helper functions as needed, e.g., for creating specific map layouts
+
+
+/**
+ * Sets up mocks for specified methods on the global Game object.
+ * Handles storing originals, applying mocks, tracking calls, and restoring.
+ *
+ * @param {Object.<string, function|boolean>} mocksToSetup - Keys are Game method names (e.g., 'logMessage').
+ *                                                        Values are mock functions or `true` to use a default spy.
+ *                                                        If a function is provided, it will be used as the mock.
+ *                                                        If `true`, a simple spy that tracks calls will be used.
+ * @returns {{calls: Object.<string, {count: number, args: Array<any>}>, restore: function}}
+ *          `calls`: An object where keys are method names and values track call count and arguments.
+ *          `restore`: A function to restore all original Game methods.
+ */
+function setupGameMocks(mocksToSetup = {}) {
+    const originalMethods = {};
+    const mockCalls = {};
+
+    if (typeof Game === 'undefined') {
+        console.error("Cannot setup Game mocks: Global Game object not found!");
+        return { calls: {}, restore: () => {} };
+    }
+
+    // Helper to create a default spy
+    const createSpy = (methodName) => {
+        return (...args) => {
+            if (!mockCalls[methodName]) mockCalls[methodName] = { count: 0, args: [] };
+            mockCalls[methodName].count++;
+            mockCalls[methodName].args.push(args);
+            // Default spy doesn't return anything specific unless overridden
+        };
+    };
+
+    // Apply mocks
+    for (const methodName in mocksToSetup) {
+        if (Game.hasOwnProperty(methodName)) {
+            originalMethods[methodName] = Game[methodName]; // Store original
+
+            const mockValue = mocksToSetup[methodName];
+            if (typeof mockValue === 'function') {
+                // Use the provided mock function, but wrap it to track calls
+                Game[methodName] = (...args) => {
+                     if (!mockCalls[methodName]) mockCalls[methodName] = { count: 0, args: [] };
+                     mockCalls[methodName].count++;
+                     mockCalls[methodName].args.push(args);
+                     return mockValue(...args); // Execute the provided mock logic
+                };
+            } else if (mockValue === true) {
+                // Use the default spy
+                Game[methodName] = createSpy(methodName);
+            } else {
+                 console.warn(`Invalid mock value for Game.${methodName}. Expected function or true.`);
+                 // Optionally, apply a default spy anyway or skip
+                 Game[methodName] = createSpy(methodName);
+            }
+        } else {
+            console.warn(`Cannot mock Game.${methodName}: Method not found on Game object.`);
+        }
+    }
+
+    // Restore function
+    function restore() {
+        if (typeof Game === 'undefined') return;
+        for (const methodName in originalMethods) {
+            Game[methodName] = originalMethods[methodName];
+        }
+    }
+
+    return {
+        calls: mockCalls,
+        restore: restore
+    };
+}
