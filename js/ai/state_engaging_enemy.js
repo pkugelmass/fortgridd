@@ -1,25 +1,19 @@
 // console.log("state_engaging_enemy.js loaded"); // Removed module loaded log
 
+
 /**
- * Handles AI logic when in the ENGAGING_ENEMY state, using gameState.
- * Prioritizes target validation, LOS check, self-preservation (fleeing),
- * attacking (ranged then melee), and then moving towards the target with risk assessment.
- * @param {object} enemy - The enemy object in the ENGAGING_ENEMY state.
+ * Validates if the enemy can continue engaging its current target.
+ * Checks target existence, health, LOS, and if the enemy should flee.
+ * @param {object} enemy - The enemy object.
  * @param {GameState} gameState - The current game state.
- * @returns {boolean} - True if an action was taken (attack, move, wait), false if re-evaluation is needed.
+ * @returns {{isValid: boolean, validatedTarget: object|null, needsReevaluation: boolean, reason: string|null}}
  */
-function handleEngagingEnemyState(enemy, gameState) {
-    // Check dependencies (Added applyKnockback, removed calculateKnockbackDestination)
-    if (!enemy || !gameState || !gameState.player || !gameState.enemies || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function' || typeof performReevaluation !== 'function' || typeof hasClearLineOfSight !== 'function' || typeof hasClearCardinalLineOfSight !== 'function' || typeof applyKnockback !== 'function' || typeof updateUnitPosition !== 'function' || typeof getValidMoves !== 'function' || typeof isMoveSafe !== 'function') {
-        Game.logMessage("handleEngagingEnemyState: Missing enemy, gameState, or required functions (incl. applyKnockback).", gameState, { level: 'ERROR', target: 'CONSOLE' });
-        return false; // Cannot act without dependencies
-    }
+function _validateEngageState(enemy, gameState) {
+    const { player, enemies } = gameState;
     const enemyId = enemy.id || 'Unknown Enemy';
-    const { player, enemies, mapData } = gameState; // Destructure
 
     // --- 1. Target Validation (Existence & Health) ---
     const target = enemy.targetEnemy;
-    // Ensure target exists within the current gameState's player/enemies list and is alive
     let currentTargetObject = null;
     if (target) {
         if (target === player && player.hp > 0) {
@@ -32,119 +26,122 @@ function handleEngagingEnemyState(enemy, gameState) {
     if (!currentTargetObject) {
         Game.logMessage(`Enemy ${enemyId} target invalid or defeated. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         enemy.targetEnemy = null;
-        performReevaluation(enemy, gameState); // Pass gameState
-        return false; // Needs re-evaluation
+        // performReevaluation is called by the main loop if this returns false
+        return { isValid: false, validatedTarget: null, needsReevaluation: true, reason: 'no_target' };
     }
-    // Use the validated currentTargetObject from now on
     const validatedTarget = currentTargetObject;
     const targetId = validatedTarget === player ? 'Player' : validatedTarget.id;
 
-
     // --- 2. Line of Sight (LOS) Check ---
-    // Use hasClearLineOfSight and detectionRange
-    // Assume AI_RANGE_MAX is global for now
-    if (!hasClearLineOfSight(enemy, validatedTarget, enemy.detectionRange || AI_RANGE_MAX, gameState)) { // Pass gameState
+    if (!hasClearLineOfSight(enemy, validatedTarget, enemy.detectionRange || AI_RANGE_MAX, gameState)) {
         Game.logMessage(`Enemy ${enemyId} lost sight of target ${targetId}. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         enemy.targetEnemy = null;
-        performReevaluation(enemy, gameState); // Pass gameState
-        return false; // Needs re-evaluation
+        // performReevaluation is called by the main loop if this returns false
+        return { isValid: false, validatedTarget: null, needsReevaluation: true, reason: 'no_los' };
     }
 
     // --- 3. Health Check (Self-Preservation) ---
-    // Assume AI_FLEE_HEALTH_THRESHOLD is global for now
-    const hpPercent = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP); // Use player max as fallback
+    const hpPercent = enemy.hp / (enemy.maxHp || PLAYER_MAX_HP);
     if (hpPercent < AI_FLEE_HEALTH_THRESHOLD) {
         Game.logMessage(`Enemy ${enemyId} HP low (${enemy.hp}), transitioning to FLEEING from ${targetId}.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-        enemy.state = AI_STATE_FLEEING;
-        // Target remains the same
-        Game.logMessage(`Enemy ${enemyId} health low, fleeing!`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT }); // Player log
-        return false; // State changed, needs re-evaluation next loop
+        enemy.state = AI_STATE_FLEEING; // Change state directly
+        Game.logMessage(`Enemy ${enemyId} health low, fleeing!`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+        return { isValid: false, validatedTarget: validatedTarget, needsReevaluation: true, reason: 'fleeing' }; // Needs re-eval due to state change
     }
 
-    // --- 4. Attack Logic ---
-    const dist = Math.abs(validatedTarget.row - enemy.row) + Math.abs(validatedTarget.col - enemy.col);
-    // Assume RANGED_ATTACK_RANGE, AI_ATTACK_DAMAGE, TILE_*, GRID_* are global for now
+    // If all checks pass
+    return { isValid: true, validatedTarget: validatedTarget, needsReevaluation: false, reason: null };
+}
 
-    // Check 4a: Ranged Attack Possible?
-    if (dist > 0 && dist <= RANGED_ATTACK_RANGE && enemy.resources.ammo > 0 && hasClearCardinalLineOfSight(enemy, validatedTarget, RANGED_ATTACK_RANGE, gameState)) { // Pass gameState
+
+/**
+ * Attempts to perform a ranged or melee attack against the target.
+ * Handles damage application, ammo decrement, and knockback.
+ * @param {object} enemy - The attacking enemy object.
+ * @param {object} target - The target unit object.
+ * @param {GameState} gameState - The current game state.
+ * @returns {boolean} - True if an attack was made, false otherwise. Also returns false if target was defeated.
+ */
+function _attemptEngageAttack(enemy, target, gameState) {
+    const enemyId = enemy.id || 'Unknown Enemy';
+    const targetId = target === gameState.player ? 'Player' : target.id;
+    const dist = Math.abs(target.row - enemy.row) + Math.abs(target.col - enemy.col);
+
+    // Ranged Attack
+    if (dist > 0 && dist <= RANGED_ATTACK_RANGE && enemy.resources.ammo > 0 && hasClearCardinalLineOfSight(enemy, target, RANGED_ATTACK_RANGE, gameState)) {
         const damage = AI_ATTACK_DAMAGE;
-        validatedTarget.hp -= damage; // Modify target HP directly
-        enemy.resources.ammo--; // Modify enemy ammo
+        target.hp -= damage;
+        enemy.resources.ammo--;
         let knockbackMsg = "";
-
-        // --- Knockback Logic (Ranged) ---
-        if (validatedTarget.hp > 0) { // Only apply knockback if target survived the initial damage
-            const knockbackResult = applyKnockback(enemy, validatedTarget, gameState); // Use centralized function
-            if (knockbackResult.success) {
-                knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
-            } else if (knockbackResult.reason !== 'calc_error') { // Don't log calc errors usually
-                knockbackMsg = ` Knockback blocked (${knockbackResult.reason}).`;
-            }
-            // No need for manual checks or updateUnitPosition call here
-        }
-        // --- End Knockback Logic ---
-
-        // Pass gameState to logMessage
-        Game.logMessage(`Enemy ${enemyId} shoots ${targetId} for ${damage} damage. (Ammo: ${enemy.resources.ammo})${knockbackMsg}`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-
-        // Check if target was defeated *after* potential knockback
-        if (validatedTarget.hp <= 0) {
-            Game.logMessage(`Enemy ${enemyId} defeated target ${targetId}. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-            enemy.targetEnemy = null;
-            performReevaluation(enemy, gameState);
-            return false;
-        }
-        return true; // Action complete (attacked)
-    }
-
-    // Check 4b: Melee Attack Possible?
-    if (dist === 1) {
-        const damage = AI_ATTACK_DAMAGE;
-        validatedTarget.hp -= damage;
-        let knockbackMsg = "";
-
-        // --- Knockback Logic (Melee) ---
-        if (validatedTarget.hp > 0) { // Only apply knockback if target survived the initial damage
-            const knockbackResult = applyKnockback(enemy, validatedTarget, gameState); // Use centralized function
+        if (target.hp > 0) {
+            const knockbackResult = applyKnockback(enemy, target, gameState);
             if (knockbackResult.success) {
                 knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
             } else if (knockbackResult.reason !== 'calc_error') {
                 knockbackMsg = ` Knockback blocked (${knockbackResult.reason}).`;
             }
-            // No need for manual checks or updateUnitPosition call here
         }
-        // --- End Knockback Logic ---
-
-        // Pass gameState to logMessage
-        Game.logMessage(`Enemy ${enemyId} melees ${targetId} for ${damage} damage.${knockbackMsg}`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-
-        // Check if target was defeated *after* potential knockback
-        if (validatedTarget.hp <= 0) {
+        Game.logMessage(`Enemy ${enemyId} shoots ${targetId} for ${damage} damage. (Ammo: ${enemy.resources.ammo})${knockbackMsg}`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+        if (target.hp <= 0) {
             Game.logMessage(`Enemy ${enemyId} defeated target ${targetId}. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-            enemy.targetEnemy = null;
-            performReevaluation(enemy, gameState); // Pass gameState
-            // Let main loop handle removal based on HP check
+            enemy.targetEnemy = null; // Clear target since it's defeated
             return false; // Needs re-evaluation
         }
-        return true; // Action complete (attacked)
+        return true; // Attack made
     }
 
-    // --- 5. Movement Logic (If No Attack Occurred) ---
+    // Melee Attack
+    if (dist === 1) {
+        const damage = AI_ATTACK_DAMAGE;
+        target.hp -= damage;
+        let knockbackMsg = "";
+        if (target.hp > 0) {
+            const knockbackResult = applyKnockback(enemy, target, gameState);
+            if (knockbackResult.success) {
+                knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
+            } else if (knockbackResult.reason !== 'calc_error') {
+                knockbackMsg = ` Knockback blocked (${knockbackResult.reason}).`;
+            }
+        }
+        Game.logMessage(`Enemy ${enemyId} melees ${targetId} for ${damage} damage.${knockbackMsg}`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+        if (target.hp <= 0) {
+            Game.logMessage(`Enemy ${enemyId} defeated target ${targetId}. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+            enemy.targetEnemy = null; // Clear target since it's defeated
+            return false; // Needs re-evaluation
+        }
+        return true; // Attack made
+    }
 
-    // A. Get Valid Moves (pass gameState)
+    return false; // No attack made
+}
+
+
+/**
+ * Determines and executes the best move for an enemy engaging a target.
+ * Considers getting closer, maintaining LOS, safety, and risk aversion.
+ * Logs the move or wait action.
+ * @param {object} enemy - The moving enemy object.
+ * @param {object} target - The target unit object.
+ * @param {GameState} gameState - The current game state.
+ * @returns {boolean} - Always returns true, as either moving or waiting is considered a completed action.
+ */
+function _determineAndExecuteEngageMove(enemy, target, gameState) {
+    const enemyId = enemy.id || 'Unknown Enemy';
+    const targetId = target === gameState.player ? 'Player' : target.id;
+
+    // A. Get Valid Moves
     const possibleMoves = getValidMoves(enemy, gameState);
     if (possibleMoves.length === 0) {
         Game.logMessage(`Enemy ${enemyId} is blocked while engaging ${targetId} and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         return true; // Wait action
     }
 
-    // B. Identify Best Moves Towards Target
+    // B. Identify Best Moves
     let closerMoves = [];
     let sidewaysMoves = [];
-    const currentDist = Math.abs(validatedTarget.row - enemy.row) + Math.abs(validatedTarget.col - enemy.col);
-
+    const currentDist = Math.abs(target.row - enemy.row) + Math.abs(target.col - enemy.col);
     for (const move of possibleMoves) {
-        const newDist = Math.abs(validatedTarget.row - move.row) + Math.abs(validatedTarget.col - move.col);
+        const newDist = Math.abs(target.row - move.row) + Math.abs(target.col - move.col);
         if (newDist < currentDist) {
             closerMoves.push(move);
         } else if (newDist === currentDist) {
@@ -153,97 +150,104 @@ function handleEngagingEnemyState(enemy, gameState) {
     }
     let potentialCandidates = [...closerMoves, ...sidewaysMoves];
 
-    // C. Filter for Safety (Avoid *Known* OTHER Enemies)
-    // Pass gameState to hasClearLineOfSight
-    const allVisibleThreats = [player, ...enemies].filter(potentialThreat =>
-        potentialThreat &&
-        potentialThreat.hp > 0 &&
-        potentialThreat !== enemy &&
-        potentialThreat !== validatedTarget &&
-        hasClearLineOfSight(enemy, potentialThreat, enemy.detectionRange || AI_RANGE_MAX, gameState) // Pass gameState
-    );
-
-    // Pass gameState to isMoveSafe
+    // C. Filter for Safety
     const safeCandidateMoves = potentialCandidates.filter(move => isMoveSafe(enemy, move.row, move.col, gameState));
-
     if (safeCandidateMoves.length === 0) {
-         if (potentialCandidates.length > 0) {
-              Game.logMessage(`Enemy ${enemyId} avoids moving closer to ${targetId} due to nearby known threats.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-         } else {
-              Game.logMessage(`Enemy ${enemyId} cannot find a suitable move towards ${targetId} and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-         }
+         const logReason = potentialCandidates.length > 0 ? "avoids moving closer due to nearby known threats" : "cannot find a suitable move";
+         Game.logMessage(`Enemy ${enemyId} ${logReason} towards ${targetId} and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
          return true; // Wait action
     }
 
-    // D. Filter for LOS Maintenance (Prefer Keeping Sight of Primary Target)
+    // D. Filter for LOS Maintenance
     let losMaintainingMoves = [];
     for (const move of safeCandidateMoves) {
         const tempEnemyPos = { row: move.row, col: move.col };
-        // Pass gameState to hasClearLineOfSight
-        if (hasClearLineOfSight(tempEnemyPos, validatedTarget, enemy.detectionRange || AI_RANGE_MAX, gameState)) {
+        if (hasClearLineOfSight(tempEnemyPos, target, enemy.detectionRange || AI_RANGE_MAX, gameState)) {
             losMaintainingMoves.push(move);
         }
     }
+    let finalCandidates = losMaintainingMoves.length > 0 ? losMaintainingMoves : safeCandidateMoves;
 
-    let finalCandidates = [];
-    if (losMaintainingMoves.length > 0) {
-        finalCandidates = losMaintainingMoves;
-    } else {
-        finalCandidates = safeCandidateMoves;
-    }
-
-    // E. Select Final Candidate Move
+    // E. Select Move
     let chosenMove = null;
     if (finalCandidates.length > 0) {
-        let finalCloserMoves = [];
-        let finalSidewaysMoves = [];
-        for (const move of finalCandidates) {
-             const newDist = Math.abs(validatedTarget.row - move.row) + Math.abs(validatedTarget.col - move.col);
-             if (newDist < currentDist) {
-                 finalCloserMoves.push(move);
-             } else if (newDist === currentDist) {
-                 finalSidewaysMoves.push(move);
-             }
-        }
-
+        let finalCloserMoves = finalCandidates.filter(move => {
+            const newDist = Math.abs(target.row - move.row) + Math.abs(target.col - move.col);
+            return newDist < currentDist;
+        });
         if (finalCloserMoves.length > 0) {
             chosenMove = finalCloserMoves[Math.floor(Math.random() * finalCloserMoves.length)];
-        } else if (finalSidewaysMoves.length > 0) {
-            chosenMove = finalSidewaysMoves[Math.floor(Math.random() * finalSidewaysMoves.length)];
+        } else {
+            chosenMove = finalCandidates[Math.floor(Math.random() * finalCandidates.length)];
         }
     }
 
-    // F. Risk Assessment (On Chosen Move)
-    let isRisky = false;
+    // F. Risk Assessment
+    let isRiskyMove = false;
     if (chosenMove) {
-        const canTargetAttack = validatedTarget.resources && validatedTarget.resources.ammo > 0;
-        let targetHasLOSToMove = false;
-        if (canTargetAttack) {
-            // Pass gameState to hasClearLineOfSight
-            targetHasLOSToMove = hasClearLineOfSight(validatedTarget, chosenMove, RANGED_ATTACK_RANGE, gameState);
-        }
-        isRisky = canTargetAttack && targetHasLOSToMove;
+        const targetCanShoot = target.resources && target.resources.ammo > 0;
+        const targetHasLOS = targetCanShoot && hasClearLineOfSight(target, chosenMove, RANGED_ATTACK_RANGE, gameState);
+        isRiskyMove = targetCanShoot && targetHasLOS;
     }
 
-    // G. Risk Aversion (Probabilistic Hesitation)
-    // Assume AI_ENGAGE_RISK_AVERSION_CHANCE is global for now
-    if (chosenMove && isRisky) {
-        const rand = Math.random();
-        if (rand < (typeof AI_ENGAGE_RISK_AVERSION_CHANCE !== 'undefined' ? AI_ENGAGE_RISK_AVERSION_CHANCE : 0.3)) {
+    // G. Risk Aversion
+    if (chosenMove && isRiskyMove) {
+        const riskChance = typeof AI_ENGAGE_RISK_AVERSION_CHANCE !== 'undefined' ? AI_ENGAGE_RISK_AVERSION_CHANCE : 0.3;
+        if (Math.random() < riskChance) {
             Game.logMessage(`Enemy ${enemyId} hesitates moving to (${chosenMove.row}, ${chosenMove.col}) due to risk from ${targetId}.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-            return true; // Wait action (hesitated)
+            return true; // Wait action
         }
     }
 
-    // H. Execute Move
-    if (chosenMove && (!isRisky || isRisky /* risk accepted */)) {
+    // H. Execute Move or Wait
+    if (chosenMove) {
         Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) moves towards target ${targetId} to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-        // Pass gameState to updateUnitPosition (anticipating refactor)
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true; // Move action complete
+    } else {
+        // Fallback wait if no move was chosen after all filtering
+        Game.logMessage(`Enemy ${enemyId} waits (engaging ${targetId}, no suitable move).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+        return true; // Wait action complete
+    }
+}
+
+
+/**
+ * Handles AI logic when in the ENGAGING_ENEMY state. Orchestrates validation, attack, and movement.
+ * @param {object} enemy - The enemy object in the ENGAGING_ENEMY state.
+ * @param {GameState} gameState - The current game state.
+ * @returns {boolean} - True if an action was taken (attack, move, wait), false if re-evaluation is needed.
+ */
+function handleEngagingEnemyState(enemy, gameState) {
+    // Check dependencies (Simplified, assuming they are loaded)
+     if (!enemy || !gameState || !gameState.player || !gameState.enemies || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function') {
+         Game.logMessage("handleEngagingEnemyState: Missing critical data.", gameState, { level: 'ERROR', target: 'CONSOLE' });
+         return false; // Cannot act
+     }
+    // const enemyId = enemy.id || 'Unknown Enemy'; // No longer needed directly here
+    // const { player, enemies, mapData } = gameState; // No longer needed directly here
+
+    // --- 1. Validate State ---
+    const validationResult = _validateEngageState(enemy, gameState);
+    if (!validationResult.isValid) {
+        // Reason logged in helper. If state changed (fleeing), re-eval needed.
+        // If target lost, re-eval needed.
+        return false; // Signal to main loop to re-evaluate
+    }
+    const validatedTarget = validationResult.validatedTarget;
+
+    // --- 2. Attempt Attack ---
+    const attackMade = _attemptEngageAttack(enemy, validatedTarget, gameState);
+    if (attackMade) {
+        return true; // Attack was the action for this turn
+    }
+    // If attackMade is false, it might be because the target was defeated,
+    // in which case _attemptEngageAttack already cleared enemy.targetEnemy and logged.
+    // We need to signal re-evaluation.
+    if (enemy.targetEnemy === null) {
+        return false; // Target defeated during attack attempt, re-evaluate needed
     }
 
-    // --- 6. Default/Wait (Fallback) ---
-    Game.logMessage(`Enemy ${enemyId} waits (engaging ${targetId}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-    return true; // Wait action complete
+    // --- 3. Determine and Execute Move (If No Attack Occurred) ---
+    return _determineAndExecuteEngageMove(enemy, validatedTarget, gameState);
 }

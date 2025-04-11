@@ -1,93 +1,57 @@
 // console.log("state_fleeing.js loaded"); // Removed module loaded log
 
+
 /**
- * Handles AI logic when in the FLEEING state, using gameState.
- * Priority: Target validation -> Threat visibility -> Cornered check (attack/wait) -> Break LOS -> Move away safely -> Wait.
+ * Validates if the enemy should continue fleeing from its current target.
+ * Checks target existence, health, and if LOS has been broken.
  * @param {object} enemy - The enemy object.
  * @param {GameState} gameState - The current game state.
- * @returns {boolean} - True if an action was taken (move, attack, wait), false if re-evaluation is needed.
+ * @returns {{isValid: boolean, threatObject: object|null, needsReevaluation: boolean, reason: string|null}}
  */
-function handleFleeingState(enemy, gameState) {
-    // Check dependencies
-    if (!enemy || !gameState || !gameState.player || !gameState.enemies || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function' || typeof performReevaluation !== 'function' || typeof hasClearLineOfSight !== 'function' || typeof hasClearCardinalLineOfSight !== 'function' || typeof getValidMoves !== 'function' || typeof isMoveSafe !== 'function' || typeof updateUnitPosition !== 'function') {
-        Game.logMessage("handleFleeingState: Missing enemy, gameState, or required functions.", gameState, { level: 'ERROR', target: 'CONSOLE' });
-        return false; // Cannot act without dependencies
-    }
+function _validateFleeState(enemy, gameState) {
+    const { player, enemies } = gameState;
     const enemyId = enemy.id || 'Unknown Enemy';
-    const { player, enemies, mapData } = gameState; // Destructure
 
     // --- 1. Target Validation ---
-    const threatObject = enemy.targetEnemy; // This should be the actual object (player or an enemy from gameState.enemies)
-    if (!threatObject || threatObject.hp <= 0) {
+    const currentThreatObject = enemy.targetEnemy; // Should be the actual object
+    if (!currentThreatObject || currentThreatObject.hp <= 0) {
         Game.logMessage(`Enemy ${enemyId} fleeing target invalid/gone. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         enemy.targetEnemy = null;
-        performReevaluation(enemy, gameState); // Pass gameState
-        return false; // Needs re-evaluation
+        // performReevaluation called by main loop
+        return { isValid: false, threatObject: null, needsReevaluation: true, reason: 'no_target' };
     }
-    const threatId = threatObject === player ? 'Player' : threatObject.id;
+    const threatId = currentThreatObject === player ? 'Player' : currentThreatObject.id;
 
-    // --- 2. Threat Visibility Check ---
-    // Assume AI_RANGE_MAX is global for now
-    if (!hasClearLineOfSight(enemy, threatObject, enemy.detectionRange || AI_RANGE_MAX, gameState)) { // Pass gameState
+    // --- 2. Threat Visibility Check (Did we escape?) ---
+    if (!hasClearLineOfSight(enemy, currentThreatObject, enemy.detectionRange || AI_RANGE_MAX, gameState)) {
         Game.logMessage(`Enemy ${enemyId} broke LOS with ${threatId}. Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         enemy.targetEnemy = null; // Successfully evaded
-        performReevaluation(enemy, gameState); // Pass gameState
-        return false; // Needs re-evaluation
+        // performReevaluation called by main loop
+        return { isValid: false, threatObject: null, needsReevaluation: true, reason: 'escaped' };
     }
 
-    // --- 3. Evaluate Potential Moves & Handle Being Cornered ---
-    const possibleMoves = getValidMoves(enemy, gameState); // Pass gameState
+    // If checks pass, continue fleeing
+    return { isValid: true, threatObject: currentThreatObject, needsReevaluation: false, reason: null };
+}
 
-    if (possibleMoves.length === 0) {
-        // Cornered! Check if we can attack the threat from here.
-        const dist = Math.abs(threatObject.row - enemy.row) + Math.abs(threatObject.col - enemy.col);
-        let canAttack = false;
-        let attackType = null;
-        // Assume RANGED_ATTACK_RANGE, AI_ATTACK_DAMAGE are global
 
-        // Check Ranged Attack
-        if (dist > 0 && dist <= RANGED_ATTACK_RANGE && enemy.resources.ammo > 0 && hasClearCardinalLineOfSight(enemy, threatObject, RANGED_ATTACK_RANGE, gameState)) { // Pass gameState
-            canAttack = true;
-            attackType = 'ranged';
-        }
-        // Check Melee Attack
-        else if (dist === 1) {
-            canAttack = true;
-            attackType = 'melee';
-        }
+/**
+ * Determines and executes the best flee move for an enemy that is not cornered.
+ * Prioritizes moves that break Line of Sight (LOS) with the threat,
+ * then moves that maximize distance from the threat safely.
+ * @param {object} enemy - The fleeing enemy object.
+ * @param {object} threatObject - The object the enemy is fleeing from.
+ * @param {Array<object>} possibleMoves - Array of valid moves {row, col}.
+ * @param {GameState} gameState - The current game state.
+ * @returns {boolean} - Always returns true, as either moving or waiting is considered a completed action.
+ */
+function _determineAndExecuteFleeMove(enemy, threatObject, possibleMoves, gameState) {
+    const enemyId = enemy.id || 'Unknown Enemy';
+    const threatId = threatObject === gameState.player ? 'Player' : threatObject.id;
 
-        if (canAttack) {
-            const damage = AI_ATTACK_DAMAGE;
-            threatObject.hp -= damage; // Modify target HP directly
-            let logMsg = `Cornered Enemy ${enemyId} desperately `;
-            if (attackType === 'ranged') {
-                enemy.resources.ammo--; // Modify self ammo
-                logMsg += `shoots ${threatId} for ${damage} damage. (Ammo: ${enemy.resources.ammo})`;
-            } else {
-                logMsg += `melees ${threatId} for ${damage} damage.`;
-            }
-            Game.logMessage(logMsg, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-
-            // Knockback is not applied when cornered? Or should it be? Let's assume not for now.
-
-            if (threatObject.hp <= 0) {
-                Game.logMessage(`Enemy ${enemyId} defeated ${threatId} while cornered! Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-                enemy.targetEnemy = null;
-                performReevaluation(enemy, gameState); // Pass gameState
-                return false; // Needs re-evaluation after kill
-            }
-            return true; // Attack action complete
-        } else {
-            // Cannot attack, truly cornered
-            Game.logMessage(`Enemy ${enemyId} is cornered and waits!`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-            return true; // Wait action complete
-        }
-    }
-
-    // --- 4. Prioritize Moves that Break LOS (If Moves Possible) ---
+    // --- Prioritize Moves that Break LOS ---
     let losBreakingMoves = [];
     for (const move of possibleMoves) {
-        // Pass gameState to hasClearLineOfSight
         const threatHasLOSToMove = hasClearLineOfSight(threatObject, move, threatObject.detectionRange || AI_RANGE_MAX, gameState);
         if (!threatHasLOSToMove) {
             losBreakingMoves.push(move);
@@ -95,28 +59,30 @@ function handleFleeingState(enemy, gameState) {
     }
 
     if (losBreakingMoves.length > 0) {
+        // Find the LOS-breaking move furthest from the threat
         let bestMove = null;
         let maxDist = -1;
         for (const move of losBreakingMoves) {
             const distFromThreat = Math.abs(move.row - threatObject.row) + Math.abs(move.col - threatObject.col);
-            if (distFromThreat > maxDist) {
+            // Also ensure the move itself is safe from other threats
+            if (isMoveSafe(enemy, move.row, move.col, gameState) && distFromThreat > maxDist) {
                 maxDist = distFromThreat;
                 bestMove = move;
             }
         }
-        if (bestMove) { // Ensure a best move was actually found
+        if (bestMove) {
             Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) flees towards cover at (${bestMove.row},${bestMove.col}) to break LOS from ${threatId}.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-            // Pass gameState to updateUnitPosition (anticipating refactor)
             updateUnitPosition(enemy, bestMove.row, bestMove.col, gameState);
             return true; // Action taken
         }
-        // If bestMove is somehow null, fall through to next strategy
+        // If no *safe* LOS-breaking move found, fall through
     }
 
-    // --- 5. Fallback: Move Directly Away Safely (If LOS Cannot Be Broken) ---
+    // --- Fallback: Move Directly Away Safely ---
     let bestAwayMoves = [];
     let maxDistFromThreat = -1;
 
+    // Find the max distance achievable among all possible moves
     for (const move of possibleMoves) {
         const distFromThreat = Math.abs(move.row - threatObject.row) + Math.abs(move.col - threatObject.col);
         if (distFromThreat > maxDistFromThreat) {
@@ -124,6 +90,7 @@ function handleFleeingState(enemy, gameState) {
         }
     }
 
+    // Collect all moves that achieve this max distance
     for (const move of possibleMoves) {
         const distFromThreat = Math.abs(move.row - threatObject.row) + Math.abs(move.col - threatObject.col);
         if (distFromThreat === maxDistFromThreat) {
@@ -131,13 +98,13 @@ function handleFleeingState(enemy, gameState) {
         }
     }
 
-    // Filter for safety using gameState
-    const safeAwayMoves = bestAwayMoves.filter(move => isMoveSafe(enemy, move.row, move.col, gameState)); // Pass gameState
+    // Filter these best-distance moves for safety
+    const safeAwayMoves = bestAwayMoves.filter(move => isMoveSafe(enemy, move.row, move.col, gameState));
 
     if (safeAwayMoves.length > 0) {
+        // Choose a random safe move among those that maximize distance
         const chosenMove = safeAwayMoves[Math.floor(Math.random() * safeAwayMoves.length)];
         Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) flees away from ${threatId} to safe spot (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-        // Pass gameState to updateUnitPosition (anticipating refactor)
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true; // Action taken
     } else {
@@ -145,4 +112,98 @@ function handleFleeingState(enemy, gameState) {
         Game.logMessage(`Enemy ${enemyId} is blocked/unsafe while fleeing and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         return true; // Wait action complete
     }
+}
+
+
+/**
+ * Handles the logic when a fleeing enemy has no possible moves (is cornered).
+ * Attempts a desperate attack if possible, otherwise waits.
+ * @param {object} enemy - The cornered enemy object.
+ * @param {object} threatObject - The object the enemy is fleeing from.
+ * @param {GameState} gameState - The current game state.
+ * @returns {boolean} - True if an action (attack/wait) was taken, false if the threat was defeated.
+ */
+function _handleCorneredFleeingEnemy(enemy, threatObject, gameState) {
+    const enemyId = enemy.id || 'Unknown Enemy';
+    const threatId = threatObject === gameState.player ? 'Player' : threatObject.id;
+
+    // Cornered! Check if we can attack the threat from here.
+    const dist = Math.abs(threatObject.row - enemy.row) + Math.abs(threatObject.col - enemy.col);
+    let canAttack = false;
+    let attackType = null;
+
+    // Check Ranged Attack
+    if (dist > 0 && dist <= RANGED_ATTACK_RANGE && enemy.resources.ammo > 0 && hasClearCardinalLineOfSight(enemy, threatObject, RANGED_ATTACK_RANGE, gameState)) {
+        canAttack = true;
+        attackType = 'ranged';
+    }
+    // Check Melee Attack
+    else if (dist === 1) {
+        canAttack = true;
+        attackType = 'melee';
+    }
+
+    if (canAttack) {
+        const damage = AI_ATTACK_DAMAGE;
+        threatObject.hp -= damage;
+        let logMsg = `Cornered Enemy ${enemyId} desperately `;
+        if (attackType === 'ranged') {
+            enemy.resources.ammo--;
+            logMsg += `shoots ${threatId} for ${damage} damage. (Ammo: ${enemy.resources.ammo})`;
+        } else {
+            logMsg += `melees ${threatId} for ${damage} damage.`;
+        }
+        Game.logMessage(logMsg, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+
+        // Knockback is not applied when cornered? Let's keep it that way for now.
+
+        if (threatObject.hp <= 0) {
+            Game.logMessage(`Enemy ${enemyId} defeated ${threatId} while cornered! Re-evaluating.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+            enemy.targetEnemy = null;
+            // performReevaluation called by main loop
+            return false; // Needs re-evaluation after kill
+        }
+        return true; // Attack action complete
+    } else {
+        // Cannot attack, truly cornered
+        Game.logMessage(`Enemy ${enemyId} is cornered and waits!`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+        return true; // Wait action complete
+    }
+}
+
+
+/**
+ * Handles AI logic when in the FLEEING state. Orchestrates validation, cornered checks, and movement.
+ * @param {object} enemy - The enemy object.
+ * @param {GameState} gameState - The current game state.
+ * @returns {boolean} - True if an action was taken (move, attack, wait), false if re-evaluation is needed.
+ */
+function handleFleeingState(enemy, gameState) {
+    // Check dependencies (Simplified)
+     if (!enemy || !gameState || !gameState.player || !gameState.enemies || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function') {
+         Game.logMessage("handleFleeingState: Missing critical data.", gameState, { level: 'ERROR', target: 'CONSOLE' });
+         return false; // Cannot act
+     }
+    const enemyId = enemy.id || 'Unknown Enemy';
+    // const { player, enemies, mapData } = gameState; // Destructure only if needed later
+
+    // --- 1. Validate State ---
+    const validationResult = _validateFleeState(enemy, gameState);
+    if (!validationResult.isValid) {
+        // Reason logged in helper. Re-evaluation needed if target lost/escaped.
+        return false; // Signal to main loop to re-evaluate
+    }
+    const threatObject = validationResult.threatObject;
+    const threatId = threatObject === gameState.player ? 'Player' : threatObject.id; // Use gameState.player here
+
+    // --- 2. Evaluate Potential Moves & Handle Being Cornered ---
+    const possibleMoves = getValidMoves(enemy, gameState);
+
+    if (possibleMoves.length === 0) {
+        // Cornered! Delegate to helper.
+        return _handleCorneredFleeingEnemy(enemy, threatObject, gameState);
+    }
+
+    // --- 3. Determine Flee Move (If Not Cornered) ---
+    return _determineAndExecuteFleeMove(enemy, threatObject, possibleMoves, gameState);
 }
