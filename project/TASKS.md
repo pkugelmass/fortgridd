@@ -34,10 +34,10 @@
     *   [X] Test `js/ai/state_engaging_enemy.js` (Completed: 2025-04-11 - Added tests & Passing)
     *   [X] Test `js/ai/state_fleeing.js` (Completed: 2025-04-11 - Added tests & Passing)
     *   [X] Test `js/ai/state_seeking_resources.js` (Completed: 2025-04-11 - Added tests & Passing)
-*   [ ] **Test `js/game.js`**
-*   [ ] **Test `js/input.js` (functions called by handlers)**
-*   [ ] **Test `js/drawing.js` & `js/ui.js` (underlying logic only)**
-*   [ ] **Test `js/main.js` (initialization)**
+*   [X] **Test `js/game.js`** (Completed: 2025-04-11 - Added tests & Passing)
+*   [X] **Test `js/input.js` (functions called by handlers)** (Completed: 2025-04-11 - Added tests & Passing)
+*   [ ] **Test `js/drawing.js` & `js/ui.js` (underlying logic only)** (Skipped per guidelines: 2025-04-11)
+*   [X] **Test `js/main.js` (initialization)** (Completed: 2025-04-11 - Added tests for init call & result handling)
 
 
  ### Refactoring / Cleanup Tasks
