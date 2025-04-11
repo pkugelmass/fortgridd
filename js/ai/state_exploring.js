@@ -48,11 +48,11 @@ function handleExploringState(enemy, gameState) {
         if (center && moveTowards(enemy, center.row, center.col, "center", gameState)) { // Pass gameState
             actionTaken = true;
         } else {
-            // If moving towards center failed or center is null, wait
-            Game.logMessage(`Enemy ${enemyId} waits (blocked from center).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-            actionTaken = true; // Waiting counts as an action
-        }
-    } else if (rand < AI_EXPLORE_MOVE_AGGRESSION_CHANCE + AI_EXPLORE_MOVE_RANDOM_CHANCE) {
+        // If moving towards center failed or center is null, wait
+        Game.logMessage(`Enemy ${enemyId} waits (blocked from center).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+        return true; // Exit after waiting due to block
+    }
+} else if (rand < AI_EXPLORE_MOVE_AGGRESSION_CHANCE + AI_EXPLORE_MOVE_RANDOM_CHANCE) {
         // Try Move randomly
         if (moveRandomly(enemy, gameState)) { // Pass gameState
             actionTaken = true;

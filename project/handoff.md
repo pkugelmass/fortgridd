@@ -27,13 +27,16 @@ We are in the process of overhauling the unit tests for the FortGridd project, f
 *   **Documentation:** Kept `project/TASKS.md` updated with completed items.
 
 ## Current Status
-*   Unit tests for `utils.js`, `config.js`, `gameState.js`, `map.js`, and `playerActions.js` are implemented (pending user cleanup of `tests/playerActions.test.js`).
-*   The test runner (`tests/test-runner.html`) includes all necessary source and test files up to this point.
+*   Unit tests for `utils.js`, `config.js`, `gameState.js`, `map.js`, `playerActions.js`, `ai.js`, `ai_perception.js`, `ai_actions.js`, and `ai_movement.js` are implemented and passing (after fixing issues).
+*   Refactoring of complex state handlers (`state_engaging_enemy.js`, `state_fleeing.js`, `state_seeking_resources.js`) is complete.
+*   The test runner (`tests/test-runner.html`) includes all necessary source and test files up to this point, including the placeholder for `ai_map_utils.test.js` (which we skipped testing) and `state_exploring.test.js`.
 *   `project/TASKS.md` reflects the completed work.
 
-## Next Steps (From `project/TASKS.md`)
-1.  **Verify `tests/playerActions.test.js`:** Ensure the file is clean after manual cleanup by the user and that all tests pass.
-2.  **Proceed to AI Testing:** Begin planning and implementing tests for the AI modules (`js/ai.js` and files within `js/ai/*`), following the established guidelines. This involves testing:
-    *   Core AI logic (`js/ai.js` - e.g., `performReevaluation`, `executeAiTurns` if applicable).
-    *   AI helper functions (`ai_map_utils.js`, `ai_perception.js`, `ai_movement.js`, `ai_actions.js`).
-    *   Individual AI state handlers (`state_*.js`).
+## Current Status & Next Steps
+We are currently debugging persistent errors in the newly created `tests/ai/state_exploring.test.js`. Specifically, tests related to the probabilistic behavior when the AI is inside the safe zone ('Takes an action (move or wait)...') and potentially the "blocked" scenarios are failing.
+
+**Immediate Next Step:**
+1.  Carefully re-examine the failing tests in `tests/ai/state_exploring.test.js` and the corresponding source code in `js/ai/state_exploring.js`.
+2.  Formulate a precise hypothesis for the cause of the failures.
+3.  Apply a targeted fix using `replace_in_file`. If repeated attempts fail, consider rewriting the specific failing tests as requested by the user.
+4.  Once `tests/ai/state_exploring.test.js` is passing, proceed with testing the remaining AI state handlers (`state_healing.js`, and the refactored `state_engaging_enemy.js`, `state_fleeing.js`, `state_seeking_resources.js`).

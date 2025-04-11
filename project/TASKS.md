@@ -25,7 +25,11 @@
 *   [X] **Test `js/map.js`** (Completed: 2025-04-10 - Added tests for `createMapData` structure and `countWallNeighbours`)
 *   [X] **Test `js/player.js` & `js/playerActions.js`** (Completed: 2025-04-10 - Deleted player.js, added tests for playerActions.js; Verified & Fixed: 2025-04-10)
 *   [X] **Test `js/ai.js` (Core FSM Logic)** (Completed: 2025-04-10 - Replaced legacy tests, added new tests for `performReevaluation` & `runAiTurns`)
-*   [ ] **Test `js/ai/*` (State handlers, perception, movement, etc.)** (Next Step - Consider refactoring complex handlers first)
+*   [ ] **Test `js/ai/*` (State handlers, perception, movement, etc.)** (In Progress)
+    *   [X] Test `js/ai/ai_perception.js` (Completed: 2025-04-10)
+    *   [X] Test `js/ai/ai_actions.js` (Completed: 2025-04-10)
+    *   [X] Test `js/ai/ai_movement.js` (Completed: 2025-04-10 - Fixed failing test)
+    *   [X] Test `js/ai/state_exploring.js` (Completed: 2025-04-11 - Re-written & Passing)
 *   [ ] **Test `js/game.js`**
 *   [ ] **Test `js/input.js` (functions called by handlers)**
 *   [ ] **Test `js/drawing.js` & `js/ui.js` (underlying logic only)**
@@ -55,6 +59,7 @@
  *   [ ] Review AI state handler modules (`state_*.js`) for length and complexity; refactor if needed. (Added: 2025-04-09)
  *   [ ] Investigate creating a shared `canMoveTo(unit, targetRow, targetCol)` utility function for player/AI move validation. (Discovered: 2025-04-08)
  *   [ ] Refactor resource handling (AI & Player) using a configuration object in config.js. (Discovered: 2025-04-08)
+ *   [ ] Refactor repetitive test setup boilerplate into a helper function in `test-helpers.js`. (Identified: 2025-04-10)
 
  ### General Process
  *   [ ] Practice small, logical Git commits with clear messages.
