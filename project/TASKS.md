@@ -11,9 +11,12 @@
     *   [x] Refactor AI turn sequencing to async/await with minimal/no highlight. (Completed 2025-04-12)
     *   [X] Implement a short delay between each AI turn (e.g., 200–400ms, configurable).
     *   [X] Ensure redraws occur after each enemy action (test with a visible log or counter).
-    *   [ ] Refactor config constants into the Game object if needed.
-    *   [ ] Add developer debug mode to visualize sequencing steps.
 *   [ ] Show attack ranges or threat indicators to help the player identify safe squares or dangerous enemies.
+    *   [ ] Define threat calculation logic: Implement a function to calculate all tiles threatened by enemies, aggregating threat counts for each tile. Add unit tests for correct threat identification, including edge cases.
+    *   [ ] Update drawing pipeline: Modify grid drawing logic to use the threat map, applying a subtle cross-hatch or diagonal pattern to threatened tiles. Emphasize multiply-threatened tiles. (Unit test if feasible; otherwise, rely on visual QA.)
+    *   [ ] Implement overlay toggle: Add a keyboard shortcut (e.g., "T") to toggle the threat overlay on/off. Unit test toggle state and redraw.
+    *   [ ] Integrate with game loop: Ensure threat calculation and overlay drawing update after player/enemy moves. Unit test threat map updates and toggle in all relevant states.
+    *   [ ] Playtest and refine: Test for clarity, performance, and usability. Adjust pattern style, density, or toggle behavior as needed.
 *   [ ] Add clear visual feedback for attacks, knockbacks, damage, and healing (e.g., animations, color flashes, floating numbers).
 *   [ ] Add simple movement/attack animations (e.g., sliding units).
 *   [ ] Experiment with adding a few fun sprites or visual touches.

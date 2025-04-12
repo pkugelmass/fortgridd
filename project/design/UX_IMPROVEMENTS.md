@@ -39,6 +39,52 @@ Make AI turns visually sequential and understandable by processing each AI enemy
 
 ---
 
+## Threat Indicator Overlay (Design Decisions)
+
+**Goal:**  
+Help the player identify safe squares or dangerous enemies by visually indicating tiles under threat.
+
+### Design Decisions
+
+1. Threat indicators will use a subtle cross-hatch or diagonal line pattern, not a solid color, to avoid adding more red and to minimize clutter.
+2. All enemy threats will be shown, with no distinction between melee and ranged for now.
+3. Tiles threatened by multiple enemies will be emphasized by increasing the density or opacity of the cross-hatch pattern.
+4. Threat overlays will be computed in a single pass before drawing the grid, aggregating threat counts for each tile. This supports efficient rendering, easy toggling, and scalable performance.
+5. The overlay will be always on for development and playtesting, with a simple keyboard toggle (e.g., "T") to show/hide the overlay if it proves distracting or too busy.
+
+---
+
+## Threat Indicator Overlay: Implementation Plan (with Unit Testing)
+
+1. **Define Threat Calculation Logic**
+   - Implement a function to calculate all tiles threatened by enemies, aggregating threat counts for each tile.
+   - **Unit Test:** Test that the function correctly identifies threatened tiles for various enemy positions, types, and map configurations. Include edge cases (e.g., enemies at map borders, overlapping threats).
+
+2. **Update Drawing Pipeline**
+   - Modify the grid drawing logic to accept and use the threat map, applying a subtle cross-hatch or diagonal pattern to threatened tiles.
+   - Ensure tiles threatened by multiple enemies are visually emphasized (e.g., denser pattern).
+   - **Unit Test:** (If drawing logic is testable) Test that the correct visual state is applied to threatened tiles based on the threat map. (Otherwise, rely on visual/manual testing.)
+
+3. **Implement Overlay Toggle**
+   - Add a keyboard shortcut (e.g., "T") to toggle the threat overlay on and off.
+   - **Unit Test:** Test that toggling the overlay updates the game state and redraws the grid as expected.
+
+4. **Integrate with Game Loop**
+   - Ensure threat calculation and overlay drawing are triggered on relevant game state changes (e.g., after enemy or player moves).
+   - **Unit Test:** Test that the threat map updates correctly after player/enemy movement and that toggling works in all relevant game states.
+
+5. **Playtest and Refine**
+   - Test for visual clarity, performance, and usability.
+   - Adjust pattern style, density, or toggle behavior based on feedback.
+
+### Unit Testing Notes
+
+- The most important new tests are for the threat calculation logic and overlay toggle state.
+- Existing tests for enemy movement, attack range, and map updates may need to be amended if they assume no threat overlay or if the threat calculation logic is tightly coupled with enemy actions.
+- Drawing tests are less critical unless the drawing logic is already unit-tested; otherwise, rely on visual/manual QA for rendering.
+
+---
+
 ## Future UX Improvements (Sections to be added)
 
 - **Movement/Attack Animations:** Sliding units, attack effects, etc.
