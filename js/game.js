@@ -45,8 +45,9 @@ const Game = {
     logMessage: function(message, gameState, options = {}) {
         // Default options
         const { level = 'INFO', target = 'PLAYER', className = null } = options;
-
-        const messageWithTurn = `T${gameState.turnNumber}: ${message}`;
+    
+        const turnStr = (gameState && typeof gameState.turnNumber !== "undefined") ? gameState.turnNumber : "?";
+        const messageWithTurn = `T${turnStr}: ${message}`;
         const consoleLogLevelValue = this.LOG_LEVEL_VALUES[CONSOLE_LOG_LEVEL] || this.LOG_LEVEL_VALUES['INFO'];
         const messageLevelValue = this.LOG_LEVEL_VALUES[level.toUpperCase()] || this.LOG_LEVEL_VALUES['INFO'];
 

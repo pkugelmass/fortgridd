@@ -159,19 +159,19 @@ async function runAiTurns(gameState) { // Renamed from executeAiTurns and accept
             // Pass gameState to all state handlers
             switch (enemy.state) {
                 case AI_STATE_EXPLORING:
-                    currentHandlerResult = handleExploringState(enemy, gameState);
+                    currentHandlerResult = await handleExploringState(enemy, gameState);
                     break;
                 case AI_STATE_SEEKING_RESOURCES:
-                    currentHandlerResult = handleSeekingResourcesState(enemy, gameState);
+                    currentHandlerResult = await handleSeekingResourcesState(enemy, gameState);
                     break;
                 case AI_STATE_ENGAGING_ENEMY:
-                    currentHandlerResult = handleEngagingEnemyState(enemy, gameState);
+                    currentHandlerResult = await handleEngagingEnemyState(enemy, gameState);
                     break;
                 case AI_STATE_FLEEING:
-                    currentHandlerResult = handleFleeingState(enemy, gameState);
+                    currentHandlerResult = await handleFleeingState(enemy, gameState);
                     break;
                 case AI_STATE_HEALING: // Added 2025-04-09
-                    currentHandlerResult = handleHealingState(enemy, gameState);
+                    currentHandlerResult = await handleHealingState(enemy, gameState);
                     break;
                 default:
                     Game.logMessage(`Enemy ${enemy.id} has unknown state: ${enemy.state}. Defaulting to Exploring.`, gameState, { level: 'WARN', target: 'CONSOLE' });

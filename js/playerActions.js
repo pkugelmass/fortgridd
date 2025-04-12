@@ -159,34 +159,11 @@ const PlayerActions = {
             }
 
             // --- Visual Effect: Ranged Attack Projectile ---
-            if (window.Effects && typeof window.Effects.addEffect === 'function' && Array.isArray(linePoints) && linePoints.length > 1) {
-                const duration = 250 + 50 * (linePoints.length - 1); // ms, scales with distance
-                window.Effects.addEffect({
-                    type: "ranged-attack",
-                    startTime: performance.now(),
-                    duration,
-                    data: {
-                        linePoints: linePoints.map(pt => ({ row: pt.row, col: pt.col })),
-                        color: "#ffb300" // gold/orange projectile
-                    },
-                    draw: function(ctx, now) {
-                        const elapsed = now - this.startTime;
-                        const t = Math.min(1, elapsed / this.duration);
-                        const idx = Math.floor(t * (this.data.linePoints.length - 1));
-                        const pt = this.data.linePoints[idx];
-                        if (!pt) return;
-                        const cellSize = typeof currentCellSize !== 'undefined' ? currentCellSize : 16;
-                        const cx = pt.col * cellSize + cellSize / 2;
-                        const cy = pt.row * cellSize + cellSize / 2;
-                        ctx.save();
-                        ctx.fillStyle = this.data.color;
-                        ctx.beginPath();
-                        ctx.arc(cx, cy, cellSize * 0.18, 0, 2 * Math.PI);
-                        ctx.shadowColor = "#fff";
-                        ctx.shadowBlur = 8;
-                        ctx.fill();
-                        ctx.restore();
-                    }
+            if (window.Effects && typeof window.Effects.triggerRangedAttackEffect === 'function' && Array.isArray(linePoints) && linePoints.length > 1) {
+                window.Effects.triggerRangedAttackEffect({
+                    linePoints,
+                    hitCell: hitCoord,
+                    color: "#ffb300"
                 });
             }
             let logMsg = `Player shoots ${dirString}`;

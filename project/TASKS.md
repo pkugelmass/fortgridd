@@ -19,16 +19,20 @@
     *   [X] Playtest and refine: Test for clarity, performance, and usability. Adjust pattern style, density, or toggle behavior as needed.
 *   [X] Light visual pass for clarity / reducing "busy"-ness.
 *   [ ] Add clear visual feedback for movement, attacks, knockbacks, damage, and healing (e.g., animations, color flashes, floating numbers).
-    *   [ ] Design effect system architecture (modular, supports shapes/icons/sprites)
-    *   [ ] Set up animation loop (requestAnimationFrame)
-    *   [ ] Implement core effect system (effect queue/manager, effect lifecycle)
-    *   [ ] Implement ranged attack visualization effect (bullet/line/projectile)
+    *   [X] Design effect system architecture (modular, supports shapes/icons/sprites)
+    *   [X] Set up animation loop (requestAnimationFrame)
+    *   [X] Implement core effect system (effect queue/manager, effect lifecycle)
+    *   [x] Implement ranged attack visualization effect (bullet/line/projectile) (Completed 2025-04-12)
+    *   [x] Refactor effect triggers to return Promises that resolve when the animation completes (Completed 2025-04-12)
+    *   [x] Update AI turn logic to sequence effects using async/await and Promise.all for parallel and sequential effects (Completed 2025-04-12)
+    *   [x] Unit test and playtest effect sequencing and turn pacing (Completed 2025-04-12)
     *   [ ] Implement movement animation effect (including knockback)
     *   [ ] Integrate effect triggers for these effects (modify game logic to trigger effects)
     *   [ ] Refactor AI turn sequencing and movement system after effect system is proven
+
     *   [ ] Implement additional effects (attack feedback, knockback, damage, healing, elimination, blocked, pickup)
     *   [ ] Unit testing (effect triggering, lifecycle, manager logic)
-    *   [ ] Documentation & playtest checklist
+    *   [x] Documentation & playtest checklist (EFFECTS_SYSTEM.md updated, 2025-04-12)
     *   [ ] Add TODOs/placeholders for future sprite support in code and docs
 *   [ ] Experiment with adding a few fun sprites or visual touches.
 *   [ ] Revisit the idea of highlighting the "current" enemy.

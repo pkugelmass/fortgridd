@@ -51,3 +51,29 @@ flowchart TD
 ---
 
 *Document created 2025-04-12 as part of the Phase 3 UX/UI Enhancements.*
+
+---
+
+## Module Responsibilities and Best Practices
+
+**Effect System Core (js/effects.js):**
+
+- All effect definitions, the global effects queue, the animation loop, and the exported API (including trigger functions) are implemented here.
+- Each effect type (e.g., ranged attack) has its own trigger function and draw logic in this module.
+- The Promise-based sequencing and effect lifecycle management are handled here.
+
+**Game Logic and AI (js/ai.js, js/ai/state_engaging_enemy.js, etc.):**
+
+- Game and AI logic modules are responsible for calling effect trigger functions and awaiting their Promises.
+- For example, AI attack logic in js/ai/state_engaging_enemy.js calls and awaits triggerRangedAttackEffect.
+
+**Game Loop and Rendering (js/main.js, js/drawing.js):**
+
+- The main game loop and board rendering logic live here.
+- The animation loop in js/effects.js calls redrawCanvas (from js/drawing.js or js/main.js) before drawing effects, ensuring the board is always up to date before effects are rendered.
+
+**Configuration (js/config.js):**
+
+- Timing constants (such as stepTime, AI_TURN_DELAY) and other tunable parameters are typically defined here.
+
+**Best Practice:** When adding a new effect, implement its core logic and trigger function in js/effects.js, integrate calls to it in the appropriate game or AI module, and ensure any configuration is centralized in js/config.js. This modular separation keeps the system maintainable and easy to extend.

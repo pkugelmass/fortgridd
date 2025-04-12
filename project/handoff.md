@@ -11,7 +11,11 @@
 The immediate goal is to make the game understandable, playable, and fun for new and returning players. This phase is not about final polish, but about exposing the right information and providing clear feedback to the player.
 
 ### Most recently we have
-- Implemented indications of which tiles on the board are currently threatened. 
+- As part of our effort to add better visual feedback of game events for the player, we have Implemented a new effects system (see: EFFECTS_SYSTEM.md design document and effects.js) and redone the drawing/animation loop
+- Implemented a "ranged attack" effect that triggers both for the player (in playerActions.js) and the enemy (in state_engaging_enemy.js), leveraging a trigger ranged attack function in effects.js.
+- We have been debugging this ranged attack effect and realized the effects system wasn't playing well with an earlier system that triggered a sleep function after every AI turn. 
+- Thus we are in the middle of enhancing the events system so that every AI turn uses a Promise/async/await system to ensure the length of the turn is sufficient for all the required effects to display.
 
 ### Immediate next steps
-- Pick up with the next task on the task list: *   [ ] Add clear visual feedback for attacks, knockbacks, damage, and healing (e.g., animations, color flashes, floating numbers).
+- Continue to debug the ranged attack
+- Do so by proceeding with the next steps in tasks.md.

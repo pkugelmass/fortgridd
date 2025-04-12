@@ -62,13 +62,24 @@ function _validateEngageState(enemy, gameState) {
  * @param {GameState} gameState - The current game state.
  * @returns {boolean} - True if an attack was made, false otherwise. Also returns false if target was defeated.
  */
-function _attemptEngageAttack(enemy, target, gameState) {
+async function _attemptEngageAttack(enemy, target, gameState) {
     const enemyId = enemy.id || 'Unknown Enemy';
     const targetId = target === gameState.player ? 'Player' : target.id;
     const dist = Math.abs(target.row - enemy.row) + Math.abs(target.col - enemy.col);
 
     // Ranged Attack
     if (dist > 0 && dist <= RANGED_ATTACK_RANGE && enemy.resources.ammo > 0 && hasClearCardinalLineOfSight(enemy, target, RANGED_ATTACK_RANGE, gameState)) {
+        // --- Visual Effect: Enemy Ranged Attack Projectile ---
+        if (window.Effects && typeof window.Effects.triggerRangedAttackEffect === 'function' && typeof traceLine === 'function') {
+            const traceEndX = target.col;
+            const traceEndY = target.row;
+            const linePoints = traceLine(enemy.col, enemy.row, traceEndX, traceEndY);
+            await window.Effects.triggerRangedAttackEffect({
+                linePoints,
+                hitCell: { row: target.row, col: target.col },
+                color: "#ff5252"
+            });
+        }
         const damage = AI_ATTACK_DAMAGE;
         target.hp -= damage;
         enemy.resources.ammo--;
@@ -218,7 +229,7 @@ function _determineAndExecuteEngageMove(enemy, target, gameState) {
  * @param {GameState} gameState - The current game state.
  * @returns {boolean} - True if an action was taken (attack, move, wait), false if re-evaluation is needed.
  */
-function handleEngagingEnemyState(enemy, gameState) {
+async function handleEngagingEnemyState(enemy, gameState) {
     // Check dependencies (Simplified, assuming they are loaded)
      if (!enemy || !gameState || !gameState.player || !gameState.enemies || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function') {
          Game.logMessage("handleEngagingEnemyState: Missing critical data.", gameState, { level: 'ERROR', target: 'CONSOLE' });
@@ -237,7 +248,7 @@ function handleEngagingEnemyState(enemy, gameState) {
     const validatedTarget = validationResult.validatedTarget;
 
     // --- 2. Attempt Attack ---
-    const attackMade = _attemptEngageAttack(enemy, validatedTarget, gameState);
+    const attackMade = await _attemptEngageAttack(enemy, validatedTarget, gameState);
     if (attackMade) {
         return true; // Attack was the action for this turn
     }

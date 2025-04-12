@@ -22,7 +22,7 @@ const FEATURE_SPAWN_CHANCE_AMMO = 0.04;   // Example: 4% chance on land (after m
 
 // Player Stats & Starting Conditions
 const PLAYER_MAX_HP = 15;
-const PLAYER_START_AMMO = 0;
+const PLAYER_START_AMMO = 10;
 const PLAYER_START_MEDKITS = 0;
 const PLAYER_AMMO_PICKUP_AMOUNT = 1; // Example: Amount of ammo Player gains from pickup (Test: > 0)
 
@@ -79,7 +79,7 @@ const HEAL_AMOUNT = 1;              // HP restored per heal action (Test: > 0)
 // UI / Game Logic Settings
 const MAX_LOG_MESSAGES = 50;        // Max messages displayed in the game log (Test: > 0)
 const AI_TURN_DELAY = 15;         // Milliseconds delay between each AI enemy's turn (set to 0 for instant turns, e.g., in unit tests; typical: 100–400ms for visible sequential AI actions)
-const CONSOLE_LOG_LEVEL = 'INFO';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown. (Test: string, one of valid)
+const CONSOLE_LOG_LEVEL = 'DEBUG';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown. (Test: string, one of valid)
 
 // --- Visuals & Appearance ---
 
@@ -94,7 +94,7 @@ const TILE_COLORS = {
     [TILE_LAND]: '#8FBC8F',   // Default land color
     [TILE_WALL]: '#999999',   // Wall color
     [TILE_BOUNDARY]: '#999999', // Boundary wall color (same as regular wall)
-    [TILE_TREE]: '#8FBC8F',   // Tree uses land color
+    [TILE_TREE]: '#83a883',   
     [TILE_MEDKIT]: '#8FBC8F', // Medkit uses land color
     [TILE_AMMO]: '#8FBC8F',   // Ammo uses land color
 };
