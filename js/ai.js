@@ -145,6 +145,9 @@ async function runAiTurns(gameState) { // Renamed from executeAiTurns and accept
         const enemy = gameState.enemies.find(e => e.id === enemyRef.id);
         if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue; // Skip if invalid/dead (redundant check but safe)
 
+        // Set activeUnitId to this enemy for the duration of its turn
+        gameState.activeUnitId = enemy.id;
+
         // --- FSM Logic with Re-evaluation Loop ---
         let actionTaken = false;
         let evaluationCount = 0;
@@ -199,6 +202,8 @@ async function runAiTurns(gameState) { // Renamed from executeAiTurns and accept
         // Check end conditions after each enemy finishes its turn, pass gameState
         if (Game.checkEndConditions(gameState)) {
             gameEndedDuringLoop = true;
+            // Clear activeUnitId before breaking out of the loop
+            gameState.activeUnitId = null;
             break;
         }
 
@@ -220,6 +225,9 @@ async function runAiTurns(gameState) { // Renamed from executeAiTurns and accept
         if (typeof sleep === 'function' && typeof AI_TURN_DELAY !== 'undefined' && AI_TURN_DELAY > 0) {
             await sleep(AI_TURN_DELAY);
         }
+
+        // Clear activeUnitId after this enemy's turn is complete
+        gameState.activeUnitId = null;
 
     } // End loop through enemies
 

@@ -77,3 +77,59 @@ flowchart TD
 - Timing constants (such as stepTime, AI_TURN_DELAY) and other tunable parameters are typically defined here.
 
 **Best Practice:** When adding a new effect, implement its core logic and trigger function in js/effects.js, integrate calls to it in the appropriate game or AI module, and ensure any configuration is centralized in js/config.js. This modular separation keeps the system maintainable and easy to extend.
+
+
+---
+
+# Effects System: Animation Layer Refactor Summary
+
+## Purpose
+
+To unify and simplify the rendering of both static and animated units (player, enemies) by introducing a true "animation layer" that leverages the main drawing functions for all cases. This eliminates code duplication, ensures visual consistency, and makes future effects easier to implement.
+
+## Key Points
+
+- **Single Source of Truth for Drawing:**  
+  All units (static or animated) are drawn using the same `drawPlayer` and `drawEnemies` functions.
+
+- **Interpolated Animation:**  
+  These functions are refactored to accept optional interpolated coordinates (row/col or x/y). During animation, the effect system calls them with interpolated positions.
+
+- **Animation Layer Responsibility:**  
+  The animation layer decides which units are animated and which are static in each frame.  
+  - Static units: drawn at their grid position.
+  - Animated units: drawn at their interpolated position, and skipped in the static draw pass.
+
+- **No Duplication:**  
+  The effect system never hard-codes its own drawing logic for units. All visual features (outlines, health bars, highlights) are handled in one place.
+
+- **Extensible:**  
+  New effects (e.g., knockback, dashes) can use the same pattern, passing interpolated positions to the main draw functions.
+
+## Example API
+
+```js
+// In drawing.js
+function drawPlayer(ctx, player, cellSize, opts = {}) {
+    const row = opts.interpolatedRow ?? player.row;
+    const col = opts.interpolatedCol ?? player.col;
+    // ...draw using row/col...
+}
+
+// In effects.js (movement effect)
+drawPlayer(ctx, unit, cellSize, { interpolatedRow: row, interpolatedCol: col });
+```
+
+## Benefits
+
+- **Visual Consistency:** Animated and static units always look the same.
+- **Maintainability:** All drawing logic is in one place.
+- **Clarity:** The animation layer is responsible for all visual interpolation.
+- **Fun:** Smooth, modern movement and effects, with less risk of bugs or visual artifacts.
+
+## Next Steps
+
+1. Refactor `drawPlayer` and `drawEnemies` to accept interpolated positions.
+2. Update the movement effect to use these functions for animation.
+3. Test with both static and animated units to ensure visual consistency.
+4. Document the new animation layer for future contributors.

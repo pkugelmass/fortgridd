@@ -26,9 +26,17 @@
     *   [x] Refactor effect triggers to return Promises that resolve when the animation completes (Completed 2025-04-12)
     *   [x] Update AI turn logic to sequence effects using async/await and Promise.all for parallel and sequential effects (Completed 2025-04-12)
     *   [x] Unit test and playtest effect sequencing and turn pacing (Completed 2025-04-12)
-    *   [ ] Implement movement animation effect (including knockback)
-    *   [ ] Integrate effect triggers for these effects (modify game logic to trigger effects)
-    *   [ ] Refactor AI turn sequencing and movement system after effect system is proven
+*   [ ] Implement movement animation effect (including knockback)
+    *   [ ] Make all animation durations (movement, knockback, ranged, etc.) configurable in config.js
+    *   [ ] Implement movement animation effect (sliding, with optional easing)
+    *   [ ] Integrate movement effect into player and AI movement logic, using Promises for sequencing
+    *   [ ] Implement knockback effect with bounce (or shake for failed movement)
+    *   [ ] Integrate knockback effect into game logic
+    *   [ ] Implement highlighting of active unit (player or enemy) during their turn
+    *   [ ] Playtest and adjust animation durations and effects for clarity and readability
+
+
+
 
     *   [ ] Implement additional effects (attack feedback, knockback, damage, healing, elimination, blocked, pickup)
     *   [ ] Unit testing (effect triggering, lifecycle, manager logic)
@@ -37,6 +45,8 @@
 *   [ ] Experiment with adding a few fun sprites or visual touches.
 *   [ ] Revisit the idea of highlighting the "current" enemy.
 *   [ ] Revisit the idea of directional threat indication.
+*   [ ] Consider having the player's threat squares indicated as well
+*   [ ] Consider a stronger visual indicator when it's the player's turn and not.
 
 ### Planned improvements - UI
 *   [ ] Improve the stats/info bar at the top for clarity and usefulness; review which stats are shown.

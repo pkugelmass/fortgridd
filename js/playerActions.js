@@ -13,7 +13,7 @@ const PlayerActions = {
      * @param {GameState} gameState - The current game state object.
      * @returns {boolean} - True if the action consumed the player's turn, false otherwise.
      */
-    handleMoveOrAttack: function(player, targetRow, targetCol, gameState) {
+    handleMoveOrAttack: async function(player, targetRow, targetCol, gameState) {
         const mapData = gameState.mapData;
         const enemies = gameState.enemies;
         const gridHeight = mapData.length;
@@ -53,6 +53,15 @@ const PlayerActions = {
         const targetTileType = mapData[targetRow][targetCol];
         if (targetTileType === TILE_LAND || targetTileType === TILE_MEDKIT || targetTileType === TILE_AMMO) {
             Game.logMessage(`Player moves to (${targetRow},${targetCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
+            if (typeof window.Effects !== "undefined" && typeof window.Effects.triggerMovementEffect === "function") {
+                // Await the movement animation before updating the position
+                await window.Effects.triggerMovementEffect({
+                    unit: player,
+                    from: { row: player.row, col: player.col },
+                    to: { row: targetRow, col: targetCol },
+                    color: PLAYER_COLOR
+                });
+            }
             if (typeof updateUnitPosition === 'function') {
                 updateUnitPosition(player, targetRow, targetCol, gameState); // Assumes global function
             } else {

@@ -63,7 +63,7 @@ function getValidMoves(unit, gameState) {
  * @param {GameState} gameState - The current game state.
  * @returns {boolean} - True if the enemy moved, false otherwise.
  */
-function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
+async function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
     // Pass gameState to getValidMoves
     const possibleMoves = getValidMoves(enemy, gameState);
     if (possibleMoves.length === 0) {
@@ -96,7 +96,15 @@ function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
     if (chosenMove) {
         // Pass gameState to logMessage
         Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards ${logReason} to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-        // Pass gameState to updateUnitPosition (anticipating its refactor)
+        // Await movement animation before updating position
+        if (typeof window !== "undefined" && window.Effects && typeof window.Effects.triggerMovementEffect === "function") {
+            await window.Effects.triggerMovementEffect({
+                unit: enemy,
+                from: { row: enemy.row, col: enemy.col },
+                to: { row: chosenMove.row, col: chosenMove.col },
+                color: enemy.isPlayer ? "#007bff" : "#ff0000"
+            });
+        }
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true;
     }
@@ -110,14 +118,22 @@ function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
  * @param {GameState} gameState - The current game state.
  * @returns {boolean} - True if the enemy moved, false otherwise.
  */
-function moveRandomly(enemy, gameState) {
+async function moveRandomly(enemy, gameState) {
     // Pass gameState to getValidMoves
     const possibleMoves = getValidMoves(enemy, gameState);
     if (possibleMoves.length > 0) {
         const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
         // Pass gameState to logMessage
         Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves randomly to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-        // Pass gameState to updateUnitPosition (anticipating its refactor)
+        // Await movement animation before updating position
+        if (typeof window !== "undefined" && window.Effects && typeof window.Effects.triggerMovementEffect === "function") {
+            await window.Effects.triggerMovementEffect({
+                unit: enemy,
+                from: { row: enemy.row, col: enemy.col },
+                to: { row: chosenMove.row, col: chosenMove.col },
+                color: enemy.isPlayer ? "#007bff" : "#ff0000"
+            });
+        }
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true;
     }

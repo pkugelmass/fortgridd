@@ -44,7 +44,8 @@ function drawThreatOverlay(ctx, threatMap, cellSize) {
     }
 }
 
-function redrawCanvas(ctx, gameState) {
+// Accepts optional activeUnitId for skipping
+function redrawCanvas(ctx, gameState, activeUnitId) {
     if (!gameState) {
         console.error("redrawCanvas called without gameState!");
         return;
@@ -81,12 +82,12 @@ function redrawCanvas(ctx, gameState) {
         Game.logMessage("ERROR: drawGrid not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
     }
     if (typeof drawEnemies === 'function') {
-        drawEnemies(ctx, gameState.enemies, cellSize);
+        drawEnemies(ctx, gameState.enemies, cellSize, activeUnitId);
     } else if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
         Game.logMessage("ERROR: drawEnemies not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
     }
     if (typeof drawPlayer === 'function') {
-        drawPlayer(ctx, gameState.player, cellSize);
+        drawPlayer(ctx, gameState.player, cellSize, activeUnitId);
     } else if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
         Game.logMessage("ERROR: drawPlayer not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
     }
@@ -215,31 +216,57 @@ function drawHealthBar(ctx, centerX, bottomY, width, height, currentHp, maxHp) {
  * @param {object} player - The player object from gameState.
  * @param {number} cellSize - Current cell size.
  */
-function drawPlayer(ctx, player, cellSize) {
+/**
+ * Draws the player at either its grid or interpolated position.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {object} player
+ * @param {number} cellSize
+ * @param {object|number} optsOrActiveUnitId - options object or activeUnitId for backward compatibility
+ */
+function drawPlayer(ctx, player, cellSize, optsOrActiveUnitId) {
+    let opts = {};
+    if (typeof optsOrActiveUnitId === "object" && optsOrActiveUnitId !== null) {
+        opts = optsOrActiveUnitId;
+    } else if (typeof optsOrActiveUnitId !== "undefined") {
+        opts.activeUnitId = optsOrActiveUnitId;
+    }
     // Use passed player object
     if (!player || player.row === null || player.col === null || typeof player.hp === 'undefined' || player.hp <= 0) return;
-    const centerX = player.col * cellSize + cellSize / 2; const centerY = player.row * cellSize + cellSize / 2; const radius = (cellSize / 2) * PLAYER_RADIUS_RATIO;
+    if (opts.activeUnitId && player.id === opts.activeUnitId) return; // Skip drawing if this is the active unit
 
-    // Apply shadow
-    ctx.shadowColor = UNIT_SHADOW_COLOR;
-    ctx.shadowBlur = UNIT_SHADOW_BLUR;
-    ctx.shadowOffsetX = UNIT_SHADOW_OFFSET_X;
-    ctx.shadowOffsetY = UNIT_SHADOW_OFFSET_Y;
+    const row = typeof opts.interpolatedRow === "number" ? opts.interpolatedRow : player.row;
+    const col = typeof opts.interpolatedCol === "number" ? opts.interpolatedCol : player.col;
+    const centerX = col * cellSize + cellSize / 2;
+    const centerY = row * cellSize + cellSize / 2;
+    const radius = (cellSize / 2) * PLAYER_RADIUS_RATIO;
+
+    // // Apply shadow
+    // ctx.shadowColor = UNIT_SHADOW_COLOR;
+    // ctx.shadowBlur = UNIT_SHADOW_BLUR;
+    // ctx.shadowOffsetX = UNIT_SHADOW_OFFSET_X;
+    // ctx.shadowOffsetY = UNIT_SHADOW_OFFSET_Y;
 
     // Draw player circle (using passed player object)
-    ctx.fillStyle = player.color; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = player.color;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Reset shadow before drawing outline and health bar
-    ctx.shadowColor = 'transparent';
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 0;
+    // // Reset shadow before drawing outline and health bar
+    // ctx.shadowColor = 'transparent';
+    // ctx.shadowBlur = 0;
+    // ctx.shadowOffsetX = 0;
+    // ctx.shadowOffsetY = 0;
 
     // Draw outline
-    ctx.strokeStyle = PLAYER_OUTLINE_COLOR; ctx.lineWidth = PLAYER_OUTLINE_WIDTH; ctx.stroke();
+    ctx.strokeStyle = PLAYER_OUTLINE_COLOR;
+    ctx.lineWidth = PLAYER_OUTLINE_WIDTH;
+    ctx.stroke();
 
     // Draw health bar (using passed player object)
-    const barWidth = cellSize * PLAYER_HEALTH_BAR_WIDTH_RATIO; const barHeight = HEALTH_BAR_HEIGHT; const barBottomY = centerY + radius + barHeight + PLAYER_HEALTH_BAR_OFFSET;
+    const barWidth = cellSize * PLAYER_HEALTH_BAR_WIDTH_RATIO;
+    const barHeight = HEALTH_BAR_HEIGHT;
+    const barBottomY = centerY + radius + barHeight + PLAYER_HEALTH_BAR_OFFSET;
     drawHealthBar(ctx, centerX, barBottomY, barWidth, barHeight, player.hp, player.maxHp || 10);
 }
 
@@ -249,29 +276,59 @@ function drawPlayer(ctx, player, cellSize) {
  * @param {Array<object>} enemies - The enemies array from gameState.
  * @param {number} cellSize - Current cell size.
  */
-function drawEnemies(ctx, enemies, cellSize) {
+/**
+ * Draws all enemies, optionally at interpolated positions.
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {Array<object>} enemies
+ * @param {number} cellSize
+ * @param {object|number} optsOrActiveUnitId - options object or activeUnitId for backward compatibility
+ */
+function drawEnemies(ctx, enemies, cellSize, optsOrActiveUnitId) {
+    let opts = {};
+    if (typeof optsOrActiveUnitId === "object" && optsOrActiveUnitId !== null) {
+        opts = optsOrActiveUnitId;
+    } else if (typeof optsOrActiveUnitId !== "undefined") {
+        opts.activeUnitId = optsOrActiveUnitId;
+    }
     // Use passed enemies array
     if (!enemies || enemies.length === 0) return;
     const baseRadius = (cellSize / 2) * ENEMY_BASE_RADIUS_RATIO;
-    const barWidth = cellSize * ENEMY_HEALTH_BAR_WIDTH_RATIO; const barHeight = HEALTH_BAR_HEIGHT; const barYOffset = ENEMY_HEALTH_BAR_OFFSET;
+    const barWidth = cellSize * ENEMY_HEALTH_BAR_WIDTH_RATIO;
+    const barHeight = HEALTH_BAR_HEIGHT;
+    const barYOffset = ENEMY_HEALTH_BAR_OFFSET;
     for (const enemy of enemies) { // Iterate over passed enemies array
         if (!enemy || enemy.row === null || enemy.col === null || typeof enemy.hp === 'undefined' || enemy.hp <= 0) continue;
-        const centerX = enemy.col * cellSize + cellSize / 2; const centerY = enemy.row * cellSize + cellSize / 2; const radiusMultiplier = enemy.radiusMultiplier || 1.0; const radius = baseRadius * radiusMultiplier;
+        if (opts.activeUnitId && enemy.id === opts.activeUnitId) continue; // Skip drawing if this is the active unit
 
-        // Apply shadow
-        ctx.shadowColor = UNIT_SHADOW_COLOR;
-        ctx.shadowBlur = UNIT_SHADOW_BLUR;
-        ctx.shadowOffsetX = UNIT_SHADOW_OFFSET_X;
-        ctx.shadowOffsetY = UNIT_SHADOW_OFFSET_Y;
+        const row = (opts.interpolatedEnemies && opts.interpolatedEnemies[enemy.id]?.row !== undefined)
+            ? opts.interpolatedEnemies[enemy.id].row
+            : enemy.row;
+        const col = (opts.interpolatedEnemies && opts.interpolatedEnemies[enemy.id]?.col !== undefined)
+            ? opts.interpolatedEnemies[enemy.id].col
+            : enemy.col;
+
+        const centerX = col * cellSize + cellSize / 2;
+        const centerY = row * cellSize + cellSize / 2;
+        const radiusMultiplier = enemy.radiusMultiplier || 1.0;
+        const radius = baseRadius * radiusMultiplier;
+
+        // // Apply shadow
+        // ctx.shadowColor = UNIT_SHADOW_COLOR;
+        // ctx.shadowBlur = UNIT_SHADOW_BLUR;
+        // ctx.shadowOffsetX = UNIT_SHADOW_OFFSET_X;
+        // ctx.shadowOffsetY = UNIT_SHADOW_OFFSET_Y;
 
         // Draw enemy circle
-        ctx.fillStyle = enemy.color || ENEMY_DEFAULT_COLOR; ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = enemy.color || ENEMY_DEFAULT_COLOR;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.fill();
 
-        // Reset shadow before drawing health bar and ID
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
+        // // Reset shadow before drawing health bar and ID
+        // ctx.shadowColor = 'transparent';
+        // ctx.shadowBlur = 0;
+        // ctx.shadowOffsetX = 0;
+        // ctx.shadowOffsetY = 0;
 
         // Draw health bar
         const barBottomY = centerY + radius + barHeight + barYOffset; const maxHp = enemy.maxHp || 5;

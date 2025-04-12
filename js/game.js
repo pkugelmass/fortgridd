@@ -421,6 +421,7 @@ const Game = {
         gameStateRef.currentTurn = 'player';
         gameStateRef.gameActive = true;
         gameStateRef.turnNumber = 1;
+        gameStateRef.activeUnitId = null; // Reset active unit on game reset
         gameStateRef.safeZone = { minRow: 0, maxRow: (GRID_HEIGHT || 25) - 1, minCol: 0, maxCol: (GRID_WIDTH || 25) - 1 };
         gameStateRef.logMessages = []; // Clear log array
 
@@ -564,6 +565,7 @@ const Game = {
         localGameState.gameActive = true;
         localGameState.turnNumber = 1;
         localGameState.currentTurn = 'player'; // Player starts
+        localGameState.activeUnitId = null; // Track the currently active unit (for animation/highlighting)
         localGameState.safeZone = { minRow: 0, maxRow: GRID_HEIGHT - 1, minCol: 0, maxCol: GRID_WIDTH - 1 };
         // logMessages already initialized by GameState constructor
 
@@ -593,6 +595,8 @@ const Game = {
         if (startPos) {
             // Create player object and assign to localGameState.player
             localGameState.player = {
+                id: "player",
+                isPlayer: true,
                 row: startPos.row,
                 col: startPos.col,
                 color: PLAYER_COLOR, // Use constant

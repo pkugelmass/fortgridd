@@ -39,6 +39,10 @@ function processPlayerTurn(actionIntent, gameState) {
         Game.logMessage("processPlayerTurn: Invalid actionIntent or missing gameState/required properties.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return; // Cannot process turn
     }
+    // Set activeUnitId to the player for the duration of the player's turn
+    if (gameState.player && gameState.player.id) {
+        gameState.activeUnitId = gameState.player.id;
+    }
 
     // Ensure it's still the player's turn and game is active before processing
     if (Game.isGameOver(gameState) || !Game.isPlayerTurn(gameState)) {
@@ -137,6 +141,8 @@ function processPlayerTurn(actionIntent, gameState) {
     if (typeof redrawCanvas === 'function') redrawCanvas(ctx, gameState);
     if (typeof updateStatusBar === 'function') updateStatusBar(gameState); // Ensure status bar updates after action
     if (typeof updateLogDisplay === 'function') updateLogDisplay(gameState); // Ensure log updates after action
+    // Clear activeUnitId after the player's turn is complete
+    gameState.activeUnitId = null;
 }
 
 // --- Initialization --- (Moved to game.js as Game.initializeGame)

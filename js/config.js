@@ -81,6 +81,12 @@ const MAX_LOG_MESSAGES = 50;        // Max messages displayed in the game log (T
 const AI_TURN_DELAY = 15;         // Milliseconds delay between each AI enemy's turn (set to 0 for instant turns, e.g., in unit tests; typical: 100–400ms for visible sequential AI actions)
 const CONSOLE_LOG_LEVEL = 'DEBUG';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown. (Test: string, one of valid)
 
+/* --- Animation Timing & Easing (All durations in ms) --- */
+const MOVEMENT_ANIMATION_DURATION = 180;    // Duration of sliding movement animation
+const KNOCKBACK_ANIMATION_DURATION = 220;   // Duration of knockback animation (can be longer for bounce)
+const RANGED_ANIMATION_DURATION = 120;      // Duration of ranged projectile animation per tile
+// Easing function for all animations: "linear", "easeIn", "easeOut", "easeInOut"
+const ANIMATION_EASING = "easeInOut";
 // --- Visuals & Appearance ---
 
 // Tile Definitions & Visuals
