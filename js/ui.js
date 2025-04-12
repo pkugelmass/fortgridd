@@ -154,6 +154,13 @@ function initializeUI(gameState) {
         // Assumes global handleKeyDown and processPlayerTurn exist
         if (typeof handleKeyDown === 'function' && typeof processPlayerTurn === 'function') {
             window.addEventListener('keydown', (event) => {
+                if (event.key && event.key.toLowerCase() === 't') {
+                    window.showThreatOverlay = !window.showThreatOverlay;
+                    if (typeof redrawCanvas === 'function') {
+                        redrawCanvas(ctx, gameState);
+                    }
+                    return; // Do not process as a game action
+                }
                 const actionIntent = handleKeyDown(event, gameState); // Get intent
                 if (actionIntent) {
                     processPlayerTurn(actionIntent, gameState); // Process the intent

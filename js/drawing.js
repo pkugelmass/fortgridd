@@ -1,4 +1,6 @@
 // console.log("drawing.js loaded"); // Removed module loaded log
+// Global toggle for threat overlay
+window.showThreatOverlay = true;
 
 let currentCellSize = 0; // Moved from main.js - Represents the calculated size for drawing
 
@@ -9,38 +11,70 @@ let currentCellSize = 0; // Moved from main.js - Represents the calculated size 
  * @param {CanvasRenderingContext2D} ctx - The canvas rendering context.
  * @param {GameState} gameState - The current game state object.
  */
+// --- Threat Overlay Drawing Helper ---
+function drawThreatOverlay(ctx, threatMap, cellSize) {
+    if (!threatMap) return;
+    for (let row = 0; row < threatMap.length; row++) {
+        for (let col = 0; col < threatMap[row].length; col++) {
+            const threat = threatMap[row][col];
+            if (threat > 0) {
+                const cellX = col * cellSize;
+                const cellY = row * cellSize;
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(cellX, cellY, cellSize, cellSize);
+                ctx.clip();
+                // Set overlay style: semi-transparent red, more opaque for higher threat
+                const baseAlpha = 0.25;
+                const maxAlpha = 0.5;
+                const alpha = Math.min(baseAlpha + 0.12 * (threat - 1), maxAlpha);
+                ctx.strokeStyle = `rgba(220, 40, 40, ${alpha})`;
+                ctx.lineWidth = 2;
+                // Draw diagonal lines, denser for higher threat
+                const spacing = Math.max(6, 16 - 2 * threat);
+                for (let i = -cellSize; i < cellSize * 2; i += spacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(cellX + i, cellY);
+                    ctx.lineTo(cellX + i + cellSize, cellY + cellSize);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+        }
+    }
+}
+
 function redrawCanvas(ctx, gameState) {
-    // Removed check for ctx, assuming valid input
     if (!gameState) {
-        // Log error if possible, maybe pass Game object or use console.error
         console.error("redrawCanvas called without gameState!");
         return;
     }
-    // Use the module-scoped variable. resizeAndDraw should update this before calling redrawCanvas.
     const cellSize = currentCellSize;
     if (cellSize <= 0 || !isFinite(cellSize)) {
         console.error(`redrawCanvas called with invalid currentCellSize: ${cellSize}!`);
-        // Attempt to log via Game if available
         if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
             Game.logMessage(`redrawCanvas ERROR: Invalid currentCellSize: ${cellSize}`, gameState, { level: 'ERROR', target: 'CONSOLE' });
         }
-        return; // Avoid drawing with zero/negative size
+        return;
     }
-
-    // Assumes global canvas exists for width/height - needed for clearRect
     if (typeof canvas === 'undefined') {
         console.error("redrawCanvas ERROR: Global 'canvas' object not found!");
         return;
     }
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Pass gameState (or relevant parts) and cellSize to drawing functions
-    // Assuming GRID_WIDTH, GRID_HEIGHT are global/accessible from config
     if (typeof drawMapCells === 'function') {
         drawMapCells(ctx, gameState.mapData, gameState.safeZone, GRID_WIDTH, GRID_HEIGHT, cellSize);
     } else if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
         Game.logMessage("ERROR: drawMapCells not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
     }
+
+    // --- Draw Threat Overlay (after base map, before units) ---
+    if (window.showThreatOverlay && typeof Game !== 'undefined' && typeof Game.calculateThreatMap === 'function') {
+        const threatMap = Game.calculateThreatMap(gameState);
+        drawThreatOverlay(ctx, threatMap, cellSize);
+    }
+
     if (typeof drawGrid === 'function') {
         drawGrid(ctx, GRID_WIDTH, GRID_HEIGHT, cellSize);
     } else if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
@@ -57,11 +91,10 @@ function redrawCanvas(ctx, gameState) {
         Game.logMessage("ERROR: drawPlayer not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
     }
     if (typeof drawUI === 'function') {
-        drawUI(ctx, gameState); // drawUI might need cellSize too? Check definition. (It doesn't currently)
+        drawUI(ctx, gameState);
     } else if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function') {
         Game.logMessage("ERROR: drawUI not defined!", gameState, { level: 'ERROR', target: 'CONSOLE' });
     }
-    // Removed updateStatusBar(gameState); - Should be called by the initiator of the redraw
 }
 
 

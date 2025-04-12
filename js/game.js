@@ -117,6 +117,55 @@ const Game = {
         return row < zone.minRow || row > zone.maxRow || col < zone.minCol || col > zone.maxCol;
     },
 
+    // --- Threat Calculation ---
+    /**
+     * Calculates a threat map for the current game state.
+     * Each cell contains the number of living enemies that can attack that tile.
+     * Only living (hp > 0, not inactive) enemies are considered.
+     * All enemies use the same attack range logic (AI_RANGE_MIN).
+     * @param {GameState} gameState - The current game state.
+     * @returns {number[][]} threatMap - 2D array [row][col] with threat counts.
+     */
+    calculateThreatMap: function(gameState) {
+        // Use grid size from config.js
+        // Always use the actual mapData size for threat map dimensions
+        const rows = gameState.mapData.length;
+        const cols = gameState.mapData[0] ? gameState.mapData[0].length : 0;
+        const threatMap = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+        if (!gameState.enemies) return threatMap;
+
+        for (const enemy of gameState.enemies) {
+            if (!enemy || enemy.hp <= 0 || enemy.inactive) continue;
+            const { row, col } = enemy;
+
+            // Determine attack range: ranged if has ammo, else melee (1)
+            let range = 1;
+            if (enemy.resources && enemy.resources.ammo > 0 && typeof RANGED_ATTACK_RANGE !== 'undefined') {
+                range = RANGED_ATTACK_RANGE;
+            }
+
+            // For each tile in range, increment threat count
+            for (let dr = -range; dr <= range; dr++) {
+                for (let dc = -range; dc <= range; dc++) {
+                    const dist = Math.abs(dr) + Math.abs(dc);
+                    // Never threaten the center tile (dist == 0)
+                    if (dist === 0) continue;
+                    // Only threaten orthogonal tiles (same row or same column)
+                    if (!(dr === 0 || dc === 0)) continue;
+                    // Only within range
+                    if (dist > range) continue;
+                    const r = row + dr;
+                    const c = col + dc;
+                    if (r >= 0 && r < rows && c >= 0 && c < cols) {
+                        threatMap[r][c]++;
+                    }
+                }
+            }
+        }
+        return threatMap;
+    },
+
     // --- Shrink Logic ---
     /**
      * Shrinks the safe zone boundaries in the gameState based on SHRINK_AMOUNT.

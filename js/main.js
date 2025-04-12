@@ -161,4 +161,29 @@ if (typeof Game !== 'undefined' && typeof Game.initializeGame === 'function') {
         ctx.textAlign = 'center';
         ctx.fillText('FATAL ERROR: Cannot start game.', 150, 75);
     }
+/**
+ * Threat overlay toggle: Listen for "T" key to show/hide threat overlay and redraw.
+ */
+window.addEventListener('keydown', function(event) {
+    if (event.key && event.key.toLowerCase() === 't') {
+        window.showThreatOverlay = !window.showThreatOverlay;
+        console.log('[ThreatOverlay] T pressed. showThreatOverlay:', window.showThreatOverlay, 'ctx:', typeof ctx, 'gameState:', typeof gameState);
+        if (typeof redrawCanvas === 'function' && typeof ctx !== 'undefined' && typeof gameState !== 'undefined') {
+            redrawCanvas(ctx, gameState);
+        } else {
+            console.warn('[ThreatOverlay] redrawCanvas, ctx, or gameState not available');
+        }
+    }
+});
+/**
+ * Threat overlay toggle: Listen for "T" key to show/hide threat overlay and redraw.
+ */
+window.addEventListener('keydown', function(event) {
+    if (event.key && event.key.toLowerCase() === 't') {
+        window.showThreatOverlay = !window.showThreatOverlay;
+        if (typeof redrawCanvas === 'function' && typeof gameState !== 'undefined') {
+            redrawCanvas(ctx, gameState);
+        }
+    }
+});
 }
