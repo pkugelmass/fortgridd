@@ -98,3 +98,43 @@ Help the player identify safe squares or dangerous enemies by visually indicatin
 ---
 
 *Add new sections here as additional UX improvements are planned or implemented.*
+
+---
+
+## Visual Feedback & Effects System (2025-04-12)
+
+### Intent & Purpose
+
+The goal of the effect system is to make the events of the game clear, understandable, and engaging for the player. This system will provide immediate, visually distinct feedback for key gameplay events (attacks, movement, pickups, etc.), improving both playability and enjoyment. The system should be economical and fit for the current prototype phase, but flexible enough to support future polish or a full visual overhaul.
+
+### Prioritized List of Visual Feedback Improvements
+
+1. **Ranged attack visualization** – Show the attack traveling from attacker to receiver (highest priority for clarity).
+2. **Attack feedback** – Color flash or highlight on attacked unit.
+3. **Knockback feedback** – Animate unit sliding/jumping to new tile, or show when knockback is blocked.
+4. **Damage feedback** – Floating damage numbers, or a red flash.
+5. **Healing feedback** – Floating green numbers, or a green flash.
+6. **Movement animation** – Animate movement from one tile to another (not just for knockback).
+7. **Enemy elimination flourish** – Visual effect when an enemy is defeated.
+8. **Blocked movement feedback** – Show when player tries to move but is blocked.
+9. **Pickup indication** – Visual effect or floating “+1!” when a pickup occurs.
+
+### Guiding Principles
+
+- **Clarity first:** Effects should make the game state and actions more understandable, not more confusing.
+- **Economical:** The system should be simple to implement and maintain, avoiding over-engineering at this stage.
+- **Extensible:** The architecture should allow for future polish, new effect types, or a full visual overhaul.
+- **Visual hierarchy:** Effects should stand out against the game board and not add to visual clutter.
+
+### Next Steps
+
+1. **Visual Simplification Pass:**  
+   Before implementing the effect system, we will do a quick pass to reduce visual clutter on the game board (e.g., tone down overlay colors, reduce tile saturation, clarify threat indicators).
+
+2. **Effect System Implementation:**  
+   After simplification, we will implement a single, flexible effect system capable of supporting the prioritized feedback types above.
+
+3. **Iterative Improvement:**  
+   As new needs or ideas arise, we will update this document and the effect system accordingly.
+
+---

@@ -11,8 +11,7 @@
 The immediate goal is to make the game understandable, playable, and fun for new and returning players. This phase is not about final polish, but about exposing the right information and providing clear feedback to the player.
 
 ### Most recently we have
-- Discussed and prioritzed improvements for this phase of work. 
-- Documented them in TASKS.md
+- Implemented indications of which tiles on the board are currently threatened. 
 
 ### Immediate next steps
-- Pick up with the next task on the task list: *   [ ] Implement sequential AI turn presentation with highlighting and delays so the user can follow the action.
+- Pick up with the next task on the task list: *   [ ] Add clear visual feedback for attacks, knockbacks, damage, and healing (e.g., animations, color flashes, floating numbers).

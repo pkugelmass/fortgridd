@@ -94,9 +94,9 @@ const TILE_COLORS = {
     [TILE_LAND]: '#8FBC8F',   // Default land color
     [TILE_WALL]: '#999999',   // Wall color
     [TILE_BOUNDARY]: '#999999', // Boundary wall color (same as regular wall)
-    [TILE_TREE]: '#556B2F',   // Tree color
-    [TILE_MEDKIT]: '#FF6347', // Medkit color
-    [TILE_AMMO]: '#4682B4',   // Ammo color
+    [TILE_TREE]: '#8FBC8F',   // Tree uses land color
+    [TILE_MEDKIT]: '#8FBC8F', // Medkit uses land color
+    [TILE_AMMO]: '#8FBC8F',   // Ammo uses land color
 };
 const DEFAULT_TILE_COLOR = '#FFFFFF'; // Fallback color for unknown tiles
 

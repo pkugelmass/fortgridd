@@ -142,6 +142,45 @@ function drawMapCells(ctx, mapData, safeZone, gridWidth, gridHeight, cellSize) {
             ctx.fillStyle = color || DEFAULT_TILE_COLOR;
             ctx.fillRect(cellX, cellY, cellSize, cellSize);
 
+            // Draw simple icon/pattern for special tiles
+            // Medkit: white cross
+            if (tileType === TILE_MEDKIT) {
+                ctx.save();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = Math.max(2, cellSize * 0.18);
+                const cx = cellX + cellSize / 2, cy = cellY + cellSize / 2, len = cellSize * 0.25;
+                ctx.beginPath();
+                ctx.moveTo(cx - len, cy);
+                ctx.lineTo(cx + len, cy);
+                ctx.moveTo(cx, cy - len);
+                ctx.lineTo(cx, cy + len);
+                ctx.stroke();
+                ctx.restore();
+            }
+            // Ammo: dark blue dot
+            else if (tileType === TILE_AMMO) {
+                ctx.save();
+                ctx.fillStyle = '#234a7d';
+                const cx = cellX + cellSize / 2, cy = cellY + cellSize / 2, r = cellSize * 0.18;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.restore();
+            }
+            // Tree: green triangle
+            else if (tileType === TILE_TREE) {
+                ctx.save();
+                ctx.fillStyle = '#357a38';
+                const cx = cellX + cellSize / 2, cy = cellY + cellSize / 2, h = cellSize * 0.38;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - h);
+                ctx.lineTo(cx - h * 0.9, cy + h * 0.8);
+                ctx.lineTo(cx + h * 0.9, cy + h * 0.8);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+
             // 2. --- REMOVED Emoji Logic ---
 
             // 3. Draw Storm Overlay if outside safe zone (using passed safeZone parameter)

@@ -16,11 +16,13 @@
     *   [X] Update drawing pipeline: Modify grid drawing logic to use the threat map, applying a subtle cross-hatch or diagonal pattern to threatened tiles. Emphasize multiply-threatened tiles. (Unit test if feasible; otherwise, rely on visual QA.)
     *   [X] Implement overlay toggle: Add a keyboard shortcut (e.g., "T") to toggle the threat overlay on/off. Unit test toggle state and redraw.
     *   [X] Integrate with game loop: Ensure threat calculation and overlay drawing update after player/enemy moves. Unit test threat map updates and toggle in all relevant states.
-    *   [ ] Playtest and refine: Test for clarity, performance, and usability. Adjust pattern style, density, or toggle behavior as needed.
+    *   [X] Playtest and refine: Test for clarity, performance, and usability. Adjust pattern style, density, or toggle behavior as needed.
+*   [ ] Light visual pass for clarity / reducing "busy"-ness.
 *   [ ] Add clear visual feedback for attacks, knockbacks, damage, and healing (e.g., animations, color flashes, floating numbers).
 *   [ ] Add simple movement/attack animations (e.g., sliding units).
 *   [ ] Experiment with adding a few fun sprites or visual touches.
 *   [ ] Revisit the idea of highlighting the "current" enemy.
+*   [ ] Revisit the idea of directional threat indication.
 
 ### Planned improvements - UI
 *   [ ] Improve the stats/info bar at the top for clarity and usefulness; review which stats are shown.
