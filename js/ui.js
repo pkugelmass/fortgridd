@@ -216,4 +216,8 @@ function initializeUI(gameState) {
     if (typeof updateLogDisplay === 'function') {
         updateLogDisplay(gameState);
     }
+    // Start the effects animation loop (draws effects on top of the game board)
+    if (window.Effects && typeof window.Effects.startEffectsAnimation === 'function' && typeof ctx !== 'undefined') {
+        window.Effects.startEffectsAnimation(ctx);
+    }
 }

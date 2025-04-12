@@ -17,9 +17,19 @@
     *   [X] Implement overlay toggle: Add a keyboard shortcut (e.g., "T") to toggle the threat overlay on/off. Unit test toggle state and redraw.
     *   [X] Integrate with game loop: Ensure threat calculation and overlay drawing update after player/enemy moves. Unit test threat map updates and toggle in all relevant states.
     *   [X] Playtest and refine: Test for clarity, performance, and usability. Adjust pattern style, density, or toggle behavior as needed.
-*   [ ] Light visual pass for clarity / reducing "busy"-ness.
-*   [ ] Add clear visual feedback for attacks, knockbacks, damage, and healing (e.g., animations, color flashes, floating numbers).
-*   [ ] Add simple movement/attack animations (e.g., sliding units).
+*   [X] Light visual pass for clarity / reducing "busy"-ness.
+*   [ ] Add clear visual feedback for movement, attacks, knockbacks, damage, and healing (e.g., animations, color flashes, floating numbers).
+    *   [ ] Design effect system architecture (modular, supports shapes/icons/sprites)
+    *   [ ] Set up animation loop (requestAnimationFrame)
+    *   [ ] Implement core effect system (effect queue/manager, effect lifecycle)
+    *   [ ] Implement ranged attack visualization effect (bullet/line/projectile)
+    *   [ ] Implement movement animation effect (including knockback)
+    *   [ ] Integrate effect triggers for these effects (modify game logic to trigger effects)
+    *   [ ] Refactor AI turn sequencing and movement system after effect system is proven
+    *   [ ] Implement additional effects (attack feedback, knockback, damage, healing, elimination, blocked, pickup)
+    *   [ ] Unit testing (effect triggering, lifecycle, manager logic)
+    *   [ ] Documentation & playtest checklist
+    *   [ ] Add TODOs/placeholders for future sprite support in code and docs
 *   [ ] Experiment with adding a few fun sprites or visual touches.
 *   [ ] Revisit the idea of highlighting the "current" enemy.
 *   [ ] Revisit the idea of directional threat indication.
