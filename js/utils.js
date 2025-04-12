@@ -1,4 +1,22 @@
 /**
+ * sleep - Pauses execution for a given number of milliseconds.
+ *
+ * In JavaScript, "Promise" is a built-in object representing the eventual completion of an asynchronous operation.
+ * The sleep function below returns a Promise that resolves after the specified time.
+ *
+ * Usage (inside an async function):
+ *   await sleep(300); // Pauses for 300 milliseconds
+ *
+ * This is a standard way to introduce delays when using async/await.
+ *
+ * @param {number} ms - The number of milliseconds to wait.
+ * @returns {Promise<void>} - A Promise that resolves after the delay.
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+ /**
  * Checks for a resource at the given coordinates and handles pickup if found, using gameState.
  * Updates the unit's resources, modifies gameState.mapData, and logs the event via Game.logMessage.
  * @param {object} unit - The unit (player or enemy) potentially picking up the resource.

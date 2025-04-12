@@ -78,7 +78,7 @@ const HEAL_AMOUNT = 1;              // HP restored per heal action (Test: > 0)
 
 // UI / Game Logic Settings
 const MAX_LOG_MESSAGES = 50;        // Max messages displayed in the game log (Test: > 0)
-const AI_TURN_DELAY = 100;          // Milliseconds delay before AI turn starts (Test: >= 0)
+const AI_TURN_DELAY = 15;         // Milliseconds delay between each AI enemy's turn (set to 0 for instant turns, e.g., in unit tests; typical: 100–400ms for visible sequential AI actions)
 const CONSOLE_LOG_LEVEL = 'INFO';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown. (Test: string, one of valid)
 
 // --- Visuals & Appearance ---

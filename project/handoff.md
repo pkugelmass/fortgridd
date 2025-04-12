@@ -4,7 +4,7 @@
 
 - **Stable Prototype Achieved:** The project has reached its second major milestone (v2.0-prototype), with a robust AI finite state machine, comprehensive unit tests, and a stable, working prototype.
 - **Codebase:** The code is well-organized, refactored, and tested. All major AI and core gameplay systems are in place.
-- **Context:** An overview of the project and plans are available in the Project directory, particularly project.md.
+- **Context:** An overview of the project and plans are available in the Project directory, particularly project.md and our todo list is in tasks.md.
 
 ## Current Focus: UX/UI Enhancements
 
@@ -15,4 +15,4 @@ The immediate goal is to make the game understandable, playable, and fun for new
 - Documented them in TASKS.md
 
 ### Immediate next steps
-- Pick up with the next task on the task list.
+- Pick up with the next task on the task list: *   [ ] Implement sequential AI turn presentation with highlighting and delays so the user can follow the action.

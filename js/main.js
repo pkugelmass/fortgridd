@@ -9,6 +9,11 @@ let gameState; // Will be initialized by initializeGame()
 // --- Canvas Setup ---
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+window.canvas = canvas;
+window.ctx = ctx;
+if (typeof redrawCanvas === "function") {
+    window.redrawCanvas = redrawCanvas;
+}
 
 // UI Update functions (updateStatusBar, updateLogDisplay) moved to ui.js
 // Resize/Draw function (resizeAndDraw) moved to ui.js

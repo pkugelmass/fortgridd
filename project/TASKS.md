@@ -8,10 +8,16 @@
 
 ### Planned improvements - in-game
 *   [ ] Implement sequential AI turn presentation with highlighting and delays so the user can follow the action.
+    *   [x] Refactor AI turn sequencing to async/await with minimal/no highlight. (Completed 2025-04-12)
+    *   [X] Implement a short delay between each AI turn (e.g., 200–400ms, configurable).
+    *   [X] Ensure redraws occur after each enemy action (test with a visible log or counter).
+    *   [ ] Refactor config constants into the Game object if needed.
+    *   [ ] Add developer debug mode to visualize sequencing steps.
 *   [ ] Show attack ranges or threat indicators to help the player identify safe squares or dangerous enemies.
 *   [ ] Add clear visual feedback for attacks, knockbacks, damage, and healing (e.g., animations, color flashes, floating numbers).
 *   [ ] Add simple movement/attack animations (e.g., sliding units).
 *   [ ] Experiment with adding a few fun sprites or visual touches.
+*   [ ] Revisit the idea of highlighting the "current" enemy.
 
 ### Planned improvements - UI
 *   [ ] Improve the stats/info bar at the top for clarity and usefulness; review which stats are shown.
@@ -24,6 +30,12 @@
 
 ### General Process
 *   [ ] Practice small, logical Git commits with clear messages.
+
+---
+
+### Subtasks: Sequential AI Turn Presentation & Highlighting
+
+
 
 
 ---

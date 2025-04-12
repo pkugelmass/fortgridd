@@ -304,41 +304,41 @@ QUnit.module('AI Core Logic (ai.js)', function(hooks) {
 
         // Note: afterEach in the outer scope handles restoring originals
 
-        QUnit.test('Guard Clause: Game Over', function(assert) {
+        QUnit.test('Guard Clause: Game Over', async function(assert) {
             // Setup: Override isGameOver to return true
             Game.isGameOver = () => true;
 
             // Execution
-            runAiTurns(mockGameState);
+            await runAiTurns(mockGameState);
 
             // Assertions
             assert.notOk(endAiTurnCalled, 'endAiTurn should not be called if game is over');
             // We don't directly check state handlers here, absence of endAiTurn implies they weren't run
         });
 
-        QUnit.test('Guard Clause: Not AI Turn', function(assert) {
+        QUnit.test('Guard Clause: Not AI Turn', async function(assert) {
             // Setup: Override getCurrentTurn to return 'player'
             Game.getCurrentTurn = () => 'player';
 
             // Execution
-            runAiTurns(mockGameState);
+            await runAiTurns(mockGameState);
 
             // Assertions
             assert.notOk(endAiTurnCalled, 'endAiTurn should not be called if not AI turn');
         });
 
-        QUnit.test('Guard Clause: No Enemies', function(assert) {
+        QUnit.test('Guard Clause: No Enemies', async function(assert) {
             // Setup: Empty enemies array
             mockGameState.enemies = [];
 
             // Execution
-            runAiTurns(mockGameState);
+            await runAiTurns(mockGameState);
 
             // Assertions
             assert.ok(endAiTurnCalled, 'endAiTurn should still be called even with no enemies');
         });
 
-        QUnit.test('Basic Turn: Single Enemy, Exploring State', function(assert) {
+        QUnit.test('Basic Turn: Single Enemy, Exploring State', async function(assert) {
             // Setup: Default state is one enemy, exploring, no threats/needs
             // We need to ensure the state handler (e.g., handleExploringState) exists globally
             // For this test, we assume the handler runs and returns true (action taken)
@@ -352,7 +352,7 @@ QUnit.module('AI Core Logic (ai.js)', function(hooks) {
 
 
             // Execution
-            runAiTurns(mockGameState);
+            await runAiTurns(mockGameState);
 
             // Assertions
             assert.equal(checkEndConditionsCalledCount, 1, 'checkEndConditions should be called once for the enemy');
@@ -360,26 +360,27 @@ QUnit.module('AI Core Logic (ai.js)', function(hooks) {
             // We don't assert the specific state handler call, just the overall flow
         });
 
-        QUnit.test('Multiple Enemies: Each takes a turn', function(assert) {
-            // Setup: Add a second enemy, both should default to exploring
-            const enemy2 = createMockUnit(false, { id: 'enemy2', state: AI_STATE_EXPLORING, hp: 5, row: 3, col: 3});
-            mockGameState.enemies.push(enemy2);
+        QUnit.test('Multiple Enemies: Each takes a turn', async function(assert) {
+            // Setup: Create a fresh mockGameState with two enemies
+            const enemy1 = createMockUnit(false, { id: 'enemy1', state: AI_STATE_EXPLORING, hp: 5, row: 2, col: 2 });
+            const enemy2 = createMockUnit(false, { id: 'enemy2', state: AI_STATE_EXPLORING, hp: 5, row: 3, col: 3 });
+            const mockGameStateLocal = createMockGameState({ enemies: [enemy1, enemy2] });
             // Ensure handlers exist (as in previous test)
-             if (typeof window.handleExploringState === 'undefined') window.handleExploringState = () => true;
-             if (typeof window.handleSeekingResourcesState === 'undefined') window.handleSeekingResourcesState = () => true;
-             if (typeof window.handleEngagingEnemyState === 'undefined') window.handleEngagingEnemyState = () => true;
-             if (typeof window.handleFleeingState === 'undefined') window.handleFleeingState = () => true;
-             if (typeof window.handleHealingState === 'undefined') window.handleHealingState = () => true;
+            if (typeof window.handleExploringState === 'undefined') window.handleExploringState = () => true;
+            if (typeof window.handleSeekingResourcesState === 'undefined') window.handleSeekingResourcesState = () => true;
+            if (typeof window.handleEngagingEnemyState === 'undefined') window.handleEngagingEnemyState = () => true;
+            if (typeof window.handleFleeingState === 'undefined') window.handleFleeingState = () => true;
+            if (typeof window.handleHealingState === 'undefined') window.handleHealingState = () => true;
 
             // Execution
-            runAiTurns(mockGameState);
+            await runAiTurns(mockGameStateLocal);
 
             // Assertions
             assert.equal(checkEndConditionsCalledCount, 2, 'checkEndConditions should be called once for each enemy');
             assert.ok(endAiTurnCalled, 'endAiTurn should be called once at the end');
         });
 
-        QUnit.test('Re-evaluation Loop: Handler returns false, then true', function(assert) {
+        QUnit.test('Re-evaluation Loop: Handler returns false, then true', async function(assert) {
             // Setup: Ensure enemy stays exploring, mock handler to control return
             let exploreCallCount = 0;
             window.handleExploringState = () => {
@@ -387,13 +388,13 @@ QUnit.module('AI Core Logic (ai.js)', function(hooks) {
                 return exploreCallCount > 1; // Return false first time, true second time
             };
             // Ensure other handlers exist if needed
-             if (typeof window.handleSeekingResourcesState === 'undefined') window.handleSeekingResourcesState = () => true;
-             if (typeof window.handleEngagingEnemyState === 'undefined') window.handleEngagingEnemyState = () => true;
-             if (typeof window.handleFleeingState === 'undefined') window.handleFleeingState = () => true;
-             if (typeof window.handleHealingState === 'undefined') window.handleHealingState = () => true;
+            if (typeof window.handleSeekingResourcesState === 'undefined') window.handleSeekingResourcesState = () => true;
+            if (typeof window.handleEngagingEnemyState === 'undefined') window.handleEngagingEnemyState = () => true;
+            if (typeof window.handleFleeingState === 'undefined') window.handleFleeingState = () => true;
+            if (typeof window.handleHealingState === 'undefined') window.handleHealingState = () => true;
 
             // Execution
-            runAiTurns(mockGameState);
+            await runAiTurns(mockGameState);
 
             // Assertions
             assert.equal(exploreCallCount, 2, 'Exploring handler should be called twice');
@@ -401,7 +402,7 @@ QUnit.module('AI Core Logic (ai.js)', function(hooks) {
             assert.ok(endAiTurnCalled, 'endAiTurn should be called');
         });
 
-        QUnit.test('Re-evaluation Loop: Hits Max Evaluations', function(assert) {
+        QUnit.test('Re-evaluation Loop: Hits Max Evaluations', async function(assert) {
             // Setup: Ensure enemy stays exploring, mock handler to always return false
             let exploreCallCount = 0;
             window.handleExploringState = () => {
@@ -409,13 +410,13 @@ QUnit.module('AI Core Logic (ai.js)', function(hooks) {
                 return false; // Always return false
             };
             // Ensure other handlers exist if needed
-             if (typeof window.handleSeekingResourcesState === 'undefined') window.handleSeekingResourcesState = () => true;
-             if (typeof window.handleEngagingEnemyState === 'undefined') window.handleEngagingEnemyState = () => true;
-             if (typeof window.handleFleeingState === 'undefined') window.handleFleeingState = () => true;
-             if (typeof window.handleHealingState === 'undefined') window.handleHealingState = () => true;
+            if (typeof window.handleSeekingResourcesState === 'undefined') window.handleSeekingResourcesState = () => true;
+            if (typeof window.handleEngagingEnemyState === 'undefined') window.handleEngagingEnemyState = () => true;
+            if (typeof window.handleFleeingState === 'undefined') window.handleFleeingState = () => true;
+            if (typeof window.handleHealingState === 'undefined') window.handleHealingState = () => true;
 
             // Execution
-            runAiTurns(mockGameState);
+            await runAiTurns(mockGameState);
 
             // Assertions
             assert.equal(exploreCallCount, MAX_EVALUATIONS_PER_TURN, `Exploring handler should be called ${MAX_EVALUATIONS_PER_TURN} times`);
@@ -425,7 +426,7 @@ QUnit.module('AI Core Logic (ai.js)', function(hooks) {
             assert.ok(endAiTurnCalled, 'endAiTurn should still be called');
         });
 
-        QUnit.test('Unknown State: Defaults to Exploring', function(assert) {
+        QUnit.test('Unknown State: Defaults to Exploring', async function(assert) {
             // Setup: Set an invalid state
             mockEnemy.state = 'INVALID_STATE';
             let exploreCallCount = 0;
@@ -435,13 +436,13 @@ QUnit.module('AI Core Logic (ai.js)', function(hooks) {
                 return true; // Assume exploring takes an action
             };
             // Ensure other handlers exist if needed
-             if (typeof window.handleSeekingResourcesState === 'undefined') window.handleSeekingResourcesState = () => true;
-             if (typeof window.handleEngagingEnemyState === 'undefined') window.handleEngagingEnemyState = () => true;
-             if (typeof window.handleFleeingState === 'undefined') window.handleFleeingState = () => true;
-             if (typeof window.handleHealingState === 'undefined') window.handleHealingState = () => true;
+            if (typeof window.handleSeekingResourcesState === 'undefined') window.handleSeekingResourcesState = () => true;
+            if (typeof window.handleEngagingEnemyState === 'undefined') window.handleEngagingEnemyState = () => true;
+            if (typeof window.handleFleeingState === 'undefined') window.handleFleeingState = () => true;
+            if (typeof window.handleHealingState === 'undefined') window.handleHealingState = () => true;
 
             // Execution
-            runAiTurns(mockGameState);
+            await runAiTurns(mockGameState);
 
             // Assertions
             // Note: The 'unknown state' log in the switch default is unreachable because
@@ -453,7 +454,7 @@ QUnit.module('AI Core Logic (ai.js)', function(hooks) {
             assert.ok(endAiTurnCalled, 'endAiTurn should be called');
         });
 
-        QUnit.test('Game Ends During AI Turns', function(assert) {
+        QUnit.test('Game Ends During AI Turns', async function(assert) {
             // Setup: Add a second enemy. Override checkEndConditions to return true after first enemy.
             const enemy2 = createMockUnit(false, { id: 'enemy2', state: AI_STATE_EXPLORING, hp: 5, row: 3, col: 3});
             mockGameState.enemies.push(enemy2);

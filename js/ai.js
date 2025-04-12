@@ -126,7 +126,7 @@ const MAX_EVALUATIONS_PER_TURN = 3; // Limit state changes/re-evaluations per AI
  * Allows for state re-evaluation and action within the same turn, up to a limit.
  * @param {GameState} gameState - The current game state object.
  */
-function runAiTurns(gameState) { // Renamed from executeAiTurns and accepts gameState
+async function runAiTurns(gameState) { // Renamed from executeAiTurns and accepts gameState
     // Check dependencies and game state using gameState
     if (typeof Game === 'undefined' || !gameState || Game.isGameOver(gameState) || Game.getCurrentTurn(gameState) !== 'ai' || !gameState.enemies) {
         if (typeof Game !== 'undefined' && gameState && !Game.isGameOver(gameState) && Game.getCurrentTurn(gameState) === 'ai') {
@@ -139,9 +139,10 @@ function runAiTurns(gameState) { // Renamed from executeAiTurns and accepts game
     const activeEnemies = gameState.enemies.filter(e => e && e.hp > 0);
     const currentEnemiesTurnOrder = [...activeEnemies]; // Iterate over a snapshot of active enemies
 
-    for (let i = 0; i < currentEnemiesTurnOrder.length; i++) {
+    let gameEndedDuringLoop = false;
+    for (const enemyRef of currentEnemiesTurnOrder) {
         // Find the current enemy in the main gameState.enemies array to ensure modifications persist
-        const enemy = gameState.enemies.find(e => e.id === currentEnemiesTurnOrder[i].id);
+        const enemy = gameState.enemies.find(e => e.id === enemyRef.id);
         if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue; // Skip if invalid/dead (redundant check but safe)
 
         // --- FSM Logic with Re-evaluation Loop ---
@@ -196,12 +197,34 @@ function runAiTurns(gameState) { // Renamed from executeAiTurns and accepts game
         }
 
         // Check end conditions after each enemy finishes its turn, pass gameState
-        if (Game.checkEndConditions(gameState)) return;
+        if (Game.checkEndConditions(gameState)) {
+            gameEndedDuringLoop = true;
+            break;
+        }
+
+        // Redraw the game after each enemy's turn to provide visual feedback.
+        // Assumes ctx and redrawCanvas are available globally (as in main.js).
+        // Use window.ctx to avoid ReferenceError in test environments where ctx is not defined.
+        if (typeof window !== "undefined" && typeof window.redrawCanvas === "function" && typeof window.ctx !== "undefined") {
+            window.redrawCanvas(window.ctx, gameState);
+        } else {
+            // Optionally log a warning if redraw is not possible (but skip in test environments)
+            if (typeof Game !== 'undefined' && typeof Game.logMessage === 'function' && typeof QUnit === 'undefined') {
+                Game.logMessage("Warning: redrawCanvas or ctx not available for redraw after AI action.", gameState, { level: 'WARN', target: 'CONSOLE' });
+            }
+        }
+
+        // Add a short delay between each AI enemy's turn for better UX.
+        // Uses the AI_TURN_DELAY constant from config.js.
+        // Set AI_TURN_DELAY to 0 for instant turns (e.g., in unit tests).
+        if (typeof sleep === 'function' && typeof AI_TURN_DELAY !== 'undefined' && AI_TURN_DELAY > 0) {
+            await sleep(AI_TURN_DELAY);
+        }
 
     } // End loop through enemies
 
-    // End AI turn only if game didn't end during loop, pass gameState
-    if (!Game.isGameOver(gameState)) {
+    // End AI turn only if game didn't end during loop and game isn't over
+    if (!gameEndedDuringLoop && !Game.isGameOver(gameState)) {
         Game.endAiTurn(gameState); // Handles setting turn and redraw if needed
     }
     // If game ended, final redraw already handled by setGameOver or checks above
