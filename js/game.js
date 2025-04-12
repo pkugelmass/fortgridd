@@ -145,21 +145,43 @@ const Game = {
                 range = RANGED_ATTACK_RANGE;
             }
 
-            // For each tile in range, increment threat count
-            for (let dr = -range; dr <= range; dr++) {
-                for (let dc = -range; dc <= range; dc++) {
-                    const dist = Math.abs(dr) + Math.abs(dc);
-                    // Never threaten the center tile (dist == 0)
-                    if (dist === 0) continue;
-                    // Only threaten orthogonal tiles (same row or same column)
-                    if (!(dr === 0 || dc === 0)) continue;
-                    // Only within range
-                    if (dist > range) continue;
-                    const r = row + dr;
-                    const c = col + dc;
-                    if (r >= 0 && r < rows && c >= 0 && c < cols) {
-                        threatMap[r][c]++;
+            // Raycast in each orthogonal direction, stopping at obstacles or units
+            const directions = [
+                { dr: -1, dc: 0 }, // up
+                { dr: 1, dc: 0 },  // down
+                { dr: 0, dc: -1 }, // left
+                { dr: 0, dc: 1 }   // right
+            ];
+            for (const { dr, dc } of directions) {
+                for (let dist = 1; dist <= range; dist++) {
+                    const r = row + dr * dist;
+                    const c = col + dc * dist;
+                    if (r < 0 || r >= rows || c < 0 || c >= cols) break;
+                    // Check for obstacles
+                    const tileType = gameState.mapData[r][c];
+                    if (tileType === TILE_WALL || tileType === TILE_TREE) {
+                        // Do NOT mark obstacle as threatened, stop propagation
+                        //console.log(`[ThreatMap] Blocked by obstacle at (${r},${c})`);
+                        break;
                     }
+                    // Check for units (player or enemy)
+                    let isUnit = false;
+                    if (gameState.player && gameState.player.row === r && gameState.player.col === c) {
+                        isUnit = true;
+                    }
+                    if (gameState.enemies) {
+                        for (const other of gameState.enemies) {
+                            // Do not count the current enemy as a blocker for its own ray
+                            if (other && other !== enemy && other.hp > 0 && !other.inactive && other.row === r && other.col === c) {
+                                isUnit = true;
+                                break;
+                            }
+                        }
+                    }
+                    // Mark as threatened
+                    threatMap[r][c]++;
+                    // If unit, stop propagation after marking
+                    if (isUnit || (gameState.player && gameState.player.row === r && gameState.player.col === c)) break;
                 }
             }
         }

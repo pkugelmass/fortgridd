@@ -37,8 +37,9 @@ QUnit.test('marks correct tiles for a single enemy in the center', function(asse
 });
 
 QUnit.test('sums threats for overlapping enemies', function(assert) {
-    const e1 = createMockUnit(false, { row: 2, col: 2, hp: 5 });
-    const e2 = createMockUnit(false, { row: 2, col: 3, hp: 5 });
+    // Place enemies so their threat rays overlap but do not block each other
+    const e1 = createMockUnit(false, { row: 1, col: 2, hp: 5 });
+    const e2 = createMockUnit(false, { row: 3, col: 2, hp: 5 });
     const gameState = createMockGameState({ enemies: [e1, e2], gridWidth: 5, gridHeight: 5 });
     const threatMap = Game.calculateThreatMap(gameState);
     let overlap = 0;
@@ -115,5 +116,47 @@ QUnit.test('marks only orthogonal tiles for a ranged enemy in the center', funct
     if (oldRange !== undefined) {
         window.RANGED_ATTACK_RANGE = oldRange;
     }
+});
+QUnit.test('threat is blocked by walls', function(assert) {
+    // Enemy at (2,2), wall at (2,4), range 3, grid 5x5
+    const gridWidth = 5, gridHeight = 5;
+    const mapData = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
+    mapData[2][4] = 1; // TILE_WALL
+    const enemy = createMockUnit(false, { row: 2, col: 2, hp: 5, resources: { ammo: 1 } });
+    const gameState = createMockGameState({ enemies: [enemy], gridWidth, gridHeight, mapData });
+    const oldRange = typeof RANGED_ATTACK_RANGE !== 'undefined' ? RANGED_ATTACK_RANGE : undefined;
+    window.RANGED_ATTACK_RANGE = 3;
+    const threatMap = Game.calculateThreatMap(gameState);
+
+    // (2,3) should be threatened, (2,4) should NOT (blocked), (2,5) and beyond should not be threatened
+    assert.equal(threatMap[2][3], 1, '(2,3) should be threatened');
+    assert.equal(threatMap[2][4], 0, '(2,4) is a wall, should not be threatened');
+    // (2,1) and (2,0) should be threatened (left side, no block)
+    assert.equal(threatMap[2][1], 1, '(2,1) should be threatened');
+    assert.equal(threatMap[2][0], 1, '(2,0) should be threatened');
+    // (2,5) is out of bounds, so not checked
+
+    if (oldRange !== undefined) window.RANGED_ATTACK_RANGE = oldRange;
+});
+
+QUnit.test('threat is blocked by units', function(assert) {
+    // Enemy at (2,2), another enemy at (2,3), range 3, grid 5x5
+    const gridWidth = 5, gridHeight = 5;
+    const mapData = Array.from({ length: gridHeight }, () => Array(gridWidth).fill(0));
+    const enemy = createMockUnit(false, { row: 2, col: 2, hp: 5, resources: { ammo: 1 } });
+    const blocker = createMockUnit(false, { row: 2, col: 3, hp: 5, resources: { ammo: 0 } });
+    const gameState = createMockGameState({ enemies: [enemy, blocker], gridWidth, gridHeight, mapData });
+    const oldRange = typeof RANGED_ATTACK_RANGE !== 'undefined' ? RANGED_ATTACK_RANGE : undefined;
+    window.RANGED_ATTACK_RANGE = 3;
+    const threatMap = Game.calculateThreatMap(gameState);
+
+    // (2,3) should be threatened (blocked by unit), (2,4) should not be threatened
+    assert.equal(threatMap[2][3], 1, '(2,3) is blocked by unit, should be threatened');
+    assert.equal(threatMap[2][4], 0, '(2,4) is beyond blocker, should not be threatened');
+    // (2,1) and (2,0) should be threatened (left side, no block)
+    assert.equal(threatMap[2][1], 1, '(2,1) should be threatened');
+    assert.equal(threatMap[2][0], 1, '(2,0) should be threatened');
+
+    if (oldRange !== undefined) window.RANGED_ATTACK_RANGE = oldRange;
 });
 });
