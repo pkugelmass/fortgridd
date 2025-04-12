@@ -63,18 +63,26 @@ At time of writing, we have a working v1 on the main branch and we are just star
         * Experience points / Leveling up? Is this a roguelike - with synergies? 
         * Different weapon types or equipment to find/use.
 
-    5. **UI/UX & Presentation:**
-        * Improved graphics/sprites instead of simple shapes.
-        * Animations for movement, attacks, healing, storm.
-        * Sound effects and background music?
-        * Clearer visual indicators for AI state, targeting, LOS.
-        * Camera effect - only see a smaller part of a larger map
+    5. **UI/UX & Presentation (Current Phase):**
+        * Focus on making the game understandable, playable, and fun for new and returning players.
+        * Prioritize clear feedback for all actions (attacks, knockbacks, healing, movement) using simple animations, highlights, or effects.
+        * Sequence and highlight AI turns so the player can follow the flow of the game.
+        * Improve the stats/info bar and action log for clarity and usefulness.
+        * Add instructions or an overview to help new players get started.
+        * Optional: Add simple sprites or visual touches for engagement, but not aiming for final polish.
+        * This phase is not about final visuals or release-level polish—it's about exposing the right information and making the prototype fun and accessible.
 
-    6. **Gameplay Balancing & Tuning:** (Ongoing / Iterative)
+    6. **Gameplay Balancing & Tuning (Next Phase):**
         * Conduct balance passes after major feature implementations (AI FSM, Resource Harvesting, New Abilities, etc.).
         * Adjust constants in `config.js` based on playtesting feedback to achieve desired difficulty and fun factor.
         * Ensure resource availability and AI capabilities remain fair and engaging throughout the game.
+        * Consider adding developer/debug overlays or tools to expose key stats for tuning.
 
+    7. **Future/Polish & Ambitious Features:**
+        * Camera effect—limit player view to a section of the map.
+        * Full visual/thematic overhaul (graphics, sprites, animations, sound, UI polish).
+        * Advanced map features (multi-level, destructible terrain, etc.).
+        * Additional accessibility and quality-of-life improvements.
 
 ## 5. Future Concepts & Themes (Brainstorming)
 

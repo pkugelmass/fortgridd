@@ -4,15 +4,21 @@
 *(Completed foundational setup, initial tests, constant centralization, and movement/pickup refactoring. See `project/COMPLETED_TASKS.md` for details.)*
 
 ---
-## Phase 3: UI/UX Enhancements (Next Focus)
+## Phase 3: UI/UX Enhancements (Current Phase)
 
-*   [ ] Implement Sequential AI Turn Presentation: (Added: 2025-04-09)
-    *   Modify `executeAiTurns` to process AIs one by one asynchronously.
-    *   Highlight current AI.
-    *   Add configurable pauses (`setTimeout`) before/after AI action.
-    *   Ensure display updates correctly after each action.
-    *   **Crucially:** Disable player input during the entire AI sequence.
-    *   Consider making pause durations configurable (via `config.js` or user setting).
+### Planned improvements - in-game
+*   [ ] Implement sequential AI turn presentation with highlighting and delays so the user can follow the action.
+*   [ ] Show attack ranges or threat indicators to help the player identify safe squares or dangerous enemies.
+*   [ ] Add clear visual feedback for attacks, knockbacks, damage, and healing (e.g., animations, color flashes, floating numbers).
+*   [ ] Add simple movement/attack animations (e.g., sliding units).
+*   [ ] Experiment with adding a few fun sprites or visual touches.
+
+### Planned improvements - UI
+*   [ ] Improve the stats/info bar at the top for clarity and usefulness; review which stats are shown.
+*   [ ] Add instructions or an overview to help new players understand the game.
+*   [ ] Tidy up the HTML/CSS frame for usability/attractiveness (not final polish).
+*   [ ] Redesign or improve the on-screen action log for readability and usefulness.
+*   [ ] Add developer/debug overlays or tools to expose key stats for future tuning/balance. (maybe)
 
 *   [ ] Add new UI/UX tasks here as they are identified.
 
