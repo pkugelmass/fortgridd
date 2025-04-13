@@ -80,6 +80,7 @@ At time of writing, we have a working v1 on the main branch and we are just star
 
     7. **Future/Polish & Ambitious Features:**
         * Camera effect—limit player view to a section of the map.
+        * Refactor Unit, Player, and Enemy into a unified class hierarchy for maintainability and extensibility (deferred to a future/polishing phase).
         * Full visual/thematic overhaul (graphics, sprites, animations, sound, UI polish).
         * Advanced map features (multi-level, destructible terrain, etc.).
         * Additional accessibility and quality-of-life improvements.

@@ -15,8 +15,9 @@ The immediate goal is to make the game understandable, playable, and fun for new
 - Implemented a "ranged attack" effect that triggers both for the player (in playerActions.js) and the enemy (in state_engaging_enemy.js), leveraging a trigger ranged attack function in effects.js.
 - Implemented a promise/async/await system to ensure events trigger sequentially/as they should
 - Documented advice for adding effects in project/design/EFFECTS_SYSTEM.md
-- Implemented another animation effect for player and AI movement - an effect now called by player and AI movement logic, but with a "trail" effect in which frames appeared not to clear as movement continued, attributed to some of the basic drawing functions.
-- We have now improved the movement trigger function by integrating it with drawPlayer - here was what the AI just said: The player object now has an id property ("player") set at creation. This ensures that the skip logic in drawPlayer works correctly, so the original player circle will be hidden during movement animation. Enemy objects already have unique id properties, so their animation and skip logic should also work as intended. Both player and enemy movement animations should now display correctly, with no lingering original circles.
+- Implemented another animation effect for player and AI movement - an effect now called by player and AI movement logic, but with a "trail" effect in which frames appeared not to clear as movement continued.
+- We decided to implement a whole new animation system that would control all drawing - see project/design/ANIMATION_SYSTEM_REWRITE.md
+- This is just getting underway with core functoins at animation.js, new drawing function at drawFrame.js, and we had just started to rewrite main.js to integrate the animation system into the core game loop. 
 
 ### Immediate next steps
-- Continue to implement player and ai movement animation, as above. 
+- Continue to try to get the new unified animation system going. 

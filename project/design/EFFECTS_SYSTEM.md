@@ -1,4 +1,4 @@
-# FortGridd Effect System Architecture
+# FortGridd Effect System Architecture - NOW DEPRECATED DO NOT ASSUME THIS IS CURRENT
 
 ## Overview
 
