@@ -141,17 +141,17 @@ async function _attemptEngageAttack(enemy, target, gameState) {
  * @param {GameState} gameState - The current game state.
  * @returns {boolean} - Always returns true, as either moving or waiting is considered a completed action.
  */
-function _determineAndExecuteEngageMove(enemy, target, gameState) {
+async function _determineAndExecuteEngageMove(enemy, target, gameState) {
     const enemyId = enemy.id || 'Unknown Enemy';
     const targetId = target === gameState.player ? 'Player' : target.id;
-
+ 
     // A. Get Valid Moves
     const possibleMoves = getValidMoves(enemy, gameState);
     if (possibleMoves.length === 0) {
         Game.logMessage(`Enemy ${enemyId} is blocked while engaging ${targetId} and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         return true; // Wait action
     }
-
+ 
     // B. Identify Best Moves
     let closerMoves = [];
     let sidewaysMoves = [];
@@ -165,7 +165,7 @@ function _determineAndExecuteEngageMove(enemy, target, gameState) {
         }
     }
     let potentialCandidates = [...closerMoves, ...sidewaysMoves];
-
+ 
     // C. Filter for Safety
     const safeCandidateMoves = potentialCandidates.filter(move => isMoveSafe(enemy, move.row, move.col, gameState));
     if (safeCandidateMoves.length === 0) {
@@ -173,7 +173,7 @@ function _determineAndExecuteEngageMove(enemy, target, gameState) {
          Game.logMessage(`Enemy ${enemyId} ${logReason} towards ${targetId} and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
          return true; // Wait action
     }
-
+ 
     // D. Filter for LOS Maintenance
     let losMaintainingMoves = [];
     for (const move of safeCandidateMoves) {
@@ -183,7 +183,7 @@ function _determineAndExecuteEngageMove(enemy, target, gameState) {
         }
     }
     let finalCandidates = losMaintainingMoves.length > 0 ? losMaintainingMoves : safeCandidateMoves;
-
+ 
     // E. Select Move
     let chosenMove = null;
     if (finalCandidates.length > 0) {
@@ -197,7 +197,7 @@ function _determineAndExecuteEngageMove(enemy, target, gameState) {
             chosenMove = finalCandidates[Math.floor(Math.random() * finalCandidates.length)];
         }
     }
-
+ 
     // F. Risk Assessment
     let isRiskyMove = false;
     if (chosenMove) {
@@ -205,7 +205,7 @@ function _determineAndExecuteEngageMove(enemy, target, gameState) {
         const targetHasLOS = targetCanShoot && hasClearLineOfSight(target, chosenMove, RANGED_ATTACK_RANGE, gameState);
         isRiskyMove = targetCanShoot && targetHasLOS;
     }
-
+ 
     // G. Risk Aversion
     if (chosenMove && isRiskyMove) {
         const riskChance = typeof AI_ENGAGE_RISK_AVERSION_CHANCE !== 'undefined' ? AI_ENGAGE_RISK_AVERSION_CHANCE : 0.3;
@@ -214,7 +214,7 @@ function _determineAndExecuteEngageMove(enemy, target, gameState) {
             return true; // Wait action
         }
     }
-
+ 
     // H. Execute Move or Wait
     if (chosenMove) {
         Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) moves towards target ${targetId} to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
@@ -225,7 +225,9 @@ function _determineAndExecuteEngageMove(enemy, target, gameState) {
                 unit: enemy,
                 from: { row: enemy.row, col: enemy.col },
                 to: { row: chosenMove.row, col: chosenMove.col },
-                color: enemy.color || "#e53935"
+                color: enemy.color || "#e53935",
+                duration: typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180,
+                easing: typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut"
             });
             animationSystem.addEffect(moveEffect);
         }
@@ -279,5 +281,5 @@ async function handleEngagingEnemyState(enemy, gameState) {
     }
 
     // --- 3. Determine and Execute Move (If No Attack Occurred) ---
-    return _determineAndExecuteEngageMove(enemy, validatedTarget, gameState);
+    return await _determineAndExecuteEngageMove(enemy, validatedTarget, gameState);
 }

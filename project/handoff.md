@@ -20,4 +20,4 @@ The immediate goal is to make the game understandable, playable, and fun for new
 - The animation loop is now working - see main.js, animation.js, and drawFrame.js - and we're in the process of refactoring two effects - ranged attack and movement - from effects.js to animation.js to wokr with the new loop.
 
 ### Immediate next steps
-- Continue to get ranged attack and movement effects fully working. 
+- Movement effects have started to work well & look ok. Right now we're making sure all AI movement scenarios are connected to the new animation system.

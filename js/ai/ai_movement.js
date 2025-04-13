@@ -97,13 +97,19 @@ async function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
         // Pass gameState to logMessage
         Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards ${logReason} to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         // Await movement animation before updating position
-        if (typeof window !== "undefined" && window.Effects && typeof window.Effects.triggerMovementEffect === "function") {
-            await window.Effects.triggerMovementEffect({
+        if (typeof animationSystem !== "undefined" && typeof AnimationSystem.createMovementEffect === "function") {
+            const moveEffect = AnimationSystem.createMovementEffect({
                 unit: enemy,
                 from: { row: enemy.row, col: enemy.col },
                 to: { row: chosenMove.row, col: chosenMove.col },
-                color: enemy.isPlayer ? "#007bff" : "#ff0000"
+                color: enemy.color || (enemy.isPlayer ? "#007bff" : "#ff0000"),
+                duration: typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180,
+                easing: typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut"
             });
+            animationSystem.addEffect(moveEffect);
+            if (moveEffect.promise) {
+                await moveEffect.promise;
+            }
         }
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true;
@@ -126,13 +132,19 @@ async function moveRandomly(enemy, gameState) {
         // Pass gameState to logMessage
         Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves randomly to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         // Await movement animation before updating position
-        if (typeof window !== "undefined" && window.Effects && typeof window.Effects.triggerMovementEffect === "function") {
-            await window.Effects.triggerMovementEffect({
+        if (typeof animationSystem !== "undefined" && typeof AnimationSystem.createMovementEffect === "function") {
+            const moveEffect = AnimationSystem.createMovementEffect({
                 unit: enemy,
                 from: { row: enemy.row, col: enemy.col },
                 to: { row: chosenMove.row, col: chosenMove.col },
-                color: enemy.isPlayer ? "#007bff" : "#ff0000"
+                color: enemy.color || (enemy.isPlayer ? "#007bff" : "#ff0000"),
+                duration: typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180,
+                easing: typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut"
             });
+            animationSystem.addEffect(moveEffect);
+            if (moveEffect.promise) {
+                await moveEffect.promise;
+            }
         }
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true;

@@ -50,7 +50,7 @@ if (gameState) {
  * @param {string} actionIntent - The player's intended action.
  * @param {object} gameState - The current game state.
  */
-function processPlayerTurn(actionIntent, gameState) {
+async function processPlayerTurn(actionIntent, gameState) {
     if (
         !actionIntent ||
         !gameState ||
@@ -173,7 +173,7 @@ function processPlayerTurn(actionIntent, gameState) {
         const gameOver = Game.checkEndConditions(gameState);
         if (!gameOver) {
             Game.endPlayerTurn(gameState);
-            runAiTurns(gameState);
+            await runAiTurns(gameState);
         }
     }
 

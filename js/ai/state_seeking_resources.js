@@ -53,14 +53,38 @@ function _validateSeekingState(enemy, gameState) {
  * @param {GameState} gameState - The current game state.
  * @returns {boolean} - True if an action (move/wait/arrival transition) was taken.
  */
-function _moveOrHandleArrivalSeeking(enemy, targetCoords, gameState) {
+async function _moveOrHandleArrivalSeeking(enemy, targetCoords, gameState) {
     const enemyId = enemy.id || 'Unknown Enemy';
     const targetRow = targetCoords.row;
     const targetCol = targetCoords.col;
 
     if (enemy.row !== targetRow || enemy.col !== targetCol) {
         // Attempt to move towards the resource
-        const moved = moveTowards(enemy, targetRow, targetCol, "resource", gameState);
+        // Replicate the animation logic from state_fleeing.js
+        const from = { row: enemy.row, col: enemy.col };
+        const to = { row: targetRow, col: targetCol };
+        let moved = false;
+
+        // Check if the move is valid (reuse getValidMoves if needed)
+        // For now, assume move is valid if not already at target
+        if (typeof animationSystem !== "undefined" && typeof AnimationSystem.createMovementEffect === "function") {
+            const moveEffect = AnimationSystem.createMovementEffect({
+                unit: enemy,
+                from,
+                to,
+                color: enemy.color || "#e53935",
+                duration: typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180,
+                easing: typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut"
+            });
+            animationSystem.addEffect(moveEffect);
+            if (moveEffect.promise) {
+                await moveEffect.promise;
+            }
+        }
+        // Actually update the position after animation
+        updateUnitPosition(enemy, targetRow, targetCol, gameState);
+        moved = true;
+
         if (!moved) {
              // If moveTowards returned false (blocked), treat as wait
              Game.logMessage(`Enemy ${enemyId} waits (blocked from resource).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
@@ -89,11 +113,11 @@ function _moveOrHandleArrivalSeeking(enemy, targetCoords, gameState) {
  * @param {GameState} gameState - The current game state.
  * @returns {boolean} - True if an action was taken (move, wait), false if re-evaluation is needed or target invalid.
  */
-function handleSeekingResourcesState(enemy, gameState) {
+async function handleSeekingResourcesState(enemy, gameState) {
     // Check dependencies (Simplified)
      if (!enemy || !gameState || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function' || typeof moveTowards !== 'function') {
-         Game.logMessage("handleSeekingResourcesState: Missing critical data.", gameState, { level: 'ERROR', target: 'CONSOLE' });
-         return false; // Cannot act
+          Game.logMessage("handleSeekingResourcesState: Missing critical data.", gameState, { level: 'ERROR', target: 'CONSOLE' });
+          return false; // Cannot act
      }
     const enemyId = enemy.id || 'Unknown Enemy';
     // const { mapData } = gameState; // No longer needed directly here
@@ -107,5 +131,5 @@ function handleSeekingResourcesState(enemy, gameState) {
     const targetCoords = validationResult.targetCoords;
 
     // --- 2. Attempt Movement Towards Resource or Handle Arrival ---
-    return _moveOrHandleArrivalSeeking(enemy, targetCoords, gameState);
+    return await _moveOrHandleArrivalSeeking(enemy, targetCoords, gameState);
 }

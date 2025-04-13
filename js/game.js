@@ -138,6 +138,8 @@ const Game = {
 
         for (const enemy of gameState.enemies) {
             if (!enemy || enemy.hp <= 0 || enemy.inactive) continue;
+            // Skip enemies in motion (fractional position)
+            if (enemy.row % 1 !== 0 || enemy.col % 1 !== 0) continue;
             const { row, col } = enemy;
 
             // Determine attack range: ranged if has ammo, else melee (1)
@@ -167,7 +169,13 @@ const Game = {
                     }
                     // Check for units (player or enemy)
                     let isUnit = false;
-                    if (gameState.player && gameState.player.row === r && gameState.player.col === c) {
+                    if (
+                        gameState.player &&
+                        gameState.player.row % 1 === 0 &&
+                        gameState.player.col % 1 === 0 &&
+                        gameState.player.row === r &&
+                        gameState.player.col === c
+                    ) {
                         isUnit = true;
                     }
                     if (gameState.enemies) {
@@ -182,7 +190,16 @@ const Game = {
                     // Mark as threatened
                     threatMap[r][c]++;
                     // If unit, stop propagation after marking
-                    if (isUnit || (gameState.player && gameState.player.row === r && gameState.player.col === c)) break;
+                    if (
+                        isUnit ||
+                        (
+                            gameState.player &&
+                            gameState.player.row % 1 === 0 &&
+                            gameState.player.col % 1 === 0 &&
+                            gameState.player.row === r &&
+                            gameState.player.col === c
+                        )
+                    ) break;
                 }
             }
         }

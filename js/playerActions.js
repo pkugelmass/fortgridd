@@ -63,7 +63,9 @@ const PlayerActions = {
                     unit: player,
                     from: { row: player.row, col: player.col },
                     to: { row: targetRow, col: targetCol },
-                    color: typeof PLAYER_COLOR !== "undefined" ? PLAYER_COLOR : "#42a5f5"
+                    color: typeof PLAYER_COLOR !== "undefined" ? PLAYER_COLOR : "#42a5f5",
+                    duration: typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180,
+                    easing: typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut"
                 });
                 animationSystem.addEffect(moveEffect);
                 if (moveEffect.promise) {

@@ -79,12 +79,23 @@ const HEAL_AMOUNT = 1;              // HP restored per heal action (Test: > 0)
 // UI / Game Logic Settings
 const MAX_LOG_MESSAGES = 50;        // Max messages displayed in the game log (Test: > 0)
 const AI_TURN_DELAY = 15;         // Milliseconds delay between each AI enemy's turn (set to 0 for instant turns, e.g., in unit tests; typical: 100–400ms for visible sequential AI actions)
-const CONSOLE_LOG_LEVEL = 'INFO';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown. (Test: string, one of valid)
+const CONSOLE_LOG_LEVEL = 'DEBUG';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown. (Test: string, one of valid)
 
 /* --- Animation Timing & Easing (All durations in ms) --- */
+/**
+ * Animation duration constants for all effect types.
+ * Adjust these values to tune animation speed and feel.
+ * Add new constants here as new effect types are implemented.
+ */
 const MOVEMENT_ANIMATION_DURATION = 180;    // Duration of sliding movement animation
 const KNOCKBACK_ANIMATION_DURATION = 220;   // Duration of knockback animation (can be longer for bounce)
 const RANGED_ANIMATION_DURATION = 120;      // Duration of ranged projectile animation per tile
+const HEAL_ANIMATION_DURATION = 180;        // Duration of healing animation (e.g., medkit use)
+const DAMAGE_ANIMATION_DURATION = 120;      // Duration of damage flash (e.g., red flash on hit)
+const ELIMINATION_ANIMATION_DURATION = 200; // Duration of elimination/fade-out effect
+const BLOCKED_ANIMATION_DURATION = 100;     // Duration of blocked/shake effect
+const PICKUP_ANIMATION_DURATION = 150;      // Duration of pickup/collect effect
+
 // Easing function for all animations: "linear", "easeIn", "easeOut", "easeInOut"
 const ANIMATION_EASING = "easeInOut";
 // --- Visuals & Appearance ---

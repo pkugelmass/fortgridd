@@ -130,6 +130,11 @@ AnimationSystem.createRangedAttackEffect = function({ linePoints, hitCell, color
         if (hitCellIdx === -1) hitCellIdx = linePoints.length - 1;
     }
 
+    // If linePoints is empty, resolve the promise immediately to avoid a hang
+    if (!linePoints || linePoints.length === 0) {
+        resolveEffectPromise();
+    }
+
     const effect = {
         type: "ranged-attack",
         startTime: performance.now(),
@@ -187,8 +192,24 @@ AnimationSystem.createRangedAttackEffect = function({ linePoints, hitCell, color
  * Factory for a movement effect compatible with AnimationSystem.
  * Usage: animationSystem.addEffect(AnimationSystem.createMovementEffect({ unit, from, to, color, duration }))
  **/
-AnimationSystem.createMovementEffect = function({ unit, from, to, color, duration }) {
-    const moveDuration = duration || 200; // ms, configurable (increased for smoother animation)
+AnimationSystem.createMovementEffect = function({ unit, from, to, color, duration, easing }) {
+    // Use config.js constants if available, otherwise fallback to defaults
+    const moveDuration = typeof duration === "number"
+        ? duration
+        : (typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180);
+    const moveEasing = typeof easing === "string"
+        ? easing
+        : (typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut");
+
+    // Easing functions (duplicated from effects.js for consistency)
+    const EASING = {
+        linear: t => t,
+        easeIn: t => t * t,
+        easeOut: t => t * (2 - t),
+        easeInOut: t => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t
+    };
+    const easeFn = EASING[moveEasing] || EASING.easeInOut;
+
     let resolveEffectPromise;
     const effectPromise = new Promise(resolve => { resolveEffectPromise = resolve; });
 
@@ -205,37 +226,30 @@ AnimationSystem.createMovementEffect = function({ unit, from, to, color, duratio
         update(now, renderState) {
             const elapsed = now - this.startTime;
             let t = Math.min(1, elapsed / this.duration);
-            // Linear interpolation; can add easing if desired
-            const interpRow = this.data.from.row + (this.data.to.row - this.data.from.row) * t;
-            const interpCol = this.data.from.col + (this.data.to.col - this.data.from.col) * t;
+            // Use easing function for interpolation
+            const easedT = easeFn(t);
+            const interpRow = this.data.from.row + (this.data.to.row - this.data.from.row) * easedT;
+            const interpCol = this.data.from.col + (this.data.to.col - this.data.from.col) * easedT;
             if (typeof window !== "undefined" && window.DEBUG_MOVEMENT_ANIMATION) {
-                console.log("[MovementEffect] t:", t, "elapsed:", elapsed, "interpRow:", interpRow, "interpCol:", interpCol);
+                console.log("[MovementEffect] t:", t, "easedT:", easedT, "elapsed:", elapsed, "interpRow:", interpRow, "interpCol:", interpCol);
             }
 
             // Find and update the unit's position in renderState
             if (renderState.player && renderState.player.id === this.data.unitId) {
                 renderState.player = { ...renderState.player, row: interpRow, col: interpCol };
-                // Debug: Log interpolated player position
                 if (typeof window !== "undefined" && window.DEBUG_MOVEMENT_ANIMATION) {
-                    console.log("[MovementEffect] Player interpolated position:", interpRow, interpCol, "t=", t);
+                    console.log("[MovementEffect] Player interpolated position:", interpRow, interpCol, "t=", t, "easedT=", easedT);
                 }
             } else if (Array.isArray(renderState.enemies)) {
                 const idx = renderState.enemies.findIndex(e => e.id === this.data.unitId);
                 if (idx !== -1) {
                     renderState.enemies[idx] = { ...renderState.enemies[idx], row: interpRow, col: interpCol };
-                    // Debug: Log interpolated enemy position
                     if (typeof window !== "undefined" && window.DEBUG_MOVEMENT_ANIMATION) {
-                        console.log("[MovementEffect] Enemy interpolated position:", interpRow, interpCol, "t=", t);
+                        console.log("[MovementEffect] Enemy interpolated position:", interpRow, interpCol, "t=", t, "easedT=", easedT);
                     }
                 }
             }
-
             // Do not resolve the promise here; let isExpired handle it
-            // This prevents a frame where both the interpolated and updated positions are shown
-            // The promise will be resolved in isExpired
-            // if (t >= 1) {
-            //     this._resolvePromise?.();
-            // }
         },
         isExpired(now) {
             const expired = (now - this.startTime) >= this.duration;

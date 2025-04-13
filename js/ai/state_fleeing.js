@@ -45,7 +45,7 @@ function _validateFleeState(enemy, gameState) {
  * @param {GameState} gameState - The current game state.
  * @returns {boolean} - Always returns true, as either moving or waiting is considered a completed action.
  */
-function _determineAndExecuteFleeMove(enemy, threatObject, possibleMoves, gameState) {
+async function _determineAndExecuteFleeMove(enemy, threatObject, possibleMoves, gameState) {
     const enemyId = enemy.id || 'Unknown Enemy';
     const threatId = threatObject === gameState.player ? 'Player' : threatObject.id;
 
@@ -72,6 +72,20 @@ function _determineAndExecuteFleeMove(enemy, threatObject, possibleMoves, gameSt
         }
         if (bestMove) {
             Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) flees towards cover at (${bestMove.row},${bestMove.col}) to break LOS from ${threatId}.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+            if (typeof animationSystem !== "undefined" && typeof AnimationSystem.createMovementEffect === "function") {
+                const moveEffect = AnimationSystem.createMovementEffect({
+                    unit: enemy,
+                    from: { row: enemy.row, col: enemy.col },
+                    to: { row: bestMove.row, col: bestMove.col },
+                    color: enemy.color || "#e53935",
+                    duration: typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180,
+                    easing: typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut"
+                });
+                animationSystem.addEffect(moveEffect);
+                if (moveEffect.promise) {
+                    await moveEffect.promise;
+                }
+            }
             updateUnitPosition(enemy, bestMove.row, bestMove.col, gameState);
             return true; // Action taken
         }
@@ -105,6 +119,20 @@ function _determineAndExecuteFleeMove(enemy, threatObject, possibleMoves, gameSt
         // Choose a random safe move among those that maximize distance
         const chosenMove = safeAwayMoves[Math.floor(Math.random() * safeAwayMoves.length)];
         Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) flees away from ${threatId} to safe spot (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+        if (typeof animationSystem !== "undefined" && typeof AnimationSystem.createMovementEffect === "function") {
+            const moveEffect = AnimationSystem.createMovementEffect({
+                unit: enemy,
+                from: { row: enemy.row, col: enemy.col },
+                to: { row: chosenMove.row, col: chosenMove.col },
+                color: enemy.color || "#e53935",
+                duration: typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180,
+                easing: typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut"
+            });
+            animationSystem.addEffect(moveEffect);
+            if (moveEffect.promise) {
+                await moveEffect.promise;
+            }
+        }
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true; // Action taken
     } else {
@@ -178,7 +206,7 @@ function _handleCorneredFleeingEnemy(enemy, threatObject, gameState) {
  * @param {GameState} gameState - The current game state.
  * @returns {boolean} - True if an action was taken (move, attack, wait), false if re-evaluation is needed.
  */
-function handleFleeingState(enemy, gameState) {
+async function handleFleeingState(enemy, gameState) {
     // Check dependencies (Simplified)
      if (!enemy || !gameState || !gameState.player || !gameState.enemies || !gameState.mapData || typeof Game === 'undefined' || typeof Game.logMessage !== 'function') {
          Game.logMessage("handleFleeingState: Missing critical data.", gameState, { level: 'ERROR', target: 'CONSOLE' });
@@ -205,5 +233,5 @@ function handleFleeingState(enemy, gameState) {
     }
 
     // --- 3. Determine Flee Move (If Not Cornered) ---
-    return _determineAndExecuteFleeMove(enemy, threatObject, possibleMoves, gameState);
+    return await _determineAndExecuteFleeMove(enemy, threatObject, possibleMoves, gameState);
 }
