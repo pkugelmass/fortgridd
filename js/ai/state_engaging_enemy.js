@@ -70,15 +70,20 @@ async function _attemptEngageAttack(enemy, target, gameState) {
     // Ranged Attack
     if (dist > 0 && dist <= RANGED_ATTACK_RANGE && enemy.resources.ammo > 0 && hasClearCardinalLineOfSight(enemy, target, RANGED_ATTACK_RANGE, gameState)) {
         // --- Visual Effect: Enemy Ranged Attack Projectile ---
-        if (window.Effects && typeof window.Effects.triggerRangedAttackEffect === 'function' && typeof traceLine === 'function') {
+        let rangedAttackEffect = null;
+        if (typeof animationSystem !== 'undefined' && typeof AnimationSystem.createRangedAttackEffect === 'function' && typeof traceLine === 'function') {
             const traceEndX = target.col;
             const traceEndY = target.row;
             const linePoints = traceLine(enemy.col, enemy.row, traceEndX, traceEndY);
-            await window.Effects.triggerRangedAttackEffect({
+            rangedAttackEffect = AnimationSystem.createRangedAttackEffect({
                 linePoints,
                 hitCell: { row: target.row, col: target.col },
                 color: "#ff5252"
             });
+            animationSystem.addEffect(rangedAttackEffect);
+        }
+        if (rangedAttackEffect && rangedAttackEffect.promise) {
+            await rangedAttackEffect.promise;
         }
         const damage = AI_ATTACK_DAMAGE;
         target.hp -= damage;
@@ -213,6 +218,20 @@ function _determineAndExecuteEngageMove(enemy, target, gameState) {
     // H. Execute Move or Wait
     if (chosenMove) {
         Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) moves towards target ${targetId} to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+        // Animate enemy movement before updating position
+        let moveEffect = null;
+        if (typeof animationSystem !== "undefined" && typeof AnimationSystem.createMovementEffect === "function") {
+            moveEffect = AnimationSystem.createMovementEffect({
+                unit: enemy,
+                from: { row: enemy.row, col: enemy.col },
+                to: { row: chosenMove.row, col: chosenMove.col },
+                color: enemy.color || "#e53935"
+            });
+            animationSystem.addEffect(moveEffect);
+        }
+        if (moveEffect && moveEffect.promise) {
+            await moveEffect.promise;
+        }
         updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
         return true; // Move action complete
     } else {

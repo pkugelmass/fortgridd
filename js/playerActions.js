@@ -53,14 +53,22 @@ const PlayerActions = {
         const targetTileType = mapData[targetRow][targetCol];
         if (targetTileType === TILE_LAND || targetTileType === TILE_MEDKIT || targetTileType === TILE_AMMO) {
             Game.logMessage(`Player moves to (${targetRow},${targetCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
-            if (typeof window.Effects !== "undefined" && typeof window.Effects.triggerMovementEffect === "function") {
+            if (
+                typeof animationSystem !== "undefined" &&
+                typeof AnimationSystem.createMovementEffect === "function"
+            ) {
+                console.log("[PlayerActions] About to add movement effect", animationSystem, AnimationSystem.createMovementEffect);
                 // Await the movement animation before updating the position
-                await window.Effects.triggerMovementEffect({
+                const moveEffect = AnimationSystem.createMovementEffect({
                     unit: player,
                     from: { row: player.row, col: player.col },
                     to: { row: targetRow, col: targetCol },
-                    color: PLAYER_COLOR
+                    color: typeof PLAYER_COLOR !== "undefined" ? PLAYER_COLOR : "#42a5f5"
                 });
+                animationSystem.addEffect(moveEffect);
+                if (moveEffect.promise) {
+                    await moveEffect.promise;
+                }
             }
             if (typeof updateUnitPosition === 'function') {
                 updateUnitPosition(player, targetRow, targetCol, gameState); // Assumes global function
@@ -113,7 +121,7 @@ const PlayerActions = {
      * @param {GameState} gameState - The current game state object.
      * @returns {boolean} - True if the action consumed the player's turn, false otherwise.
      */
-    handleShoot: function(player, shootDirection, dirString, gameState) {
+    handleShoot: async function(player, shootDirection, dirString, gameState) {
         if (player.resources.ammo > 0) {
             player.resources.ammo--;
 
@@ -168,12 +176,17 @@ const PlayerActions = {
             }
 
             // --- Visual Effect: Ranged Attack Projectile ---
-            if (window.Effects && typeof window.Effects.triggerRangedAttackEffect === 'function' && Array.isArray(linePoints) && linePoints.length > 1) {
-                window.Effects.triggerRangedAttackEffect({
+            let rangedAttackEffect = null;
+            if (typeof animationSystem !== 'undefined' && typeof AnimationSystem.createRangedAttackEffect === 'function' && Array.isArray(linePoints) && linePoints.length > 1) {
+                rangedAttackEffect = AnimationSystem.createRangedAttackEffect({
                     linePoints,
                     hitCell: hitCoord,
                     color: "#ffb300"
                 });
+                animationSystem.addEffect(rangedAttackEffect);
+            }
+            if (rangedAttackEffect && rangedAttackEffect.promise) {
+                await rangedAttackEffect.promise;
             }
             let logMsg = `Player shoots ${dirString}`;
             let knockbackMsg = "";

@@ -34,7 +34,7 @@ const AI_HP_MAX = 15;                // Max starting HP for AI variation (Test: 
 const AI_RANGE_MIN = 5;             // Min detection range for AI variation (Test: > 0 if defined)
 const AI_RANGE_MAX = 8;            // Max detection range for AI variation (Test: > 0 if defined)
 const AI_AMMO_MIN = 0;              // Min starting ammo for AI variation (Test: >= 0 if defined)
-const AI_AMMO_MAX = 0;              // Max starting ammo for AI variation (Test: >= 0 if defined)
+const AI_AMMO_MAX = 5;              // Max starting ammo for AI variation (Test: >= 0 if defined)
 const AI_PURSUE_HP_THRESHOLD = 0.3; // HP percentage above which AI will pursue targets (Test: 0-1 if defined)
 
 // AI FSM States (Test: strings)
@@ -79,7 +79,7 @@ const HEAL_AMOUNT = 1;              // HP restored per heal action (Test: > 0)
 // UI / Game Logic Settings
 const MAX_LOG_MESSAGES = 50;        // Max messages displayed in the game log (Test: > 0)
 const AI_TURN_DELAY = 15;         // Milliseconds delay between each AI enemy's turn (set to 0 for instant turns, e.g., in unit tests; typical: 100–400ms for visible sequential AI actions)
-const CONSOLE_LOG_LEVEL = 'DEBUG';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown. (Test: string, one of valid)
+const CONSOLE_LOG_LEVEL = 'INFO';   // Console logging verbosity ('DEBUG', 'INFO', 'WARN', 'ERROR'). Only logs at this level or higher are shown. (Test: string, one of valid)
 
 /* --- Animation Timing & Easing (All durations in ms) --- */
 const MOVEMENT_ANIMATION_DURATION = 180;    // Duration of sliding movement animation

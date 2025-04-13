@@ -17,7 +17,7 @@ The immediate goal is to make the game understandable, playable, and fun for new
 - Documented advice for adding effects in project/design/EFFECTS_SYSTEM.md
 - Implemented another animation effect for player and AI movement - an effect now called by player and AI movement logic, but with a "trail" effect in which frames appeared not to clear as movement continued.
 - We decided to implement a whole new animation system that would control all drawing - see project/design/ANIMATION_SYSTEM_REWRITE.md
-- This is just getting underway with core functoins at animation.js, new drawing function at drawFrame.js, and we had just started to rewrite main.js to integrate the animation system into the core game loop. 
+- The animation loop is now working - see main.js, animation.js, and drawFrame.js - and we're in the process of refactoring two effects - ranged attack and movement - from effects.js to animation.js to wokr with the new loop.
 
 ### Immediate next steps
-- Continue to try to get the new unified animation system going. 
+- Continue to get ranged attack and movement effects fully working. 

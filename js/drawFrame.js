@@ -25,7 +25,28 @@ function drawFrame(ctx, renderState, options = {}) {
         drawMapCells(ctx, renderState.mapData, renderState.safeZone, GRID_WIDTH, GRID_HEIGHT, cellSize);
     }
 
-    // Draw threat overlay if present in renderState
+        // Draw projectiles from overlays (new animation system)
+        // Each projectile can have its own color and style as set by the effect.
+        if (
+            renderState.overlays &&
+            Array.isArray(renderState.overlays.projectiles) &&
+            renderState.overlays.projectiles.length > 0
+        ) {
+            for (const proj of renderState.overlays.projectiles) {
+                const cx = proj.col * cellSize + cellSize / 2;
+                const cy = proj.row * cellSize + cellSize / 2;
+                ctx.save();
+                ctx.fillStyle = proj.color || "#ffb300"; // Color is set per projectile
+                ctx.beginPath();
+                ctx.arc(cx, cy, cellSize * 0.18, 0, 2 * Math.PI);
+                ctx.shadowColor = proj.shadowColor || "#fff";
+                ctx.shadowBlur = typeof proj.shadowBlur === "number" ? proj.shadowBlur : 8;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+    
+        // Draw threat overlay if present in renderState
     if (renderState.threatMap && typeof drawThreatOverlay === 'function') {
         drawThreatOverlay(ctx, renderState.threatMap, cellSize);
     }
@@ -35,11 +56,29 @@ function drawFrame(ctx, renderState, options = {}) {
     }
 
     if (typeof drawEnemies === 'function') {
-        drawEnemies(ctx, renderState.enemies, cellSize, options.activeUnitId);
+        // Always pass the player id as activeUnitId to prevent double-drawing
+        drawEnemies(ctx, renderState.enemies, cellSize, renderState.player && renderState.player.id);
     }
-
+    
     if (typeof drawPlayer === 'function') {
-        drawPlayer(ctx, renderState.player, cellSize, options.activeUnitId);
+        // Check for active movement effect for the player
+        let playerMoveEffect = null;
+        if (Array.isArray(renderState.effects)) {
+            playerMoveEffect = renderState.effects.find(
+                e => e.type === "movement" && e.data && e.data.unitId === renderState.player.id
+            );
+        }
+        // Robust guard: Only draw the player at the interpolated position if animating, otherwise at the static position.
+        if (playerMoveEffect && playerMoveEffect.data) {
+            // Only draw at the interpolated position, never at the static position
+            drawPlayer(ctx, renderState.player, cellSize, {
+                interpolatedRow: renderState.player.row,
+                interpolatedCol: renderState.player.col
+            });
+        } else {
+            // Only draw at the static position if not animating
+            drawPlayer(ctx, renderState.player, cellSize, options.activeUnitId);
+        }
     }
 
     if (typeof drawUI === 'function') {

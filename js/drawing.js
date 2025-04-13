@@ -236,6 +236,9 @@ function drawPlayer(ctx, player, cellSize, optsOrActiveUnitId) {
 
     const row = typeof opts.interpolatedRow === "number" ? opts.interpolatedRow : player.row;
     const col = typeof opts.interpolatedCol === "number" ? opts.interpolatedCol : player.col;
+    if (typeof window !== "undefined" && window.DEBUG_DRAW_PLAYER) {
+        console.log(`[drawPlayer] Drawing player id=${player.id} at row=${row}, col=${col}, opts=`, opts);
+    }
     const centerX = col * cellSize + cellSize / 2;
     const centerY = row * cellSize + cellSize / 2;
     const radius = (cellSize / 2) * PLAYER_RADIUS_RATIO;
