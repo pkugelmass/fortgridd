@@ -144,14 +144,14 @@ async function _attemptEngageAttack(enemy, target, gameState) {
 async function _determineAndExecuteEngageMove(enemy, target, gameState) {
     const enemyId = enemy.id || 'Unknown Enemy';
     const targetId = target === gameState.player ? 'Player' : target.id;
- 
+
     // A. Get Valid Moves
     const possibleMoves = getValidMoves(enemy, gameState);
     if (possibleMoves.length === 0) {
         Game.logMessage(`Enemy ${enemyId} is blocked while engaging ${targetId} and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         return true; // Wait action
     }
- 
+
     // B. Identify Best Moves
     let closerMoves = [];
     let sidewaysMoves = [];
@@ -165,7 +165,7 @@ async function _determineAndExecuteEngageMove(enemy, target, gameState) {
         }
     }
     let potentialCandidates = [...closerMoves, ...sidewaysMoves];
- 
+
     // C. Filter for Safety
     const safeCandidateMoves = potentialCandidates.filter(move => isMoveSafe(enemy, move.row, move.col, gameState));
     if (safeCandidateMoves.length === 0) {
@@ -173,7 +173,7 @@ async function _determineAndExecuteEngageMove(enemy, target, gameState) {
          Game.logMessage(`Enemy ${enemyId} ${logReason} towards ${targetId} and waits.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
          return true; // Wait action
     }
- 
+
     // D. Filter for LOS Maintenance
     let losMaintainingMoves = [];
     for (const move of safeCandidateMoves) {
@@ -183,7 +183,7 @@ async function _determineAndExecuteEngageMove(enemy, target, gameState) {
         }
     }
     let finalCandidates = losMaintainingMoves.length > 0 ? losMaintainingMoves : safeCandidateMoves;
- 
+
     // E. Select Move
     let chosenMove = null;
     if (finalCandidates.length > 0) {
@@ -197,7 +197,7 @@ async function _determineAndExecuteEngageMove(enemy, target, gameState) {
             chosenMove = finalCandidates[Math.floor(Math.random() * finalCandidates.length)];
         }
     }
- 
+
     // F. Risk Assessment
     let isRiskyMove = false;
     if (chosenMove) {
@@ -205,7 +205,7 @@ async function _determineAndExecuteEngageMove(enemy, target, gameState) {
         const targetHasLOS = targetCanShoot && hasClearLineOfSight(target, chosenMove, RANGED_ATTACK_RANGE, gameState);
         isRiskyMove = targetCanShoot && targetHasLOS;
     }
- 
+
     // G. Risk Aversion
     if (chosenMove && isRiskyMove) {
         const riskChance = typeof AI_ENGAGE_RISK_AVERSION_CHANCE !== 'undefined' ? AI_ENGAGE_RISK_AVERSION_CHANCE : 0.3;
@@ -214,7 +214,7 @@ async function _determineAndExecuteEngageMove(enemy, target, gameState) {
             return true; // Wait action
         }
     }
- 
+
     // H. Execute Move or Wait
     if (chosenMove) {
         Game.logMessage(`Enemy ${enemyId} at (${enemy.row},${enemy.col}) moves towards target ${targetId} to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });

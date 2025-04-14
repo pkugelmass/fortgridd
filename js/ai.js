@@ -154,12 +154,16 @@ async function runAiTurns(gameState) { // Renamed from executeAiTurns and accept
 
         while (!actionTaken && evaluationCount < MAX_EVALUATIONS_PER_TURN) {
             evaluationCount++;
+            Game.logMessage(`[DEBUG] Enemy ${enemy.id} AI loop iteration ${evaluationCount} ENTER`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+            Game.logMessage(`[DEBUG] Enemy ${enemy.id} about to call performReevaluation`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
             performReevaluation(enemy, gameState); // Re-evaluate state *before* acting, pass gameState
+            Game.logMessage(`[DEBUG] Enemy ${enemy.id} finished performReevaluation, state is now: ${enemy.state}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
 
             let currentHandlerResult = false; // Assume handler returns false (needs re-eval) unless it returns true
 
             // Call the handler function corresponding to the enemy's *current* (potentially updated) state
             // Pass gameState to all state handlers
+            Game.logMessage(`[DEBUG] Enemy ${enemy.id} calling handler for state: ${enemy.state}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
             switch (enemy.state) {
                 case AI_STATE_EXPLORING:
                     currentHandlerResult = await handleExploringState(enemy, gameState);
@@ -183,12 +187,14 @@ async function runAiTurns(gameState) { // Renamed from executeAiTurns and accept
                     currentHandlerResult = false;
                     break;
             }
+            Game.logMessage(`[DEBUG] Enemy ${enemy.id} handler for state ${enemy.state} returned: ${currentHandlerResult}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
 
             if (currentHandlerResult) {
                 actionTaken = true; // Handler took a final action, break the while loop
             }
             // If handler returned false, the loop continues (up to the limit),
             // performReevaluation will run again with the current state.
+            Game.logMessage(`[DEBUG] Enemy ${enemy.id} AI loop iteration ${evaluationCount} END`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         } // End while loop for single enemy turn
 
         if (!actionTaken) {

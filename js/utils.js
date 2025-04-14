@@ -1,13 +1,7 @@
 /**
  * sleep - Pauses execution for a given number of milliseconds.
  *
- * In JavaScript, "Promise" is a built-in object representing the eventual completion of an asynchronous operation.
  * The sleep function below returns a Promise that resolves after the specified time.
- *
- * Usage (inside an async function):
- *   await sleep(300); // Pauses for 300 milliseconds
- *
- * This is a standard way to introduce delays when using async/await.
  *
  * @param {number} ms - The number of milliseconds to wait.
  * @returns {Promise<void>} - A Promise that resolves after the delay.
@@ -273,7 +267,36 @@ function applyKnockback(attacker, target, gameState) {
  * @param {number} y1 - Ending row.
  * @returns {Array<{row: number, col: number}>} - Array of coordinates.
  */
+const MAX_TRACE_STEPS = 200;
+
+/**
+ * Traces a line between two points using Bresenham's line algorithm.
+ * All input coordinates are rounded to the nearest integer to ensure robust grid-based behavior,
+ * even if fractional/interpolated positions are passed in (e.g., from animation).
+ * Returns an array of all integer coordinates along the line, including start and end.
+ * @param {number} x0 - Starting column.
+ * @param {number} y0 - Starting row.
+ * @param {number} x1 - Ending column.
+ * @param {number} y1 - Ending row.
+ * @returns {Array<{row: number, col: number}>} - Array of coordinates.
+ */
 function traceLine(x0, y0, x1, y1) {
+    // Round all inputs to the nearest integer for grid-based logic
+    x0 = Math.round(x0);
+    y0 = Math.round(y0);
+    x1 = Math.round(x1);
+    y1 = Math.round(y1);
+
+    if (
+        typeof Game !== "undefined" &&
+        (isNaN(x0) || isNaN(y0) || isNaN(x1) || isNaN(y1))
+    ) {
+        Game.logMessage(
+            `[DEBUG] traceLine called with invalid coordinates: x0=${x0}, y0=${y0}, x1=${x1}, y1=${y1}`,
+            undefined,
+            { level: "ERROR", target: "CONSOLE" }
+        );
+    }
     const points = [];
     const dx = Math.abs(x1 - x0);
     const dy = -Math.abs(y1 - y0);
@@ -282,12 +305,24 @@ function traceLine(x0, y0, x1, y1) {
     let err = dx + dy; // error value e_xy
     let currentX = x0;
     let currentY = y0;
+    let steps = 0;
 
     while (true) {
         points.push({ row: currentY, col: currentX }); // Add current point
 
         if (currentX === x1 && currentY === y1) {
             break; // Reached the end
+        }
+
+        steps++;
+        if (steps > MAX_TRACE_STEPS) {
+            const msg = `[WARN] traceLine exceeded max steps (${MAX_TRACE_STEPS}) for input: x0=${x0}, y0=${y0}, x1=${x1}, y1=${y1}, points.length=${points.length}`;
+            if (typeof Game !== "undefined" && typeof Game.logMessage === "function") {
+                Game.logMessage(msg, undefined, { level: "WARN", target: "CONSOLE" });
+            } else {
+                console.warn(msg);
+            }
+            return points;
         }
 
         const e2 = 2 * err;
@@ -301,4 +336,23 @@ function traceLine(x0, y0, x1, y1) {
         }
     }
     return points;
+}
+
+/**
+ * Ensures grid coordinates are integers.
+ * Accepts (row, col) or an object with row/col properties.
+ * Returns { row: int, col: int }
+ */
+function toGridCoords(rowOrObj, col) {
+    if (typeof rowOrObj === "object" && rowOrObj !== null) {
+        return {
+            row: Math.round(rowOrObj.row),
+            col: Math.round(rowOrObj.col)
+        };
+    } else {
+        return {
+            row: Math.round(rowOrObj),
+            col: Math.round(col)
+        };
+    }
 }

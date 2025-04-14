@@ -7,6 +7,8 @@
  * @param {GameState} gameState - The current game state.
  * @returns {Array<object>} - An array of {row, col} objects for valid moves.
  */
+// Ensure toGridCoords is available globally or imported as needed
+
 function getValidMoves(unit, gameState) {
     const possibleMoves = [];
     if (!unit || !gameState || !gameState.mapData || !gameState.safeZone || !gameState.player || !gameState.enemies) {
@@ -16,11 +18,13 @@ function getValidMoves(unit, gameState) {
 
     const directions = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
     const { mapData, safeZone, player, enemies } = gameState; // Destructure for readability
-    // Assume config constants like GRID_HEIGHT, GRID_WIDTH, TILE_* are globally available for now
+
+    // Sanitize unit coordinates
+    const { row: unitRow, col: unitCol } = toGridCoords(unit);
 
     for (const dir of directions) {
-        const targetRow = unit.row + dir.dr;
-        const targetCol = unit.col + dir.dc;
+        // Always round targetRow/Col to integer grid
+        const { row: targetRow, col: targetCol } = toGridCoords(unitRow + dir.dr, unitCol + dir.dc);
 
         // 1. Check Map Boundaries
         if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
@@ -31,12 +35,15 @@ function getValidMoves(unit, gameState) {
                     const tileType = mapData[targetRow][targetCol];
                     if (tileType === TILE_LAND || tileType === TILE_MEDKIT || tileType === TILE_AMMO) {
                         // 4. Check Occupancy (using gameState.player and gameState.enemies)
-                        let occupiedByPlayer = (player.hp > 0 && player.row === targetRow && player.col === targetCol);
+                        let occupiedByPlayer = (player.hp > 0 &&
+                            toGridCoords(player).row === targetRow &&
+                            toGridCoords(player).col === targetCol);
                         let occupiedByOtherEnemy = false;
                         for (const otherEnemy of enemies) {
                             // Skip self, dead enemies, or invalid enemy objects
                             if (!otherEnemy || (unit.id && otherEnemy.id === unit.id) || otherEnemy.hp <= 0) continue;
-                            if (otherEnemy.row === targetRow && otherEnemy.col === targetCol) {
+                            const { row: otherRow, col: otherCol } = toGridCoords(otherEnemy);
+                            if (otherRow === targetRow && otherCol === targetCol) {
                                 occupiedByOtherEnemy = true;
                                 break;
                             }
@@ -64,6 +71,10 @@ function getValidMoves(unit, gameState) {
  * @returns {boolean} - True if the enemy moved, false otherwise.
  */
 async function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
+    // Sanitize all coordinates
+    const { row: enemyRow, col: enemyCol } = toGridCoords(enemy);
+    const { row: tgtRow, col: tgtCol } = toGridCoords(targetRow, targetCol);
+
     // Pass gameState to getValidMoves
     const possibleMoves = getValidMoves(enemy, gameState);
     if (possibleMoves.length === 0) {
@@ -71,12 +82,13 @@ async function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
         return false;
     }
 
-    const currentDistance = Math.abs(targetRow - enemy.row) + Math.abs(targetCol - enemy.col);
+    const currentDistance = Math.abs(tgtRow - enemyRow) + Math.abs(tgtCol - enemyCol);
     let closerMoves = [];
     let sidewaysMoves = [];
 
     for (const move of possibleMoves) {
-        const newDist = Math.abs(targetRow - move.row) + Math.abs(targetCol - move.col);
+        const { row: moveRow, col: moveCol } = toGridCoords(move);
+        const newDist = Math.abs(tgtRow - moveRow) + Math.abs(tgtCol - moveCol);
         if (newDist < currentDistance) {
             closerMoves.push({ move: move, distance: newDist });
         } else if (newDist === currentDistance) {
@@ -94,14 +106,15 @@ async function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
     }
 
     if (chosenMove) {
+        const { row: chosenRow, col: chosenCol } = toGridCoords(chosenMove);
         // Pass gameState to logMessage
-        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves towards ${logReason} to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+        Game.logMessage(`Enemy ${enemy.id} at (${enemyRow},${enemyCol}) moves towards ${logReason} to (${chosenRow},${chosenCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         // Await movement animation before updating position
         if (typeof animationSystem !== "undefined" && typeof AnimationSystem.createMovementEffect === "function") {
             const moveEffect = AnimationSystem.createMovementEffect({
                 unit: enemy,
-                from: { row: enemy.row, col: enemy.col },
-                to: { row: chosenMove.row, col: chosenMove.col },
+                from: { row: enemyRow, col: enemyCol },
+                to: { row: chosenRow, col: chosenCol },
                 color: enemy.color || (enemy.isPlayer ? "#007bff" : "#ff0000"),
                 duration: typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180,
                 easing: typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut"
@@ -111,7 +124,7 @@ async function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
                 await moveEffect.promise;
             }
         }
-        updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
+        updateUnitPosition(enemy, chosenRow, chosenCol, gameState);
         return true;
     }
 
@@ -119,24 +132,27 @@ async function moveTowards(enemy, targetRow, targetCol, logReason, gameState) {
 }
 
 /**
- * Moves the enemy to a random valid adjacent cell, using gameState.
+ * Moves the enemy to a random valid adjacent cell.
  * @param {object} enemy - The enemy object to move.
  * @param {GameState} gameState - The current game state.
  * @returns {boolean} - True if the enemy moved, false otherwise.
  */
 async function moveRandomly(enemy, gameState) {
+    // Sanitize enemy coordinates
+    const { row: enemyRow, col: enemyCol } = toGridCoords(enemy);
     // Pass gameState to getValidMoves
     const possibleMoves = getValidMoves(enemy, gameState);
     if (possibleMoves.length > 0) {
         const chosenMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+        const { row: chosenRow, col: chosenCol } = toGridCoords(chosenMove);
         // Pass gameState to logMessage
-        Game.logMessage(`Enemy ${enemy.id} at (${enemy.row},${enemy.col}) moves randomly to (${chosenMove.row},${chosenMove.col}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+        Game.logMessage(`Enemy ${enemy.id} at (${enemyRow},${enemyCol}) moves randomly to (${chosenRow},${chosenCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
         // Await movement animation before updating position
         if (typeof animationSystem !== "undefined" && typeof AnimationSystem.createMovementEffect === "function") {
             const moveEffect = AnimationSystem.createMovementEffect({
                 unit: enemy,
-                from: { row: enemy.row, col: enemy.col },
-                to: { row: chosenMove.row, col: chosenMove.col },
+                from: { row: enemyRow, col: enemyCol },
+                to: { row: chosenRow, col: chosenCol },
                 color: enemy.color || (enemy.isPlayer ? "#007bff" : "#ff0000"),
                 duration: typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180,
                 easing: typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut"
@@ -146,20 +162,19 @@ async function moveRandomly(enemy, gameState) {
                 await moveEffect.promise;
             }
         }
-        updateUnitPosition(enemy, chosenMove.row, chosenMove.col, gameState);
+        updateUnitPosition(enemy, chosenRow, chosenCol, gameState);
         return true;
     }
     return false;
 }
 
 /**
- * Checks if a potential move destination is considered "safe" for an enemy, using gameState.
- * Safe means not adjacent to other known (visible) threats (excluding self and primary target).
- * @param {object} enemy - The enemy considering the move.
- * @param {number} targetRow - The row of the potential move destination.
- * @param {number} targetCol - The column of the potential move destination.
+ * Checks if a move is safe (not adjacent to visible threats).
+ * @param {object} enemy - The enemy object.
+ * @param {number} targetRow - The target row.
+ * @param {number} targetCol - The target column.
  * @param {GameState} gameState - The current game state.
- * @returns {boolean} - True if the move is considered safe, false otherwise.
+ * @returns {boolean} - True if the move is safe, false otherwise.
  */
 function isMoveSafe(enemy, targetRow, targetCol, gameState) {
     if (!enemy || !gameState || !gameState.player || !gameState.enemies) {
@@ -168,6 +183,9 @@ function isMoveSafe(enemy, targetRow, targetCol, gameState) {
     }
     const primaryTarget = enemy.targetEnemy;
     const { player, enemies } = gameState; // Destructure
+
+    // Sanitize move target
+    const { row: safeRow, col: safeCol } = toGridCoords(targetRow, targetCol);
 
     // Combine player and enemies into a list of potential threats
     const potentialThreats = [];
@@ -182,13 +200,16 @@ function isMoveSafe(enemy, targetRow, targetCol, gameState) {
             continue;
         }
 
+        // Sanitize threat coordinates
+        const { row: threatRow, col: threatCol } = toGridCoords(threat);
+
         // Check visibility (anticipating hasClearLineOfSight needing gameState)
         // Assume AI_RANGE_MAX is globally available for now
         if (typeof hasClearLineOfSight === 'function' && hasClearLineOfSight(enemy, threat, enemy.detectionRange || AI_RANGE_MAX, gameState)) {
             // Check adjacency
-            const adjacent = Math.abs(targetRow - threat.row) <= 1 && Math.abs(targetCol - threat.col) <= 1;
+            const adjacent = Math.abs(safeRow - threatRow) <= 1 && Math.abs(safeCol - threatCol) <= 1;
             if (adjacent) {
-                Game.logMessage(`[isMoveSafe] Move to (${targetRow},${targetCol}) unsafe due to adjacent visible threat: ${threat.id || 'Player'} at (${threat.row},${threat.col})`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+                Game.logMessage(`[isMoveSafe] Move to (${safeRow},${safeCol}) unsafe due to adjacent visible threat: ${threat.id || 'Player'} at (${threatRow},${threatCol})`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
                 return false; // Move is not safe
             }
         }
@@ -196,5 +217,3 @@ function isMoveSafe(enemy, targetRow, targetCol, gameState) {
 
     return true; // No adjacent visible threats found
 }
-
-// calculateKnockbackDestination function moved to js/utils.js (2025-04-10)

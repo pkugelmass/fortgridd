@@ -76,7 +76,31 @@ class AnimationSystem {
         }
 
         // 1. Remove expired effects
-        this.effects = this.effects.filter(e => !e.isExpired || !e.isExpired(now));
+        // 1. Update effects and filter expired ones, ensuring promises are resolved
+        const remainingEffects = [];
+        for (const effect of this.effects) {
+            let expired = false;
+            if (typeof effect.isExpired === "function") {
+                expired = effect.isExpired(now); // Note: isExpired for movement effects resolves its own promise
+            }
+
+            if (expired) {
+                // Check specifically for ranged attacks that haven't resolved yet
+                if (effect.type === "ranged-attack" && typeof effect._isResolved === 'function' && !effect._isResolved()) {
+                     if (typeof effect._resolvePromiseAndMark === 'function') {
+                        // console.log("Resolving ranged attack promise due to expiration");
+                        effect._resolvePromiseAndMark(); // Resolve it before discarding
+                     } else {
+                        // This case should ideally not happen if created by the factory
+                        console.warn("Expired ranged attack effect missing _resolvePromiseAndMark method.");
+                     }
+                }
+                // Do not add expired effect to the next frame's list
+            } else {
+                remainingEffects.push(effect); // Keep non-expired effects
+            }
+        }
+        this.effects = remainingEffects;
 
         // 2. Compose threatMap for this frame
         const currentGameState = this.getGameState();
@@ -120,8 +144,9 @@ AnimationSystem.createRangedAttackEffect = function({ linePoints, hitCell, color
     const stepTime = 80; // ms per tile
     const totalSteps = linePoints.length;
     const duration = stepTime * totalSteps;
-    let resolveEffectPromise;
-    const effectPromise = new Promise(resolve => { resolveEffectPromise = resolve; });
+    let _internalResolveEffectPromise; // Renamed internal resolver
+    let _promiseResolved = false;      // Flag to track resolution status
+    const effectPromise = new Promise(resolve => { _internalResolveEffectPromise = resolve; });
 
     // Find the index of the hit cell in the linePoints array
     let hitCellIdx = -1;
@@ -156,7 +181,7 @@ AnimationSystem.createRangedAttackEffect = function({ linePoints, hitCell, color
                 this.data.hitCellIdx >= 0 &&
                 idx > this.data.hitCellIdx
             ) {
-                this._resolvePromise?.();
+                this._resolvePromiseAndMark?.(); // Call the wrapper
                 return;
             }
             // Only show the projectile at the current position
@@ -176,15 +201,26 @@ AnimationSystem.createRangedAttackEffect = function({ linePoints, hitCell, color
                 this.data.hitCellIdx >= 0 &&
                 idx === this.data.hitCellIdx
             ) {
-                this._resolvePromise?.();
+                this._resolvePromiseAndMark?.(); // Call the wrapper
             }
         },
         isExpired(now) {
             if (typeof now !== "number") now = performance.now();
             return (now - this.startTime) >= this.duration;
         },
-        _resolvePromise: resolveEffectPromise,
-        promise: effectPromise
+        // Internal resolver reference - DO NOT CALL DIRECTLY FROM OUTSIDE THE EFFECT
+        _internalResolve: _internalResolveEffectPromise,
+        // Method to check if the promise has been resolved
+        _isResolved: () => _promiseResolved,
+        // Wrapper function to resolve the promise AND set the flag
+        _resolvePromiseAndMark: function() {
+            if (!_promiseResolved) {
+                _promiseResolved = true; // Mark as resolved
+                this._internalResolve(); // Call the actual Promise resolver
+                // console.log("Ranged attack promise resolved."); // For debugging
+            }
+        },
+        promise: effectPromise // The promise awaited by external logic
     };
     return effect;
 }
