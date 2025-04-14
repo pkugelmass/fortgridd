@@ -10,6 +10,40 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Checks if a grid tile is occupied by any living unit (player or enemy).
+ * @param {number} row - The row coordinate to check.
+ * @param {number} col - The column coordinate to check.
+ * @param {GameState} gameState - The current game state.
+ * @param {object} [ignoreUnit] - Optional unit to ignore (e.g., self).
+ * @returns {boolean} - True if occupied, false otherwise.
+ */
+function isTileOccupied(row, col, gameState, ignoreUnit) {
+    if (!gameState || !gameState.player || !Array.isArray(gameState.enemies)) return false;
+    // Check player
+    if (
+        gameState.player.hp > 0 &&
+        gameState.player.row === row &&
+        gameState.player.col === col &&
+        gameState.player !== ignoreUnit
+    ) {
+        return true;
+    }
+    // Check enemies
+    for (const enemy of gameState.enemies) {
+        if (
+            enemy &&
+            enemy.hp > 0 &&
+            enemy.row === row &&
+            enemy.col === col &&
+            enemy !== ignoreUnit
+        ) {
+            return true;
+        }
+    }
+    return false;
+}
+
  /**
  * Checks for a resource at the given coordinates and handles pickup if found, using gameState.
  * Updates the unit's resources, modifies gameState.mapData, and logs the event via Game.logMessage.
@@ -205,8 +239,7 @@ function applyKnockback(attacker, target, gameState) {
         Game.logMessage("applyKnockback: Missing attacker, target, or required gameState properties.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return { success: false, dest: null, reason: 'internal_error' };
     }
-    const { mapData, player, enemies } = gameState;
-    // Assume GRID_HEIGHT, GRID_WIDTH, TILE_WALL, TILE_TREE are global for now
+    const { mapData } = gameState;
 
     const knockbackDest = calculateKnockbackDestination(attacker, target, gameState); // Pass gameState
     if (!knockbackDest) {
@@ -219,6 +252,11 @@ function applyKnockback(attacker, target, gameState) {
     const gridHeight = mapData.length;
     const gridWidth = mapData[0] ? mapData[0].length : 0;
     const isInBounds = destRow >= 0 && destRow < gridHeight && destCol >= 0 && destCol < gridWidth;
+
+    // 2. Check Occupancy (shared utility)
+    if (typeof isTileOccupied === "function" && isTileOccupied(destRow, destCol, gameState, target)) {
+        return { success: false, dest: knockbackDest, reason: 'blocked_occupied' };
+    }
     if (!isInBounds) {
         return { success: false, dest: knockbackDest, reason: 'out_of_bounds' };
     }
@@ -234,24 +272,6 @@ function applyKnockback(attacker, target, gameState) {
     }
 
     // 3. Check Occupancy
-    let isOccupied = false;
-    // Check player
-    if (player.hp > 0 && player.row === destRow && player.col === destCol) {
-        isOccupied = true;
-    }
-    // Check other enemies
-    if (!isOccupied) {
-        for (const otherEnemy of enemies) {
-            // Check if it's a different, living enemy at the destination
-            if (otherEnemy && otherEnemy.hp > 0 && otherEnemy !== target && otherEnemy.row === destRow && otherEnemy.col === destCol) {
-                isOccupied = true;
-                break;
-            }
-        }
-    }
-    if (isOccupied) {
-        return { success: false, dest: knockbackDest, reason: 'blocked_occupied' };
-    }
 
     // All checks passed, apply knockback
     updateUnitPosition(target, destRow, destCol, gameState); // Use the refactored function

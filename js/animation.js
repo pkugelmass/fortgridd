@@ -61,72 +61,81 @@ class AnimationSystem {
 
     // Main animation loop
     _animationFrame(now) {
-        // Frame rate cap (optional, set this.maxFPS to e.g. 60)
-        if (this.maxFPS) {
-            if (this._lastFrameTime !== undefined) {
-                const minFrameTime = 1000 / this.maxFPS;
-                if (now - this._lastFrameTime < minFrameTime) {
-                    if (this.running) {
-                        requestAnimationFrame(this._animationFrame.bind(this));
+        try {
+            // Frame rate cap (optional, set this.maxFPS to e.g. 60)
+            if (this.maxFPS) {
+                if (this._lastFrameTime !== undefined) {
+                    const minFrameTime = 1000 / this.maxFPS;
+                    if (now - this._lastFrameTime < minFrameTime) {
+                        if (this.running) {
+                            requestAnimationFrame(this._animationFrame.bind(this));
+                        }
+                        return;
                     }
-                    return;
+                }
+                this._lastFrameTime = now;
+            }
+
+            // 1. Remove expired effects
+            // 1. Update effects and filter expired ones, ensuring promises are resolved
+            const remainingEffects = [];
+            for (const effect of this.effects) {
+                let expired = false;
+                if (typeof effect.isExpired === "function") {
+                    expired = effect.isExpired(now); // Note: isExpired for movement effects resolves its own promise
+                }
+
+                if (expired) {
+                    // Check specifically for ranged attacks that haven't resolved yet
+                    if (effect.type === "ranged-attack" && typeof effect._isResolved === 'function' && !effect._isResolved()) {
+                        if (typeof effect._resolvePromiseAndMark === 'function') {
+                            // console.log("Resolving ranged attack promise due to expiration");
+                            effect._resolvePromiseAndMark(); // Resolve it before discarding
+                        } else {
+                            // This case should ideally not happen if created by the factory
+                            console.warn("Expired ranged attack effect missing _resolvePromiseAndMark method.");
+                        }
+                    }
+                    // Do not add expired effect to the next frame's list
+                } else {
+                    remainingEffects.push(effect); // Keep non-expired effects
                 }
             }
-            this._lastFrameTime = now;
-        }
+            this.effects = remainingEffects;
 
-        // 1. Remove expired effects
-        // 1. Update effects and filter expired ones, ensuring promises are resolved
-        const remainingEffects = [];
-        for (const effect of this.effects) {
-            let expired = false;
-            if (typeof effect.isExpired === "function") {
-                expired = effect.isExpired(now); // Note: isExpired for movement effects resolves its own promise
-            }
+            // 2. Compose threatMap for this frame
+            const currentGameState = this.getGameState();
+            const threatMap = this.createThreatMap(currentGameState);
 
-            if (expired) {
-                // Check specifically for ranged attacks that haven't resolved yet
-                if (effect.type === "ranged-attack" && typeof effect._isResolved === 'function' && !effect._isResolved()) {
-                     if (typeof effect._resolvePromiseAndMark === 'function') {
-                        // console.log("Resolving ranged attack promise due to expiration");
-                        effect._resolvePromiseAndMark(); // Resolve it before discarding
-                     } else {
-                        // This case should ideally not happen if created by the factory
-                        console.warn("Expired ranged attack effect missing _resolvePromiseAndMark method.");
-                     }
+            // 3. Compose RenderState for this frame
+            const renderState = new RenderState({
+                gameState: currentGameState,
+                threatMap: threatMap,
+                effects: this.effects
+                // overlays and ui can be added as needed
+            });
+
+            // 3b. Let each effect mutate/interpolate the render state for this frame
+            for (const effect of this.effects) {
+                if (typeof effect.update === "function") {
+                    effect.update(now, renderState);
                 }
-                // Do not add expired effect to the next frame's list
-            } else {
-                remainingEffects.push(effect); // Keep non-expired effects
             }
-        }
-        this.effects = remainingEffects;
 
-        // 2. Compose threatMap for this frame
-        const currentGameState = this.getGameState();
-        const threatMap = this.createThreatMap(currentGameState);
+            // 4. Draw the frame
+            this.drawFrame(renderState);
 
-        // 3. Compose RenderState for this frame
-        const renderState = new RenderState({
-            gameState: currentGameState,
-            threatMap: threatMap,
-            effects: this.effects
-            // overlays and ui can be added as needed
-        });
-
-        // 3b. Let each effect mutate/interpolate the render state for this frame
-        for (const effect of this.effects) {
-            if (typeof effect.update === "function") {
-                effect.update(now, renderState);
+        } catch (err) {
+            // Log error to console and game log if possible
+            console.error("AnimationSystem _animationFrame error:", err);
+            if (typeof Game !== "undefined" && typeof Game.logMessage === "function") {
+                Game.logMessage(`[ERROR] AnimationSystem _animationFrame: ${err && err.stack ? err.stack : err}`, this.gameState, { level: "ERROR", target: "CONSOLE" });
             }
-        }
-
-        // 4. Draw the frame
-        this.drawFrame(renderState);
-
-        // 5. Request next frame if running
-        if (this.running) {
-            requestAnimationFrame(this._animationFrame.bind(this));
+        } finally {
+            // Always continue the animation loop
+            if (this.running) {
+                requestAnimationFrame(this._animationFrame.bind(this));
+            }
         }
     }
 

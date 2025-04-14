@@ -34,21 +34,8 @@ function getValidMoves(unit, gameState) {
                 if (mapData[targetRow]) { // Check row exists
                     const tileType = mapData[targetRow][targetCol];
                     if (tileType === TILE_LAND || tileType === TILE_MEDKIT || tileType === TILE_AMMO) {
-                        // 4. Check Occupancy (using gameState.player and gameState.enemies)
-                        let occupiedByPlayer = (player.hp > 0 &&
-                            toGridCoords(player).row === targetRow &&
-                            toGridCoords(player).col === targetCol);
-                        let occupiedByOtherEnemy = false;
-                        for (const otherEnemy of enemies) {
-                            // Skip self, dead enemies, or invalid enemy objects
-                            if (!otherEnemy || (unit.id && otherEnemy.id === unit.id) || otherEnemy.hp <= 0) continue;
-                            const { row: otherRow, col: otherCol } = toGridCoords(otherEnemy);
-                            if (otherRow === targetRow && otherCol === targetCol) {
-                                occupiedByOtherEnemy = true;
-                                break;
-                            }
-                        }
-                        if (!occupiedByPlayer && !occupiedByOtherEnemy) {
+                        // 4. Check Occupancy (shared utility)
+                        if (typeof isTileOccupied !== "function" || !isTileOccupied(targetRow, targetCol, gameState, unit)) {
                             possibleMoves.push({ row: targetRow, col: targetCol }); // All checks passed
                         }
                     } // End check for valid tile types
@@ -180,6 +167,10 @@ function isMoveSafe(enemy, targetRow, targetCol, gameState) {
     if (!enemy || !gameState || !gameState.player || !gameState.enemies) {
         Game.logMessage("isMoveSafe: Missing enemy or required gameState properties.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return false; // Cannot determine safety without full state
+    }
+    // Prevent moving into occupied tiles
+    if (typeof isTileOccupied === "function" && isTileOccupied(targetRow, targetCol, gameState, enemy)) {
+        return false;
     }
     const primaryTarget = enemy.targetEnemy;
     const { player, enemies } = gameState; // Destructure

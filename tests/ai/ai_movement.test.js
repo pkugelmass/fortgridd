@@ -83,9 +83,27 @@ QUnit.module('AI Movement Logic (ai_movement.js)', function(hooks) {
             const moves = getValidMoves(mockEnemy, mockGameState);
 
             // Assertion
-            assert.deepEqual(moves.sort((a,b) => a.row - b.row || a.col - b.col),
-                             expectedMoves.sort((a,b) => a.row - b.row || a.col - b.col),
-                             'Should find all 4 adjacent land tiles');
+            assert.deepEqual(
+                moves.sort((a, b) => a.row - b.row || a.col - b.col),
+                expectedMoves.sort((a, b) => a.row - b.row || a.col - b.col),
+                'All adjacent land tiles are valid moves when open'
+            );
+        });
+
+        QUnit.test('Does not include tile occupied by player', function(assert) {
+            // Place player adjacent to enemy
+            mockPlayer.row = 4; mockPlayer.col = 5;
+            const moves = getValidMoves(mockEnemy, mockGameState);
+            assert.notOk(moves.some(move => move.row === 4 && move.col === 5), 'Tile occupied by player is not a valid move');
+        });
+
+        QUnit.test('Does not include tile occupied by another enemy', function(assert) {
+            // Place another enemy adjacent to mockEnemy
+            const otherEnemy = createMockUnit(false, { id: 'blocker', row: 6, col: 5 });
+            mockGameState.enemies.push(otherEnemy);
+            const moves = getValidMoves(mockEnemy, mockGameState);
+            assert.notOk(moves.some(move => move.row === 6 && move.col === 5), 'Tile occupied by another enemy is not a valid move');
+        });
             assert.equal(moves.length, 4, 'Should find exactly 4 moves');
         });
 
@@ -383,5 +401,4 @@ QUnit.module('AI Movement Logic (ai_movement.js)', function(hooks) {
             assert.strictEqual(updateUnitPositionCalledWith, null, 'updateUnitPosition should not be called');
         });
     });
-
-
+});

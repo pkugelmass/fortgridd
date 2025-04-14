@@ -25,33 +25,46 @@ const PlayerActions = {
             return false; // Turn not consumed
         }
 
-        // 2. Check for Enemy (Melee Attack)
-        const targetEnemy = enemies.find(enemy => enemy.hp > 0 && enemy.row === targetRow && enemy.col === targetCol);
-        if (targetEnemy) {
-            const targetId = targetEnemy.id || '??';
-            const damage = PLAYER_ATTACK_DAMAGE || 1;
-            Game.logMessage(`Player attacks ${targetId} at (${targetRow},${targetCol}) for ${damage} damage.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_GOOD });
-            targetEnemy.hp -= damage;
-            let knockbackMsg = "";
-            if (targetEnemy.hp > 0 && typeof applyKnockback === 'function') { // Check if knockback exists
-                const knockbackResult = applyKnockback(player, targetEnemy, gameState);
-                if (knockbackResult.success) {
-                    knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
-                } else if (knockbackResult.reason !== 'calc_error') {
-                    knockbackMsg = ` Knockback blocked (${knockbackResult.reason}).`;
+        // 2. Check for Enemy (Melee Attack) or Occupied Tile
+        // Use shared utility for occupancy
+        if (typeof isTileOccupied === "function" && isTileOccupied(targetRow, targetCol, gameState, player)) {
+            // Find the enemy at the target tile (for melee)
+            const targetEnemy = enemies.find(enemy => enemy.hp > 0 && enemy.row === targetRow && enemy.col === targetCol);
+            if (targetEnemy) {
+                const targetId = targetEnemy.id || '??';
+                const damage = PLAYER_ATTACK_DAMAGE || 1;
+                Game.logMessage(`Player attacks ${targetId} at (${targetRow},${targetCol}) for ${damage} damage.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_GOOD });
+                targetEnemy.hp -= damage;
+                let knockbackMsg = "";
+                if (targetEnemy.hp > 0 && typeof applyKnockback === 'function') { // Check if knockback exists
+                    const knockbackResult = applyKnockback(player, targetEnemy, gameState);
+                    if (knockbackResult.success) {
+                        knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
+                    } else if (knockbackResult.reason !== 'calc_error') {
+                        knockbackMsg = ` Knockback blocked (${knockbackResult.reason}).`;
+                    }
+                } else if (targetEnemy.hp > 0) {
+                    Game.logMessage("handleMoveOrAttack: applyKnockback function not found!", gameState, { level: 'WARN', target: 'CONSOLE' });
                 }
-            } else if (targetEnemy.hp > 0) {
-                 Game.logMessage("handleMoveOrAttack: applyKnockback function not found!", gameState, { level: 'WARN', target: 'CONSOLE' });
+                if (knockbackMsg) {
+                    Game.logMessage(knockbackMsg.trim(), gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+                }
+                return true; // Turn consumed by attack
+            } else {
+                // Occupied by something else (should not happen), block move
+                Game.logMessage(`Player move blocked by occupied tile at (${targetRow},${targetCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
+                return false;
             }
-            if (knockbackMsg) {
-                Game.logMessage(knockbackMsg.trim(), gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-            }
-            return true; // Turn consumed by attack
         }
 
         // 3. Check Terrain (Movement)
         const targetTileType = mapData[targetRow][targetCol];
         if (targetTileType === TILE_LAND || targetTileType === TILE_MEDKIT || targetTileType === TILE_AMMO) {
+            // Check occupancy again before moving (should not be needed, but double safety)
+            if (typeof isTileOccupied === "function" && isTileOccupied(targetRow, targetCol, gameState, player)) {
+                Game.logMessage(`Player move blocked by occupied tile at (${targetRow},${targetCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
+                return false;
+            }
             Game.logMessage(`Player moves to (${targetRow},${targetCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
             if (
                 typeof animationSystem !== "undefined" &&
@@ -155,6 +168,11 @@ const PlayerActions = {
                 // Use Chebyshev distance (max of row/col difference) for grid range
                 const dist = Math.max(Math.abs(checkRow - player.row), Math.abs(checkCol - player.col));
 
+                // Debug: Log each cell checked for projectile collision
+                if (typeof Game !== "undefined" && typeof Game.logMessage === "function") {
+                    Game.logMessage(`[DEBUG] handleShoot: Checking cell (${checkRow},${checkCol}), dist=${dist}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+                }
+
                 if (dist > RANGED_ATTACK_RANGE) {
                     break;
                 }
@@ -172,6 +190,9 @@ const PlayerActions = {
                 }
                 hitTarget = enemies.find(enemy => enemy.hp > 0 && enemy.row === checkRow && enemy.col === checkCol);
                 if (hitTarget) {
+                    if (typeof Game !== "undefined" && typeof Game.logMessage === "function") {
+                        Game.logMessage(`[DEBUG] handleShoot: Found enemy ${hitTarget.id} at (${checkRow},${checkCol})`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+                    }
                     shotHit = true; hitCoord = { row: checkRow, col: checkCol };
                     break;
                 }

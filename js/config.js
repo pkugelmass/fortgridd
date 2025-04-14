@@ -33,7 +33,7 @@ const AI_HP_MIN = 12;                // Min starting HP for AI variation (Test: 
 const AI_HP_MAX = 15;                // Max starting HP for AI variation (Test: > 0 if defined)
 const AI_RANGE_MIN = 5;             // Min detection range for AI variation (Test: > 0 if defined)
 const AI_RANGE_MAX = 8;            // Max detection range for AI variation (Test: > 0 if defined)
-const AI_AMMO_MIN = 0;              // Min starting ammo for AI variation (Test: >= 0 if defined)
+const AI_AMMO_MIN = 1;              // Min starting ammo for AI variation (Test: >= 0 if defined)
 const AI_AMMO_MAX = 5;              // Max starting ammo for AI variation (Test: >= 0 if defined)
 const AI_PURSUE_HP_THRESHOLD = 0.3; // HP percentage above which AI will pursue targets (Test: 0-1 if defined)
 
@@ -111,7 +111,7 @@ const TILE_COLORS = {
     [TILE_LAND]: '#8FBC8F',   // Default land color
     [TILE_WALL]: '#999999',   // Wall color
     [TILE_BOUNDARY]: '#999999', // Boundary wall color (same as regular wall)
-    [TILE_TREE]: '#83a883',   
+    [TILE_TREE]: '#83a883',
     [TILE_MEDKIT]: '#8FBC8F', // Medkit uses land color
     [TILE_AMMO]: '#8FBC8F',   // Ammo uses land color
 };

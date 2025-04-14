@@ -141,68 +141,81 @@ async function runAiTurns(gameState) { // Renamed from executeAiTurns and accept
 
     let gameEndedDuringLoop = false;
     for (const enemyRef of currentEnemiesTurnOrder) {
-        // Find the current enemy in the main gameState.enemies array to ensure modifications persist
-        const enemy = gameState.enemies.find(e => e.id === enemyRef.id);
-        if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue; // Skip if invalid/dead (redundant check but safe)
+        try {
+            // Find the current enemy in the main gameState.enemies array to ensure modifications persist
+            const enemy = gameState.enemies.find(e => e.id === enemyRef.id);
+            if (!enemy || enemy.row === null || enemy.col === null || enemy.hp <= 0) continue; // Skip if invalid/dead (redundant check but safe)
 
-        // Set activeUnitId to this enemy for the duration of its turn
-        gameState.activeUnitId = enemy.id;
+            // Set activeUnitId to this enemy for the duration of its turn
+            gameState.activeUnitId = enemy.id;
 
-        // --- FSM Logic with Re-evaluation Loop ---
-        let actionTaken = false;
-        let evaluationCount = 0;
+            // --- FSM Logic with Re-evaluation Loop ---
+            let actionTaken = false;
+            let evaluationCount = 0;
 
-        while (!actionTaken && evaluationCount < MAX_EVALUATIONS_PER_TURN) {
-            evaluationCount++;
-            Game.logMessage(`[DEBUG] Enemy ${enemy.id} AI loop iteration ${evaluationCount} ENTER`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-            Game.logMessage(`[DEBUG] Enemy ${enemy.id} about to call performReevaluation`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-            performReevaluation(enemy, gameState); // Re-evaluate state *before* acting, pass gameState
-            Game.logMessage(`[DEBUG] Enemy ${enemy.id} finished performReevaluation, state is now: ${enemy.state}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+            while (!actionTaken && evaluationCount < MAX_EVALUATIONS_PER_TURN) {
+                evaluationCount++;
+                Game.logMessage(`[DEBUG] Enemy ${enemy.id} AI loop iteration ${evaluationCount} ENTER`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+                Game.logMessage(`[DEBUG] Enemy ${enemy.id} about to call performReevaluation`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+                performReevaluation(enemy, gameState); // Re-evaluate state *before* acting, pass gameState
+                Game.logMessage(`[DEBUG] Enemy ${enemy.id} finished performReevaluation, state is now: ${enemy.state}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
 
-            let currentHandlerResult = false; // Assume handler returns false (needs re-eval) unless it returns true
+                let currentHandlerResult = false; // Assume handler returns false (needs re-eval) unless it returns true
 
-            // Call the handler function corresponding to the enemy's *current* (potentially updated) state
-            // Pass gameState to all state handlers
-            Game.logMessage(`[DEBUG] Enemy ${enemy.id} calling handler for state: ${enemy.state}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-            switch (enemy.state) {
-                case AI_STATE_EXPLORING:
-                    currentHandlerResult = await handleExploringState(enemy, gameState);
-                    break;
-                case AI_STATE_SEEKING_RESOURCES:
-                    currentHandlerResult = await handleSeekingResourcesState(enemy, gameState);
-                    break;
-                case AI_STATE_ENGAGING_ENEMY:
-                    currentHandlerResult = await handleEngagingEnemyState(enemy, gameState);
-                    break;
-                case AI_STATE_FLEEING:
-                    currentHandlerResult = await handleFleeingState(enemy, gameState);
-                    break;
-                case AI_STATE_HEALING: // Added 2025-04-09
-                    currentHandlerResult = await handleHealingState(enemy, gameState);
-                    break;
-                default:
-                    Game.logMessage(`Enemy ${enemy.id} has unknown state: ${enemy.state}. Defaulting to Exploring.`, gameState, { level: 'WARN', target: 'CONSOLE' });
-                    enemy.state = AI_STATE_EXPLORING; // Force explore state
-                    // Let the loop re-evaluate and run the Exploring handler next iteration
-                    currentHandlerResult = false;
-                    break;
+                // Call the handler function corresponding to the enemy's *current* (potentially updated) state
+                // Pass gameState to all state handlers
+                Game.logMessage(`[DEBUG] Enemy ${enemy.id} calling handler for state: ${enemy.state}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+                switch (enemy.state) {
+                    case AI_STATE_EXPLORING:
+                        currentHandlerResult = await handleExploringState(enemy, gameState);
+                        break;
+                    case AI_STATE_SEEKING_RESOURCES:
+                        currentHandlerResult = await handleSeekingResourcesState(enemy, gameState);
+                        break;
+                    case AI_STATE_ENGAGING_ENEMY:
+                        currentHandlerResult = await handleEngagingEnemyState(enemy, gameState);
+                        break;
+                    case AI_STATE_FLEEING:
+                        currentHandlerResult = await handleFleeingState(enemy, gameState);
+                        break;
+                    case AI_STATE_HEALING: // Added 2025-04-09
+                        currentHandlerResult = await handleHealingState(enemy, gameState);
+                        break;
+                    default:
+                        Game.logMessage(`Enemy ${enemy.id} has unknown state: ${enemy.state}. Defaulting to Exploring.`, gameState, { level: 'WARN', target: 'CONSOLE' });
+                        enemy.state = AI_STATE_EXPLORING; // Force explore state
+                        // Let the loop re-evaluate and run the Exploring handler next iteration
+                        currentHandlerResult = false;
+                        break;
+                }
+                Game.logMessage(`[DEBUG] Enemy ${enemy.id} handler for state ${enemy.state} returned: ${currentHandlerResult}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+
+                if (currentHandlerResult) {
+                    actionTaken = true; // Handler took a final action, break the while loop
+                }
+                // If handler returned false, the loop continues (up to the limit),
+                // performReevaluation will run again with the current state.
+                Game.logMessage(`[DEBUG] Enemy ${enemy.id} AI loop iteration ${evaluationCount} END`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+            } // End while loop for single enemy turn
+
+            if (!actionTaken) {
+                // (rest of code unchanged)
             }
-            Game.logMessage(`[DEBUG] Enemy ${enemy.id} handler for state ${enemy.state} returned: ${currentHandlerResult}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-
-            if (currentHandlerResult) {
-                actionTaken = true; // Handler took a final action, break the while loop
-            }
-            // If handler returned false, the loop continues (up to the limit),
-            // performReevaluation will run again with the current state.
-            Game.logMessage(`[DEBUG] Enemy ${enemy.id} AI loop iteration ${evaluationCount} END`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-        } // End while loop for single enemy turn
-
-        if (!actionTaken) {
+        } catch (err) {
+            Game.logMessage(
+                `[ERROR] Exception in AI update for enemy ${enemyRef && enemyRef.id ? enemyRef.id : "unknown"}: ${err && err.stack ? err.stack : err}`,
+                gameState,
+                { level: 'ERROR', target: 'CONSOLE' }
+            );
+            // Continue to next enemy
             // Loop limit reached without a handler returning true
-            Game.logMessage(`Enemy ${enemy.id} reached max evaluations (${MAX_EVALUATIONS_PER_TURN}) without completing an action. Forcing wait.`, gameState, { level: 'WARN', target: 'CONSOLE' });
-            // Pass gameState to logMessage
-            Game.logMessage(`Enemy ${enemy.id} waits (evaluation limit).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-            // Consider this a completed turn action to prevent infinite game loops if AI gets stuck
+            // This logic should be inside the for loop, after try/catch, and only run if actionTaken is still false
+            // But enemy may be undefined here if the try block failed early, so check for enemy
+            if (typeof enemy !== "undefined" && !actionTaken) {
+                Game.logMessage(`Enemy ${enemy.id} reached max evaluations (${MAX_EVALUATIONS_PER_TURN}) without completing an action. Forcing wait.`, gameState, { level: 'WARN', target: 'CONSOLE' });
+                Game.logMessage(`Enemy ${enemy.id} waits (evaluation limit).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
+                // Consider this a completed turn action to prevent infinite game loops if AI gets stuck
+            }
         }
 
         // Check end conditions after each enemy finishes its turn, pass gameState

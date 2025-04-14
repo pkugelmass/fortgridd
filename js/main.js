@@ -103,7 +103,7 @@ async function processPlayerTurn(actionIntent, gameState) {
             const targetRow = player.row + dy;
             const targetCol = player.col + dx;
             if (typeof PlayerActions.handleMoveOrAttack === 'function') {
-                turnEnded = PlayerActions.handleMoveOrAttack(player, targetRow, targetCol, gameState);
+                turnEnded = await PlayerActions.handleMoveOrAttack(player, targetRow, targetCol, gameState);
             } else {
                 Game.logMessage(
                     "processPlayerTurn: PlayerActions.handleMoveOrAttack not found!",
@@ -125,7 +125,7 @@ async function processPlayerTurn(actionIntent, gameState) {
 
         case 'HEAL':
             if (typeof PlayerActions.handleHeal === 'function') {
-                turnEnded = PlayerActions.handleHeal(player, gameState);
+                turnEnded = await PlayerActions.handleHeal(player, gameState);
             } else {
                 Game.logMessage(
                     "processPlayerTurn: PlayerActions.handleHeal not found!",
@@ -148,7 +148,7 @@ async function processPlayerTurn(actionIntent, gameState) {
                 }
             })();
             if (typeof PlayerActions.handleShoot === 'function') {
-                turnEnded = PlayerActions.handleShoot(player, { dr, dc }, dirString, gameState);
+                turnEnded = await PlayerActions.handleShoot(player, { dr, dc }, dirString, gameState);
             } else {
                 Game.logMessage(
                     "processPlayerTurn: PlayerActions.handleShoot not found!",

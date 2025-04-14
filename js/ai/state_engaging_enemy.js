@@ -65,19 +65,47 @@ function _validateEngageState(enemy, gameState) {
 async function _attemptEngageAttack(enemy, target, gameState) {
     const enemyId = enemy.id || 'Unknown Enemy';
     const targetId = target === gameState.player ? 'Player' : target.id;
-    const dist = Math.abs(target.row - enemy.row) + Math.abs(target.col - enemy.col);
+
+    // Ensure integer grid positions
+    const { row: enemyRow, col: enemyCol } = toGridCoords(enemy);
+    const { row: targetRow, col: targetCol } = toGridCoords(target);
+
+    const dist = Math.abs(targetRow - enemyRow) + Math.abs(targetCol - enemyCol);
+
+    // --- DEBUG: Log AI consideration for ranged attack ---
+    if (dist > 0 && dist <= RANGED_ATTACK_RANGE) {
+        if (enemy.resources.ammo > 0) {
+            if (hasClearCardinalLineOfSight(
+                { row: enemyRow, col: enemyCol, ...enemy },
+                { row: targetRow, col: targetCol, ...target },
+                RANGED_ATTACK_RANGE, gameState)) {
+                Game.logMessage(`[DEBUG] Enemy ${enemyId} considering RANGED attack on ${targetId} at (${targetRow},${targetCol}): IN RANGE, HAS AMMO, HAS LOS`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+            } else {
+                Game.logMessage(`[DEBUG] Enemy ${enemyId} considering RANGED attack on ${targetId} at (${targetRow},${targetCol}): IN RANGE, HAS AMMO, NO LOS`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+            }
+        } else {
+            Game.logMessage(`[DEBUG] Enemy ${enemyId} considering RANGED attack on ${targetId} at (${targetRow},${targetCol}): IN RANGE, NO AMMO`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+        }
+    } else {
+        Game.logMessage(`[DEBUG] Enemy ${enemyId} considering RANGED attack on ${targetId} at (${targetRow},${targetCol}): OUT OF RANGE`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
+    }
 
     // Ranged Attack
-    if (dist > 0 && dist <= RANGED_ATTACK_RANGE && enemy.resources.ammo > 0 && hasClearCardinalLineOfSight(enemy, target, RANGED_ATTACK_RANGE, gameState)) {
+    if (dist > 0 && dist <= RANGED_ATTACK_RANGE && enemy.resources.ammo > 0 &&
+        hasClearCardinalLineOfSight(
+            { row: enemyRow, col: enemyCol, ...enemy },
+            { row: targetRow, col: targetCol, ...target },
+            RANGED_ATTACK_RANGE, gameState)) {
+        Game.logMessage(`[DEBUG] Enemy ${enemyId} PERFORMS RANGED attack on ${targetId} at (${targetRow},${targetCol})`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         // --- Visual Effect: Enemy Ranged Attack Projectile ---
         let rangedAttackEffect = null;
         if (typeof animationSystem !== 'undefined' && typeof AnimationSystem.createRangedAttackEffect === 'function' && typeof traceLine === 'function') {
-            const traceEndX = target.col;
-            const traceEndY = target.row;
-            const linePoints = traceLine(enemy.col, enemy.row, traceEndX, traceEndY);
+            const traceEndX = targetCol;
+            const traceEndY = targetRow;
+            const linePoints = traceLine(enemyCol, enemyRow, traceEndX, traceEndY);
             rangedAttackEffect = AnimationSystem.createRangedAttackEffect({
                 linePoints,
-                hitCell: { row: target.row, col: target.col },
+                hitCell: { row: targetRow, col: targetCol },
                 color: "#ff5252"
             });
             animationSystem.addEffect(rangedAttackEffect);
@@ -90,7 +118,10 @@ async function _attemptEngageAttack(enemy, target, gameState) {
         enemy.resources.ammo--;
         let knockbackMsg = "";
         if (target.hp > 0) {
-            const knockbackResult = applyKnockback(enemy, target, gameState);
+            const knockbackResult = applyKnockback(
+                { row: enemyRow, col: enemyCol, ...enemy },
+                { row: targetRow, col: targetCol, ...target },
+                gameState);
             if (knockbackResult.success) {
                 knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
             } else if (knockbackResult.reason !== 'calc_error') {
@@ -108,11 +139,15 @@ async function _attemptEngageAttack(enemy, target, gameState) {
 
     // Melee Attack
     if (dist === 1) {
+        Game.logMessage(`[DEBUG] Enemy ${enemyId} considering MELEE attack on ${targetId} at (${targetRow},${targetCol})`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
         const damage = AI_ATTACK_DAMAGE;
         target.hp -= damage;
         let knockbackMsg = "";
         if (target.hp > 0) {
-            const knockbackResult = applyKnockback(enemy, target, gameState);
+            const knockbackResult = applyKnockback(
+                { row: enemyRow, col: enemyCol, ...enemy },
+                { row: targetRow, col: targetCol, ...target },
+                gameState);
             if (knockbackResult.success) {
                 knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
             } else if (knockbackResult.reason !== 'calc_error') {
@@ -128,6 +163,7 @@ async function _attemptEngageAttack(enemy, target, gameState) {
         return true; // Attack made
     }
 
+    Game.logMessage(`[DEBUG] Enemy ${enemyId} cannot attack ${targetId} at (${targetRow},${targetCol}): not in range for melee or ranged.`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
     return false; // No attack made
 }
 

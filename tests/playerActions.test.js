@@ -77,6 +77,22 @@ QUnit.module('Player Actions (playerActions.js)', function(hooks) {
             const targetRow = 1, targetCol = 2;
 
             const result = PlayerActions.handleMoveOrAttack(player, targetRow, targetCol, gameState);
+        QUnit.test('Movement: Blocked by enemy (melee triggers, cannot move into occupied tile)', function(assert) {
+            const player = createMockUnit(true, { row: 1, col: 1 });
+            const enemy = createMockUnit(false, { row: 1, col: 2, hp: 3, id: 'E1' });
+            const mapData = [ [TILE_BOUNDARY, TILE_BOUNDARY, TILE_BOUNDARY], [TILE_BOUNDARY, TILE_LAND, TILE_LAND], [TILE_BOUNDARY, TILE_BOUNDARY, TILE_BOUNDARY] ];
+            const gameState = createMockGameState({ player: player, mapData: mapData, enemies: [enemy] });
+            const targetRow = 1, targetCol = 2;
+
+            const result = PlayerActions.handleMoveOrAttack(player, targetRow, targetCol, gameState);
+
+            assert.true(result, 'Should return true (turn consumed by melee)');
+            assert.equal(player.row, 1, 'Player row unchanged');
+            assert.equal(player.col, 1, 'Player col unchanged');
+            assert.equal(enemy.hp, 3 - (PLAYER_ATTACK_DAMAGE || 1), 'Enemy took damage');
+            assert.ok(logMock.calls.some(log => log.message.includes('Player attacks')), 'Melee attack logged');
+            assert.notOk(logMock.calls.some(log => log.message.includes('Player moves to (1,2)')), 'No move log');
+        });
 
             assert.false(result, 'Should return false (turn not consumed)');
             assert.equal(player.row, 1, 'Player row unchanged');
@@ -143,7 +159,7 @@ QUnit.module('Player Actions (playerActions.js)', function(hooks) {
             assert.ok(logMock.calls.some(log => log.message.includes('Player attacks')), 'Attack logged');
         });
 
-        QUnit.test('Attack: Hit enemy with successful knockback', function(assert) {
+        QUnit.test('Attack: Hit enemy with successful knockback', async function(assert) {
             const player = createMockUnit(true, { row: 1, col: 1 });
             const enemy = createMockUnit(false, { row: 1, col: 2, hp: 5 });
             const mapData = [ [0,0,0,0], [0,0,0,0], [0,0,0,0] ]; // Open map for knockback
@@ -151,7 +167,7 @@ QUnit.module('Player Actions (playerActions.js)', function(hooks) {
             const targetRow = 1, targetCol = 2;
             const initialEnemyHp = enemy.hp;
 
-            const result = PlayerActions.handleMoveOrAttack(player, targetRow, targetCol, gameState);
+            const result = await PlayerActions.handleMoveOrAttack(player, targetRow, targetCol, gameState);
 
             assert.true(result, 'Should return true (turn consumed)');
             assert.equal(enemy.hp, initialEnemyHp - PLAYER_ATTACK_DAMAGE, 'Enemy HP reduced');
@@ -161,7 +177,7 @@ QUnit.module('Player Actions (playerActions.js)', function(hooks) {
             assert.ok(logMock.calls.some(log => log.message.includes('knocked back')), 'Knockback logged');
         });
 
-        QUnit.test('Attack: Hit enemy with blocked knockback (wall)', function(assert) {
+        QUnit.test('Attack: Hit enemy with blocked knockback (wall)', async function(assert) {
             const player = createMockUnit(true, { row: 1, col: 1 });
             const enemy = createMockUnit(false, { row: 1, col: 2, hp: 5 });
             const mapData = [ [0,0,0,0], [0,0,0,TILE_WALL], [0,0,0,0] ]; // Wall blocking knockback
@@ -169,7 +185,7 @@ QUnit.module('Player Actions (playerActions.js)', function(hooks) {
             const targetRow = 1, targetCol = 2;
             const initialEnemyHp = enemy.hp;
 
-            const result = PlayerActions.handleMoveOrAttack(player, targetRow, targetCol, gameState);
+            const result = await PlayerActions.handleMoveOrAttack(player, targetRow, targetCol, gameState);
 
             assert.true(result, 'Should return true (turn consumed)');
             assert.equal(enemy.hp, initialEnemyHp - PLAYER_ATTACK_DAMAGE, 'Enemy HP reduced');
