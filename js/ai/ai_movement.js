@@ -11,13 +11,13 @@
 
 function getValidMoves(unit, gameState) {
     const possibleMoves = [];
-    if (!unit || !gameState || !gameState.mapData || !gameState.safeZone || !gameState.player || !gameState.enemies) {
+    if (!unit || !gameState || !gameState.map || !gameState.safeZone || !gameState.player || !gameState.enemies) {
         Game.logMessage("getValidMoves: Missing unit or required gameState properties.", gameState, { level: 'ERROR', target: 'CONSOLE' });
         return possibleMoves; // Return empty array if critical data is missing
     }
 
     const directions = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
-    const { mapData, safeZone, player, enemies } = gameState; // Destructure for readability
+    const { map, safeZone } = gameState;
 
     // Sanitize unit coordinates
     const { row: unitRow, col: unitCol } = toGridCoords(unit);
@@ -26,24 +26,26 @@ function getValidMoves(unit, gameState) {
         // Always round targetRow/Col to integer grid
         const { row: targetRow, col: targetCol } = toGridCoords(unitRow + dir.dr, unitCol + dir.dc);
 
-        // 1. Check Map Boundaries
-        if (targetRow >= 0 && targetRow < GRID_HEIGHT && targetCol >= 0 && targetCol < GRID_WIDTH) {
-            // 2. Check Safe Zone Boundaries
-            if (targetRow >= safeZone.minRow && targetRow <= safeZone.maxRow && targetCol >= safeZone.minCol && targetCol <= safeZone.maxCol) {
-                // 3. Check Tile Type (Allow LAND, MEDKIT, AMMO)
-                if (mapData[targetRow]) { // Check row exists
-                    const tileType = mapData[targetRow][targetCol];
-                    if (tileType === TILE_LAND || tileType === TILE_MEDKIT || tileType === TILE_AMMO) {
-                        // 4. Check Occupancy (shared utility)
-                        if (typeof isTileOccupied !== "function" || !isTileOccupied(targetRow, targetCol, gameState, unit)) {
-                            possibleMoves.push({ row: targetRow, col: targetCol }); // All checks passed
-                        }
-                    } // End check for valid tile types
-                } else {
-                     Game.logMessage(`getValidMoves: mapData error at row ${targetRow}`, gameState, { level: 'ERROR', target: 'CONSOLE' });
-                } // End check for valid map data row
-            } // End check for safe zone
-        } // End check for map boundaries
+        // 1. Check Map Boundaries (via Map.getTile)
+        const tile = map.getTile(targetCol, targetRow);
+        if (!tile) continue;
+
+        // 2. Check Safe Zone Boundaries
+        if (
+            targetRow >= safeZone.minRow && targetRow <= safeZone.maxRow &&
+            targetCol >= safeZone.minCol && targetCol <= safeZone.maxCol
+        ) {
+            // 3. Check Tile Type (Allow 'land', 'medkit', 'ammo')
+            if (
+                (tile.type === 'land' || tile.type === 'medkit' || tile.type === 'ammo') &&
+                tile.passable
+            ) {
+                // 4. Check Occupancy (shared utility or tile.isOccupied)
+                if (typeof isTileOccupied !== "function" || !isTileOccupied(targetRow, targetCol, gameState, unit)) {
+                    possibleMoves.push({ row: targetRow, col: targetCol }); // All checks passed
+                }
+            }
+        }
     }
     return possibleMoves;
 }

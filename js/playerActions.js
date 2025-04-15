@@ -14,88 +14,11 @@ const PlayerActions = {
      * @returns {boolean} - True if the action consumed the player's turn, false otherwise.
      */
     handleMoveOrAttack: async function(player, targetRow, targetCol, gameState) {
-        const mapData = gameState.mapData;
-        const enemies = gameState.enemies;
-        const gridHeight = mapData.length;
-        const gridWidth = mapData[0] ? mapData[0].length : 0;
-
-        // 1. Boundary Check
-        if (targetRow < 0 || targetRow >= gridHeight || targetCol < 0 || targetCol >= gridWidth) {
-            Game.logMessage(`Player move blocked by map edge at (${targetRow},${targetCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
-            return false; // Turn not consumed
-        }
-
-        // 2. Check for Enemy (Melee Attack) or Occupied Tile
-        // Use shared utility for occupancy
-        if (typeof isTileOccupied === "function" && isTileOccupied(targetRow, targetCol, gameState, player)) {
-            // Find the enemy at the target tile (for melee)
-            const targetEnemy = enemies.find(enemy => enemy.hp > 0 && enemy.row === targetRow && enemy.col === targetCol);
-            if (targetEnemy) {
-                const targetId = targetEnemy.id || '??';
-                const damage = PLAYER_ATTACK_DAMAGE || 1;
-                Game.logMessage(`Player attacks ${targetId} at (${targetRow},${targetCol}) for ${damage} damage.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_GOOD });
-                targetEnemy.hp -= damage;
-                let knockbackMsg = "";
-                if (targetEnemy.hp > 0 && typeof applyKnockback === 'function') { // Check if knockback exists
-                    const knockbackResult = applyKnockback(player, targetEnemy, gameState);
-                    if (knockbackResult.success) {
-                        knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
-                    } else if (knockbackResult.reason !== 'calc_error') {
-                        knockbackMsg = ` Knockback blocked (${knockbackResult.reason}).`;
-                    }
-                } else if (targetEnemy.hp > 0) {
-                    Game.logMessage("handleMoveOrAttack: applyKnockback function not found!", gameState, { level: 'WARN', target: 'CONSOLE' });
-                }
-                if (knockbackMsg) {
-                    Game.logMessage(knockbackMsg.trim(), gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_ENEMY_EVENT });
-                }
-                return true; // Turn consumed by attack
-            } else {
-                // Occupied by something else (should not happen), block move
-                Game.logMessage(`Player move blocked by occupied tile at (${targetRow},${targetCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
-                return false;
-            }
-        }
-
-        // 3. Check Terrain (Movement)
-        const targetTileType = mapData[targetRow][targetCol];
-        if (targetTileType === TILE_LAND || targetTileType === TILE_MEDKIT || targetTileType === TILE_AMMO) {
-            // Check occupancy again before moving (should not be needed, but double safety)
-            if (typeof isTileOccupied === "function" && isTileOccupied(targetRow, targetCol, gameState, player)) {
-                Game.logMessage(`Player move blocked by occupied tile at (${targetRow},${targetCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
-                return false;
-            }
-            Game.logMessage(`Player moves to (${targetRow},${targetCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
-            if (
-                typeof animationSystem !== "undefined" &&
-                typeof AnimationSystem.createMovementEffect === "function"
-            ) {
-                console.log("[PlayerActions] About to add movement effect", animationSystem, AnimationSystem.createMovementEffect);
-                // Await the movement animation before updating the position
-                const moveEffect = AnimationSystem.createMovementEffect({
-                    unit: player,
-                    from: { row: player.row, col: player.col },
-                    to: { row: targetRow, col: targetCol },
-                    color: typeof PLAYER_COLOR !== "undefined" ? PLAYER_COLOR : "#42a5f5",
-                    duration: typeof MOVEMENT_ANIMATION_DURATION !== "undefined" ? MOVEMENT_ANIMATION_DURATION : 180,
-                    easing: typeof ANIMATION_EASING !== "undefined" ? ANIMATION_EASING : "easeInOut"
-                });
-                animationSystem.addEffect(moveEffect);
-                if (moveEffect.promise) {
-                    await moveEffect.promise;
-                }
-            }
-            if (typeof updateUnitPosition === 'function') {
-                updateUnitPosition(player, targetRow, targetCol, gameState); // Assumes global function
-            } else {
-                 Game.logMessage("handleMoveOrAttack: updateUnitPosition function not found!", gameState, { level: 'ERROR', target: 'CONSOLE' });
-                 return false; // Cannot complete move, don't consume turn
-            }
-            return true; // Turn consumed by move
-        } else {
-            Game.logMessage(`Player move blocked by terrain at (${targetRow},${targetCol}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
-            return false; // Turn not consumed
-        }
+        // Only handle animation/effects here; delegate action logic to Player/Unit
+        // Optionally, you can await animation before calling moveOrAttack if needed
+        // (Assume player is a Player instance)
+        // Animation logic (if any) can go here before/after the action
+        return player.moveOrAttack(targetRow, targetCol, gameState);
     },
 
     /**
@@ -108,21 +31,8 @@ const PlayerActions = {
      * @returns {boolean} - True if the action consumed the player's turn, false otherwise.
      */
     handleHeal: function(player, gameState) {
-        if (player.resources.medkits >= HEAL_COST) {
-            if (player.hp < player.maxHp) {
-                const healAmountActual = Math.min(HEAL_AMOUNT, player.maxHp - player.hp);
-                player.resources.medkits -= HEAL_COST;
-                player.hp += healAmountActual;
-                Game.logMessage(`Player uses Medkit, heals ${healAmountActual} HP.`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_GOOD });
-                return true; // Turn consumed
-            } else {
-                Game.logMessage("Cannot heal: Full health.", gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
-                return false; // Turn not consumed
-            }
-        } else {
-            Game.logMessage(`Cannot heal: Need ${HEAL_COST} medkits (Have: ${player.resources.medkits || 0}).`, gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_NEUTRAL });
-            return false; // Turn not consumed
-        }
+        // Delegate to Player/Unit heal method
+        return player.heal(gameState);
     },
 
     /**
@@ -137,112 +47,8 @@ const PlayerActions = {
      * @returns {boolean} - True if the action consumed the player's turn, false otherwise.
      */
     handleShoot: async function(player, shootDirection, dirString, gameState) {
-        if (player.resources.ammo > 0) {
-            player.resources.ammo--;
-
-            let shotHit = false;
-            let hitTarget = null;
-            let blocked = false;
-            let blockedBy = "";
-            let hitCoord = null;
-
-            const mapData = gameState.mapData;
-            const enemies = gameState.enemies;
-            const gridHeight = mapData.length;
-            const gridWidth = mapData[0] ? mapData[0].length : 0;
-
-            // Assumes traceLine function is available globally
-            if (typeof traceLine !== 'function') {
-                 Game.logMessage("handleShoot: traceLine function not found!", gameState, { level: 'ERROR', target: 'CONSOLE' });
-                 return false; // Cannot perform action, don't consume turn
-            }
-
-            const traceEndX = player.col + shootDirection.dc * (RANGED_ATTACK_RANGE + 1);
-            const traceEndY = player.row + shootDirection.dr * (RANGED_ATTACK_RANGE + 1);
-            const linePoints = traceLine(player.col, player.row, traceEndX, traceEndY);
-
-            for (let i = 1; i < linePoints.length; i++) {
-                const point = linePoints[i];
-                const checkRow = point.row;
-                const checkCol = point.col;
-                // Use Chebyshev distance (max of row/col difference) for grid range
-                const dist = Math.max(Math.abs(checkRow - player.row), Math.abs(checkCol - player.col));
-
-                // Debug: Log each cell checked for projectile collision
-                if (typeof Game !== "undefined" && typeof Game.logMessage === "function") {
-                    Game.logMessage(`[DEBUG] handleShoot: Checking cell (${checkRow},${checkCol}), dist=${dist}`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-                }
-
-                if (dist > RANGED_ATTACK_RANGE) {
-                    break;
-                }
-                if (checkRow < 0 || checkRow >= gridHeight || checkCol < 0 || checkCol >= gridWidth) {
-                    blocked = true; blockedBy = "Map Edge"; hitCoord = { row: checkRow, col: checkCol };
-                    break;
-                }
-                const tileType = mapData[checkRow][checkCol];
-                // Add TILE_BOUNDARY check
-                if (tileType === TILE_WALL || tileType === TILE_TREE || tileType === TILE_BOUNDARY) {
-                    blocked = true;
-                    blockedBy = (tileType === TILE_WALL ? "Wall" : (tileType === TILE_TREE ? "Tree" : "Boundary")); // Update blockedBy message
-                    hitCoord = { row: checkRow, col: checkCol };
-                    break;
-                }
-                hitTarget = enemies.find(enemy => enemy.hp > 0 && enemy.row === checkRow && enemy.col === checkCol);
-                if (hitTarget) {
-                    if (typeof Game !== "undefined" && typeof Game.logMessage === "function") {
-                        Game.logMessage(`[DEBUG] handleShoot: Found enemy ${hitTarget.id} at (${checkRow},${checkCol})`, gameState, { level: 'DEBUG', target: 'CONSOLE' });
-                    }
-                    shotHit = true; hitCoord = { row: checkRow, col: checkCol };
-                    break;
-                }
-            }
-
-            // --- Visual Effect: Ranged Attack Projectile ---
-            let rangedAttackEffect = null;
-            if (typeof animationSystem !== 'undefined' && typeof AnimationSystem.createRangedAttackEffect === 'function' && Array.isArray(linePoints) && linePoints.length > 1) {
-                rangedAttackEffect = AnimationSystem.createRangedAttackEffect({
-                    linePoints,
-                    hitCell: hitCoord,
-                    color: "#ffb300"
-                });
-                animationSystem.addEffect(rangedAttackEffect);
-            }
-            if (rangedAttackEffect && rangedAttackEffect.promise) {
-                await rangedAttackEffect.promise;
-            }
-            let logMsg = `Player shoots ${dirString}`;
-            let knockbackMsg = "";
-            let msgClass = LOG_CLASS_PLAYER_NEUTRAL;
-
-            if (shotHit && hitTarget) {
-                const targetId = hitTarget.id || '??';
-                const damage = RANGED_ATTACK_DAMAGE || 1;
-                hitTarget.hp -= damage;
-                logMsg += ` -> hits ${targetId} at (${hitTarget.row},${hitTarget.col}) for ${damage} damage! (HP: ${hitTarget.hp}/${hitTarget.maxHp})`;
-                msgClass = LOG_CLASS_PLAYER_GOOD;
-
-                if (hitTarget.hp > 0 && typeof applyKnockback === 'function') { // Check if knockback exists
-                    const knockbackResult = applyKnockback(player, hitTarget, gameState);
-                    if (knockbackResult.success) {
-                        knockbackMsg = ` ${targetId} knocked back to (${knockbackResult.dest.row},${knockbackResult.dest.col}).`;
-                    } else if (knockbackResult.reason !== 'calc_error') {
-                        knockbackMsg = ` Knockback blocked (${knockbackResult.reason}).`;
-                    }
-                } else if (hitTarget.hp > 0) {
-                    Game.logMessage("handleShoot: applyKnockback function not found!", gameState, { level: 'WARN', target: 'CONSOLE' });
-                }
-            } else if (blocked) {
-                logMsg += ` -> blocked by ${blockedBy}` + (hitCoord ? ` at (${hitCoord.row},${hitCoord.col})` : '') + ".";
-            } else {
-                logMsg += " -> missed.";
-            }
-            Game.logMessage(logMsg + knockbackMsg, gameState, { level: 'PLAYER', target: 'PLAYER', className: msgClass });
-            return true; // Turn consumed
-
-        } else {
-            Game.logMessage("Cannot shoot: Out of ammo!", gameState, { level: 'PLAYER', target: 'PLAYER', className: LOG_CLASS_PLAYER_BAD });
-            return false; // Turn not consumed
-        }
+        // Only handle animation/effects here; delegate action logic to Player/Unit
+        // (Assume player is a Player instance)
+        return player.shoot(shootDirection, dirString, gameState);
     },
 };

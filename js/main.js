@@ -13,6 +13,17 @@ const ctx = canvas.getContext('2d');
 window.canvas = canvas;
 window.ctx = ctx;
 
+// --- Cell Size Calculation ---
+function updateCellSize() {
+    if (window.canvas && typeof gameState !== "undefined" && gameState && gameState.map) {
+        const cellWidth = Math.floor(window.canvas.width / gameState.map.width);
+        const cellHeight = Math.floor(window.canvas.height / gameState.map.height);
+        window.currentCellSize = Math.max(1, Math.min(cellWidth, cellHeight));
+    } else {
+        window.currentCellSize = 32; // fallback
+    }
+}
+
 // --- Threat Map Generator ---
 function generateThreatMap(gs) {
     if (typeof Game !== 'undefined' && typeof Game.calculateThreatMap === 'function') {
@@ -38,7 +49,8 @@ function startAnimationSystem() {
  * Initialize the game and start the animation system.
  * This ensures the animation loop only starts after gameState is ready.
  */
-gameState = Game.initializeGame();
+gameState = new GameState(GAME_CONFIG);
+updateCellSize();
 if (gameState) {
     startAnimationSystem();
 } else {
@@ -184,11 +196,6 @@ async function processPlayerTurn(actionIntent, gameState) {
 
     // Clear activeUnitId after the player's turn is complete
     gameState.activeUnitId = null;
-}
-if (gameState) {
-    startAnimationSystem();
-} else {
-    console.error("Failed to initialize gameState. Animation system not started.");
 }
 
 // ...rest of main.js unchanged...
